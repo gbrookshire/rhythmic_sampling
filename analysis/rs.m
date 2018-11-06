@@ -2,15 +2,15 @@
 % Fall 2018
 % Geoff Brookshire
 % Each subject has multiple files
-%   0.fif is the QUEST thresholding procedure
-%   [1-3].fif are the main experiment
+%   [1-2].fif is the QUEST thresholding procedure
+%   [3-5].fif are the main experiment
 
 clear variables
 close all
-addpath C:\Users\brookshg\Documents\MATLAB\fieldtrip-20180805\
-addpath C:\Users\brookshg\Documents\rhythmic_sampling\analysis\
-rs_setup
+addpath('/rds/projects/2017/jenseno-02/gb/fieldtrip-20180805/')
+addpath('/rds/projects/2017/jenseno-02/gb/rhythmic_sampling/analysis/')
 ft_defaults
+rs_setup
 cd(exp_dir)
 
 %% TODO

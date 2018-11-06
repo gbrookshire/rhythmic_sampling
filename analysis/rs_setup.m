@@ -1,5 +1,4 @@
-exp_dir = 'C:\Users\brookshg\Documents\rhythmic_sampling\data\';
-addpath([exp_dir '..\analysis'])
+exp_dir = '/rds/projects/2017/jenseno-02/gb/rhythmic_sampling_data/';
 
 % Genearal experiment parameters
 exp_params = [];
