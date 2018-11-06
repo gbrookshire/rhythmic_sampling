@@ -1,0 +1,7 @@
+In this study, you'll see faces appear on the screen for several seconds at a time.
+Your job is press the button as fast as you can whenever a small dot flashes on one of the faces. This might look like faint mole that flashes very briefly on the face.
+These dots will start off fairly easy to see, but it will get more difficult as the experiment goes on.
+Dots will not appear on every trial.
+While the faces are on the screen, it's important to avoid blinking, and to keep your eyes on the white dot in the middle of the screen.
+You'll get a brief break once every few seconds. The white dot tells you that faces will appear soon. Be sure to keep your eyes on that white dot!
+There will be a longer break once every few minutes.
