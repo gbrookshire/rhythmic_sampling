@@ -1,6 +1,2 @@
 *.pyc
 *.pdf
-
-# Don't include the data
-data/**
-
