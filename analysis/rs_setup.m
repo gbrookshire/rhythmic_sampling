@@ -1,4 +1,5 @@
-exp_dir = '/rds/projects/2017/jenseno-02/gb/rhythmic_sampling_data/';
+rs_base_path
+exp_dir = [base_dir 'rhythmic_sampling_data/'];
 
 % Genearal experiment parameters
 exp_params = [];

@@ -7,10 +7,14 @@
 
 clear variables
 close all
-addpath('/rds/projects/2017/jenseno-02/gb/fieldtrip-20180805/')
-addpath('/rds/projects/2017/jenseno-02/gb/rhythmic_sampling/analysis/')
-ft_defaults
+
+run('~/startup.m')
+addpath(['rhythmic_sampling/analysis/'])
 rs_setup
+
+addpath([base_dir 'fieldtrip-20180805/'])
+ft_defaults
+
 cd(exp_dir)
 
 %% TODO
@@ -22,7 +26,7 @@ cd(exp_dir)
 
 %% Define trials -- 2nd version
 rs_setup
-for i_subject = 1:height(subject_info)
+for i_subject = 10:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
