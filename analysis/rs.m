@@ -8,14 +8,19 @@
 clear variables
 close all
 
-run('~/startup.m')
-addpath(['rhythmic_sampling/analysis/'])
+if strcmp(computer, 'PCWIN64')
+    cd('Z:/gb/')
+else
+    cd('/rds/projects/2017/jenseno-02/gb/')
+    run('~/startup.m')
+end
+addpath('rhythmic_sampling/analysis/')
 rs_setup
+cd(exp_dir)
 
 addpath([base_dir 'fieldtrip-20180805/'])
 ft_defaults
 
-cd(exp_dir)
 
 %% TODO
 
@@ -26,7 +31,7 @@ cd(exp_dir)
 
 %% Define trials -- 2nd version
 rs_setup
-for i_subject = 10:height(subject_info)
+for i_subject = 11:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
@@ -80,7 +85,8 @@ end
 %   - combine recordings
 %       - ICA
 
-i_subject = 8;
+clear variables
+i_subject = 9;
 
 %% Visually identify artifacts
 
@@ -99,15 +105,19 @@ for chan_type = {'grad'} % Separately examine grads and mags
         disp(['Block ' num2str(i_block)])
 
         % Read in the trial definition
-        fn = [exp_dir 'trialdef\' fname '\trials_' num2str(i_block) '.mat'];
+        fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
         if ~exist(fn, 'file')
             warning('No trialdef for sub %s, block %d', fname, i_block)
             continue
         end
+        trialdef = load(fn);
 
         % Preprocess the data
-        cfg = load(fn);
-        cfg = cfg.cfg;
+        fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+        cfg = [];
+        cfg.dataset = fn;
+        cfg.event = trialdef.trl.event;
+        cfg.trl = trialdef.trl.trial;
         cfg.channel = chan.(chan_type).names;
         cfg.bsfilter = 'yes';
         cfg.bsfreq = [48 52];
@@ -125,6 +135,7 @@ for chan_type = {'grad'} % Separately examine grads and mags
         cfg.layout = chan.(chan_type).layout;
         data_sel_rej = ft_rejectvisual(cfg, d);
         rej_chans_summ = setdiff(d.label, data_sel_rej.label);
+        
         % Detailed look at the signals
         % Tag segments that are artifacts and look for other bad channels
         cfg = [];
@@ -133,6 +144,7 @@ for chan_type = {'grad'} % Separately examine grads and mags
         cfg.continuous = 'no';
         cfg.layout = chan.(chan_type).layout;
         cfg_art.(chan_type){i_block} = ft_databrowser(cfg, d);
+        
         % Put together the list of bad channels
         rej_chans_visual = input('Other bad channels: ');
         rej_chans_visual = reshape(rej_chans_visual, ... % Reshape to
@@ -153,9 +165,13 @@ fname = subject_info.meg{i_subject};
 a = load([exp_dir 'artifacts\' fname '\visual']);
 
 % Only keep MEG channels and reject bad channels
-bad_chans = union( ...
-    union([a.bad_chans.grad{:}], {}), ...
-    union([a.bad_chans.mag{:}], {}));
+if isfield(a.bad_chans, 'mag')
+    bad_chans = union( ...
+        union([a.bad_chans.grad{:}], {}), ...
+        union([a.bad_chans.mag{:}], {}));
+else
+    bad_chans = union([a.bad_chans.grad{:}], {});
+end
 bad_chans = cellfun(@(s) ['-' s], bad_chans, 'UniformOutput', false);
 chan_sel = [chan.all.names bad_chans'];
 
@@ -165,15 +181,19 @@ data_by_block = cell(size(block_info.all));
 for i_block = block_info.main
     
     % Read in the trial definition
-    fn = [exp_dir 'trialdef\' fname '\trials_' num2str(i_block) '.mat'];
+    fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
     if ~exist(fn, 'file')
         warning('No trialdef for sub %s, block %d', fname, i_block)
         continue
     end
+    trialdef = load(fn);
 
     % Preprocess the data
-    cfg = load(fn);
-    cfg = cfg.cfg;
+    fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+    cfg = [];
+    cfg.dataset = fn;
+    cfg.event = trialdef.trl.event;
+    cfg.trl = trialdef.trl.trial;
     cfg.channel = chan_sel;
     cfg.bsfilter = 'yes';
     cfg.bsfreq = [48 52];
@@ -189,7 +209,7 @@ for i_block = block_info.main
     cfg = [];
     cfg.artfctdef.reject = 'nan';
     cfg.artfctdef.visual_grad = a.cfg_art.grad{i_block}.artfctdef.visual;
-    cfg.artfctdef.visual_mag = a.cfg_art.mag{i_block}.artfctdef.visual;
+    %cfg.artfctdef.visual_mag = a.cfg_art.mag{i_block}.artfctdef.visual;
     data_by_block{i_block} = ft_rejectartifact(cfg, d);
 end
 
@@ -250,15 +270,21 @@ threshold = 0.3;
 % Read in the raw photodiode recordings
 phot = cell(size(block_info.all));
 for i_block = block_info.all
-    fn = [exp_dir 'trialdef\' fname '\trials_' num2str(i_block) '.mat'];
+
+    % Read in the trial definition
+    fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
     if ~exist(fn, 'file')
         warning('No trialdef for sub %s, block %d', fname, i_block)
         continue
     end
-    % Read in the trialdef
-    cfg = load(fn);
-    cfg = cfg.cfg;
+    trialdef = load(fn);
+
     % Preprocess the data
+    fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+    cfg = [];
+    cfg.dataset = fn;
+    cfg.event = trialdef.trl.event;
+    cfg.trl = trialdef.trl.trial;
     cfg.channel = 'MISC004'; % Only the photodiode
     cfg.detrend = 'yes'; % Remove slow drifts 
     d = ft_preprocessing(cfg);
@@ -358,16 +384,21 @@ art_ica = load([exp_dir 'artifacts\' fname '\ica']); % Artifact defs
 
 data_by_block = cell(size(block_info.all));
 for i_block = block_info.main
+
     % Read in the trial definition
-    fn = [exp_dir 'trialdef\' fname '\trials_' num2str(i_block) '.mat'];
+    fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
     if ~exist(fn, 'file')
         warning('No trialdef for sub %s, block %d', fname, i_block)
         continue
     end
+    trialdef = load(fn);
+
     % Preprocess the data
-    % Minimal preprocessing b/c we're not filtering before FFT
-    cfg = load(fn);
-    cfg = cfg.cfg;
+    fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+    cfg = [];
+    cfg.dataset = fn;
+    cfg.event = trialdef.trl.event;
+    cfg.trl = trialdef.trl.trial;   
     cfg.channel = art_ica.comp.cfg.channel; % Load the good channels
     cfg.polyremoval = 'yes';
     cfg.polyorder = 1;
