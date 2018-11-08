@@ -77,6 +77,7 @@ for i_trial = 1:length(trial_onset_inx)
             hit = 0;
         end
     else % Target trigger is missing from the MEG data!
+        % Exclude these by looking for NaNs in the target trl
         target_t = NaN;
         resp_t = NaN;
         hit = NaN;
