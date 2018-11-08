@@ -31,7 +31,7 @@ ft_defaults
 
 %% Define trials -- 2nd version
 rs_setup
-for i_subject = 1:height(subject_info)
+for i_subject = 11:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
@@ -60,7 +60,7 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    dataset = [exp_dir 'raw\' fname '\1.fif'];
+    dataset = [exp_dir 'raw\' fname '\' num2str(i_block) '.fif'];
     hdr = ft_read_header(dataset);
     grad = hdr.grad;
     [~,~,~] = mkdir([exp_dir 'grad\'], fname);
@@ -86,7 +86,7 @@ end
 %       - ICA
 
 clear variables
-i_subject = 12;
+i_subject = 9;
 
 %% Visually identify artifacts
 
@@ -170,8 +170,7 @@ if isfield(a.bad_chans, 'mag')
         union([a.bad_chans.grad{:}], {}), ...
         union([a.bad_chans.mag{:}], {}));
 else
-    bad_chans = union([a.bad_chans.grad{:}], {});
-end
+    bad_chans = union([a.bad_chans.grad{:}], {})
 bad_chans = cellfun(@(s) ['-' s], bad_chans, 'UniformOutput', false);
 chan_sel = [chan.all.names bad_chans'];
 
@@ -209,7 +208,7 @@ for i_block = block_info.main
     cfg = [];
     cfg.artfctdef.reject = 'nan';
     cfg.artfctdef.visual_grad = a.cfg_art.grad{i_block}.artfctdef.visual;
-    %cfg.artfctdef.visual_mag = a.cfg_art.mag{i_block}.artfctdef.visual;
+    cfg.artfctdef.visual_mag = a.cfg_art.mag{i_block}.artfctdef.visual;
     data_by_block{i_block} = ft_rejectartifact(cfg, d);
 end
 
@@ -270,21 +269,15 @@ threshold = 0.3;
 % Read in the raw photodiode recordings
 phot = cell(size(block_info.all));
 for i_block = block_info.all
-
-    % Read in the trial definition
-    fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
+    fn = [exp_dir 'trialdef\' fname '\trials_' num2str(i_block) '.mat'];
     if ~exist(fn, 'file')
         warning('No trialdef for sub %s, block %d', fname, i_block)
         continue
     end
-    trialdef = load(fn);
-
+    % Read in the trialdef
+    cfg = load(fn);
+    cfg = cfg.cfg;
     % Preprocess the data
-    fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
-    cfg = [];
-    cfg.dataset = fn;
-    cfg.event = trialdef.trl.event;
-    cfg.trl = trialdef.trl.trial;
     cfg.channel = 'MISC004'; % Only the photodiode
     cfg.detrend = 'yes'; % Remove slow drifts 
     d = ft_preprocessing(cfg);
@@ -324,7 +317,6 @@ for i_block = block_info.all
         hold off
         ylabel('Raw photodiode (V)')
         xlim([1 6000])
-        ylim([-0.025 0.025])
         subplot(2,1,2)
         plot(abs(dphi2_d2t)) % Changes in frequency
         hold on
@@ -333,7 +325,6 @@ for i_block = block_info.all
         hold off
         ylabel('abs(d^{2}\phi / dt^{2}) (rad)')
         xlim([1 6000])
-        ylim([0 6])
         fprintf('%i: ', i_trial)
         r = input('[N]ext or [p]revious: ', 's');
         switch r
@@ -379,111 +370,106 @@ save([exp_dir 'artifacts\' fname '\photodiode'], ...
 %% Compute spectra of MEG signals for each trial
 % Note that this doesn't reject visually identified artifacts!
 
-for i_subject = 8:height(subject_info)
+i_subject = 8;
 
-    fname = subject_info.meg{i_subject};
-    art_ica = load([exp_dir 'artifacts\' fname '\ica']); % Artifact defs
+fname = subject_info.meg{i_subject};
+art_ica = load([exp_dir 'artifacts\' fname '\ica']); % Artifact defs
 
-    data_by_block = cell(size(block_info.all));
-    for i_block = block_info.main
-
-        % Read in the trial definition
-        fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
-        if ~exist(fn, 'file')
-            warning('No trialdef for sub %s, block %d', fname, i_block)
-            continue
-        end
-        trialdef = load(fn);
-
-        % Preprocess the data
-        fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
-        cfg = [];
-        cfg.dataset = fn;
-        cfg.event = trialdef.trl.event;
-        cfg.trl = trialdef.trl.trial;   
-        cfg.channel = art_ica.comp.cfg.channel; % Load the good channels
-        cfg.polyremoval = 'yes';
-        cfg.polyorder = 1;
-        d = ft_preprocessing(cfg);
-
-        % Downsample
-        cfg = [];
-        cfg.resamplefs = 250;
-        d = ft_resampledata(cfg, d);
-
-        % Reject artifact ICs
-        cfg = [];
-        cfg.component = art_ica.reject_comp;
-        d = ft_rejectcomponent(cfg, art_ica.comp, d);
-
-        % Save the preproc data in a cell obj
-        data_by_block{i_block} = d;
-        clear d
+data_by_block = cell(size(block_info.all));
+for i_block = block_info.main
+    % Read in the trial definition
+    fn = [exp_dir 'trialdef\' fname '\trials_' num2str(i_block) '.mat'];
+    if ~exist(fn, 'file')
+        warning('No trialdef for sub %s, block %d', fname, i_block)
+        continue
     end
-
-    % Combine all the data
-    data_by_block = data_by_block(block_info.main);
-    data = ft_appenddata([], data_by_block{:});
-
-    % Only look at the time while the stimulus is flashing
-    for i_trial = 1:length(data.trial)
-        t = data.time{i_trial};
-        t_sel = (t > 0) & (t < (max(t) - 1)); % Assuming 1s post-stim in trial
-        d = data.trial{i_trial};
-        data.trial{i_trial} = d(:,t_sel);
-        data.time{i_trial} = t(:,t_sel);
-    end
-
-    % Compute the spectra
+    % Preprocess the data
+    % Minimal preprocessing b/c we're not filtering before FFT
+    cfg = load(fn);
+    cfg = cfg.cfg;
+    cfg.channel = art_ica.comp.cfg.channel; % Load the good channels
+    cfg.polyremoval = 'yes';
+    cfg.polyorder = 1;
+    d = ft_preprocessing(cfg);
+    
+    % Downsample
     cfg = [];
-    cfg.method = 'mtmfft';
-    cfg.output = 'pow';
-    cfg.channel = 'MEG';
-    cfg.taper = 'hanning';
-    cfg.pad = 'nextpow2'; % (2 ^ 11) / (250 Hz) = 8.192 s
-    cfg.padtype = 'zero';
-    cfg.polyremoval = 1; % Remove linear trends
-    freq_data = ft_freqanalysis(cfg, data);
-    warning('TODO: Make sure this correctly pads trials to 4.096 s')
+    cfg.resamplefs = 250;
+    d = ft_resampledata(cfg, d);
 
-    [~,~,~] = mkdir([exp_dir 'spectra\'], fname);
-    save([exp_dir 'spectra\' fname '\spectra'], 'freq_data')
+    % Reject artifact ICs
+    cfg = [];
+    cfg.component = art_ica.reject_comp;
+    d = ft_rejectcomponent(cfg, art_ica.comp, d);
+    
+    % Save the preproc data in a cell obj
+    data_by_block{i_block} = d;
+    clear d
 end
+
+% Combine all the data
+data_by_block = data_by_block(block_info.main);
+data = ft_appenddata([], data_by_block{:});
+
+% Only look at the time while the stimulus is flashing
+for i_trial = 1:length(data.trial)
+    t = data.time{i_trial};
+    t_sel = (t > 0) & (t < (max(t) - 1)); % Assuming 1s post-stim in trial
+    d = data.trial{i_trial};
+    data.trial{i_trial} = d(:,t_sel);
+    data.time{i_trial} = t(:,t_sel);
+end
+
+% Compute the spectra
+cfg = [];
+cfg.method = 'mtmfft';
+cfg.output = 'pow';
+cfg.channel = 'MEG';
+cfg.taper = 'hanning';
+cfg.pad = 'nextpow2'; % (2 ^ 11) / (250 Hz) = 8.192 s
+cfg.padtype = 'zero';
+cfg.polyremoval = 1; % Remove linear trends
+freq_data = ft_freqanalysis(cfg, data);
+warning('TODO: Make sure this correctly pads trials to 4.096 s')
+
+[~,~,~] = mkdir([exp_dir 'spectra\'], fname);
+save([exp_dir 'spectra\' fname '\spectra'], 'freq_data')
+
 
 %% Compute the SNR at each channel to get an ROI of power at tagged freqs
 
 rs_setup
-for i_subject = 8:height(subject_info)
+i_subject = 8;
 
-    fname = subject_info.meg{i_subject};
-    spec = load([exp_dir 'spectra\' fname '\spectra']);
-    spec = spec.freq_data;
+fname = subject_info.meg{i_subject};
+spec = load([exp_dir 'spectra\' fname '\spectra']);
+spec = spec.freq_data;
 
-    f_tag = exp_params.tagged_freqs; % Tagged frequencies
+f_tag = exp_params.tagged_freqs; % Tagged frequencies
 
-    snr = cell(size(f_tag));
-    for i_freq = 1:length(f_tag)
-        % Get power at the tagged freq
-        cfg = [];
-        cfg.frequency = [-0.5 0.5] + f_tag(i_freq);
-        cfg.avgoverfreq = 'yes';
-        p = ft_selectdata(cfg, spec);
-        % Get power at a lower frequency
-        cfg.frequency = [-1 1] + f_tag(i_freq) - 2;
-        p_l = ft_selectdata(cfg, spec);
-        % Get power at a higher frequency
-        cfg.frequency = [-1 1] + f_tag(i_freq) + 2;
-        p_h = ft_selectdata(cfg, spec);
-        % Calculate the SNR
-        s = p.powspctrm ./ ((p_l.powspctrm + p_h.powspctrm) / 2);
-        % Put SNR into a fieldtrip structure for plotting
-        snr{i_freq} = p;
-        snr{i_freq}.powspctrm = s;
-        clear s p p_h p_l cfg
-    end
-
-    save([exp_dir 'spectra\' fname '\snr'], 'snr')
+snr = cell(size(f_tag));
+for i_freq = 1:length(f_tag)
+    % Get power at the tagged freq
+    cfg = [];
+    cfg.frequency = [-0.5 0.5] + f_tag(i_freq);
+    cfg.avgoverfreq = 'yes';
+    p = ft_selectdata(cfg, spec);
+    % Get power at a lower frequency
+    cfg.frequency = [-1 1] + f_tag(i_freq) - 2;
+    p_l = ft_selectdata(cfg, spec);
+    % Get power at a higher frequency
+    cfg.frequency = [-1 1] + f_tag(i_freq) + 2;
+    p_h = ft_selectdata(cfg, spec);
+    % Calculate the SNR
+    s = p.powspctrm ./ ((p_l.powspctrm + p_h.powspctrm) / 2);
+    % Put SNR into a fieldtrip structure for plotting
+    snr{i_freq} = p;
+    snr{i_freq}.powspctrm = s;
+    clear s p p_h p_l cfg
 end
+
+save([exp_dir 'spectra\' fname '\snr'], 'snr')
+
 
 %% Compute high-freq TFR time-locked to stimulus onset
 
