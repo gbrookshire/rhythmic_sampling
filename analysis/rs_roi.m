@@ -1,14 +1,18 @@
-function roi = rs_roi(subj)
+function roi = rs_roi(fname, roi_size)
 
-% Return a selection of channels with the highest SNR
+% Return a selection of channels with the highest SNR for each freq
+% fname: subject name
+% roi_size: number of channels to include in the ROI
 
-roi_size = 4; % Number of channels to return
+rs_base_path
+exp_dir = [base_dir 'rhythmic_sampling_data/'];
 
-% Take the SNR at 63 Hz, because it gives a clearer signal
-snr = load([exp_dir 'spectra\' fname '\snr']);
-s = snr.snr{1};
+roi = cell([1 2]);
+for i_freq = 1:2
+    snr = load([exp_dir 'spectra\' fname '\snr']);
+    s = snr.snr{i_freq};
 
-% Get the best channels
-[~, inx] = sort(s.powspctrm, 'descend');
-
-roi = snr.snr{1}.label(inx <= roi_size);
+    % Get the best channels
+    [~, inx] = sort(s.powspctrm, 'descend');
+    roi{i_freq} = snr.snr{i_freq}.label(inx <= roi_size);
+end

@@ -157,34 +157,49 @@ for i_subject = 1:height(subject_info)
 
 end
 
+
 %% Plot power at the tagged freqs time-locked to stimulus onset
 
+clear variables
 rs_setup
+
+roi_type = 'functional'; % 'anatomical' or 'functional'
+
+approx_eq = @(x,y) abs(x - y) < 0.1;
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
     fname = subject_info.meg{i_subject};
 
-    hf = load([exp_dir 'tfr\high_freq\' fname '\high_freq']);
+    hf = load([exp_dir 'tfr/high_freq/trial/' fname '/high_freq']);
     freq_data = hf.freq_data;
 
-    approx_eq = @(x,y) abs(x - y) < 0.1;
-    visual_roi = [2012 2013 ... % TODO: make a smarter ROI
-        2022 2023 ...
-        2032 2033 ...
-        2042 4043 ...
-        2112 2113];
-    visual_roi = cellfun(@(n) ['MEG' num2str(n)], ...
-        num2cell(visual_roi), ...
-        'UniformOutput', false);
+    if strcmp(roi_type, 'anatomical')
+        % Anatomical ROI
+        roi = [2012 2013 ... % occipital gradiometers
+            2022 2023 ...
+            2032 2033 ...
+            2042 4043 ...
+            2112 2113];
+        roi = cellfun(@(n) ['MEG' num2str(n)], num2cell(roi), ...
+            'UniformOutput', false);
+        roi = {roi roi}; % Duplicate for 2 frequencies
+    elseif strcmp(roi_type, 'functional')
+        roi = rs_roi(fname, 1);
+%         disp(roi{1})
+%         disp(roi{2})
+%         cfg = [];
+%         cfg.layout = 'neuromag306planar.lay';
+%         
+    end
 
     close all
     % Plot of frequency tagging response from trial onset
     subplot(2,1,1)
     cfg = [];
-    cfg.channel = visual_roi;
-    cfg.layout = 'neuromag306planar.lay';
+    cfg.channel = union(roi{:});
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
     cfg.title = ' ';
@@ -205,8 +220,8 @@ for i_subject = 1:height(subject_info)
     freq_bl = ft_freqbaseline(cfg, freq_data);
 
     clr = [0.9 0 0.9; 0 0.5 1];
-    chan_sel = ismember(freq_bl.label, visual_roi);
     for i_freq = 1:2
+        chan_sel = ismember(freq_bl.label, roi{i_freq});
         freq_inx = approx_eq(freq_bl.freq, ...
             exp_params.tagged_freqs(i_freq));
         x = freq_bl.powspctrm(chan_sel, freq_inx, :);
