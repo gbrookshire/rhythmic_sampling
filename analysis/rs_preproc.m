@@ -4,8 +4,7 @@ function data = rs_preproc(fname, evt)
 % evt: Which event type to segment out (trials|targets|responses)
 
 rs_setup
-art_path = [exp_dir 'artifacts\' fname '\'];
-trialdef_path = [exp_dir 'trialdef\' fname '\' evt '_'];
+art_path = [exp_dir 'artifacts/' fname '/'];
 
 disp('Loading artifact definitions...')
 art = [];
@@ -15,14 +14,21 @@ art.photo = load([art_path 'photodiode']);
 
 data_by_block = cell(size(block_info.all));
 for i_block = block_info.main
+
     % Read in the trial definition
-    fn = sprintf('%s%i.mat', trialdef_path, i_block);
+    fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
     if ~exist(fn, 'file')
         warning('No trialdef for sub %s, block %d', fname, i_block)
         continue
     end
-    cfg = load(fn);
-    cfg = cfg.cfg;
+    trialdef = load(fn);
+
+    % Preprocess the data
+    fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+    cfg = [];
+    cfg.dataset = fn;
+    cfg.event = trialdef.trl.event;
+    cfg.trl = trialdef.trl.(evt);   
 
     % Preprocess the data
     cfg.channel = art.ica.comp.cfg.channel; % Select the good channels
@@ -40,8 +46,8 @@ for i_block = block_info.main
     cfg = [];
     cfg.artfctdef.reject = 'nan';
     cfg.artfctdef.minaccepttim = 0.5;
-    cfg.artfctdef.mag = art.visual.cfg_art.mag{i_block}.artfctdef.visual;
     cfg.artfctdef.grad = art.visual.cfg_art.grad{i_block}.artfctdef.visual;
+    %%%cfg.artfctdef.mag = art.visual.cfg_art.mag{i_block}.artfctdef.visual;
     %%%cfg.artfctdef.photodiode.artifact = art.photo.photo_artfctdef{i_block};
     d = ft_rejectartifact(cfg, d);
     warning('Make sure artifacts are being rejected correctly!')
