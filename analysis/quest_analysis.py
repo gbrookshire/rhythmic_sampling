@@ -1,14 +1,20 @@
 """ Preliminary analysis of the QUEST procedures.
 """
 
+import sys
 import numpy as np
 import cPickle as pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 # plt.style.use('classic')
 
-exp_dir = 'C:/Users/brookshg/Documents/rhythmic_sampling/data/logfiles/'
-n_subj = 8
+if sys.platform == 'win32':
+    base_dir = 'Z:/'
+else:
+    base_dir = '/rds/projects/2017/jenseno-02/'
+
+exp_dir = base_dir + 'gb/rhythmic_sampling_data/logfiles/'
+n_subj = 9
 
 subject_info = pd.read_csv(exp_dir + '../subject_info.csv')
 subj = subject_info['behav'][n_subj-1]
