@@ -379,7 +379,7 @@ save([exp_dir 'artifacts\' fname '\photodiode'], ...
 %% Compute spectra of MEG signals for each trial
 % Note that this doesn't reject visually identified artifacts!
 
-for i_subject = 8:height(subject_info)
+for i_subject = 1:height(subject_info)
 
     fname = subject_info.meg{i_subject};
     art_ica = load([exp_dir 'artifacts\' fname '\ica']); % Artifact defs
@@ -487,14 +487,17 @@ end
 
 %% Compute high-freq TFR time-locked to stimulus onset
 
-
-
+clear variables
 rs_setup
-segment_type = 'trials'; % Or targets
+segment_type = 'trial'; % Or target
 save_dir = [exp_dir 'tfr\high_freq\' segment_type '\'];
-for i_subject = 8
+for i_subject = 1:height(subject_info)
+    
+    if subject_info.exclude(i_subject)
+        continue
+    end
     fname = subject_info.meg{i_subject};
-    d = rs_preproc(fname, 'trials');
+    d = rs_preproc(fname, segment_type);
 
     % Compute TFR to look at power around the tagged frequencies
     cfg = [];
