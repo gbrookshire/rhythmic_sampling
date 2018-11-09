@@ -30,7 +30,6 @@ for n_subj in range(len(subject_info)):
             with open(exp_dir + fname) as f:
                 d = pickle.load(f)
                 x = d.intensities
-                # x = np.delete(x, np.nonzero(np.diff(x) == 0))
                 plt.plot(range(len(x)),
                          x,
                          linestyle=line_type[freq],
@@ -46,7 +45,3 @@ for n_subj in range(len(subject_info)):
 
     plt.savefig(exp_dir + '../plots/quest/' + subj + '.png')
     plt.close()
-
-#########
-# Is this actually working?
-# Why are there 40 obs. per cell when there should be 32?
