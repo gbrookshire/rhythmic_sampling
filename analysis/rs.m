@@ -247,6 +247,7 @@ cfg.channel = 1:15;
 cfg.continuous = 'no';
 cfg.viewmode = 'component'; 
 cfg.layout = chan.mag.layout;
+cfg.compscale = 'local';
 ft_databrowser(cfg, comp);
 
 % Save the list of components to reject
