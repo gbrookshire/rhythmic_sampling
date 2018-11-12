@@ -29,6 +29,7 @@ ft_defaults
 %     Check eye-tracking traces
 %     Check EOG traces
 
+
 %% Define trials -- 2nd version
 rs_setup
 for i_subject = 1:height(subject_info)
@@ -53,6 +54,7 @@ for i_subject = 1:height(subject_info)
     end
 end
 
+
 %% Save grad structures for each subject
 rs_setup
 for i_subject = 1:height(subject_info)
@@ -66,6 +68,40 @@ for i_subject = 1:height(subject_info)
     [~,~,~] = mkdir([exp_dir 'grad\'], fname);
     save([exp_dir 'grad\' fname '\grad'], 'grad')
 end
+
+
+%% Make forward model
+
+%%%% Check the cfg options for all of this!
+
+rs_setup
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    % Read in the MRI scan
+    mri = ft_read_mri(subject_info.T1(i_subject));
+    % Segmentation
+    cfg = [];
+    cfg.write = 'no';
+    segmentedmri = ft_volumesegment(cfg, mri);
+    % Prepare the head model
+    cfg = [];
+    cfg.method = 'singleshell';
+    headmodel = ft_prepare_headmodel(cfg, segmentedmri);
+    % Prepare the lead field
+    cfg = [];
+    cfg.grad = FREQ_DATA.grad; % Fill in with output from ft_freqanalysis
+    cfg.headmodel = headmodel;
+    cfg.reducerank = 2;
+    cfg.channel = FREQ_DATA.label;
+    cfg.grid.resolution = 1; % use a 3-D grid with a 1 cm resolution
+    cfg.grid.unit = 'cm';
+    grid = ft_prepare_leadfield(cfg);
+    % Save the results
+    save([exp_dir 'forward_model\' fname '\fm'], 'headmodel', 'grid')
+end
+
 
 
 %% Identify artifacts
@@ -86,7 +122,7 @@ end
 %       - ICA
 
 clear variables
-i_subject = 12;
+i_subject = 13;
 
 %% Visually identify artifacts
 
