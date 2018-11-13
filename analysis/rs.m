@@ -122,7 +122,7 @@ end
 %       - ICA
 
 clear variables
-i_subject = 13;
+i_subject = 14;
 
 %% Visually identify artifacts
 
@@ -293,7 +293,7 @@ save([exp_dir 'artifacts\' fname '\ica'], 'comp', 'reject_comp')
 
 %% Look for irregularities in the photo-diode
 % Identify them by looking for changes in frequency
-
+rs_setup
 ignore_before = 0.5; % Ignore anomalies before this time in the trial
 ignore_after = 1.5; % Ignore anom after 0.5 s from the end of the trial
 exclude_pre = 0.1; % Exclude this much time before the photodiode jump
@@ -416,6 +416,9 @@ save([exp_dir 'artifacts\' fname '\photodiode'], ...
 %% Compute spectra of MEG signals for each trial
 % Note that this doesn't reject visually identified artifacts!
 
+clear variables
+rs_setup
+
 for i_subject = 1:height(subject_info)
 
     fname = subject_info.meg{i_subject};
@@ -487,6 +490,7 @@ for i_subject = 1:height(subject_info)
     save([exp_dir 'spectra\' fname '\spectra'], 'freq_data')
 end
 
+
 %% Compute the SNR at each channel to get an ROI of power at tagged freqs
 
 rs_setup
@@ -500,27 +504,12 @@ for i_subject = 8:height(subject_info)
 
     snr = cell(size(f_tag));
     for i_freq = 1:length(f_tag)
-        % Get power at the tagged freq
-        cfg = [];
-        cfg.frequency = [-0.5 0.5] + f_tag(i_freq);
-        cfg.avgoverfreq = 'yes';
-        p = ft_selectdata(cfg, spec);
-        % Get power at a lower frequency
-        cfg.frequency = [-1 1] + f_tag(i_freq) - 2;
-        p_l = ft_selectdata(cfg, spec);
-        % Get power at a higher frequency
-        cfg.frequency = [-1 1] + f_tag(i_freq) + 2;
-        p_h = ft_selectdata(cfg, spec);
-        % Calculate the SNR
-        s = p.powspctrm ./ ((p_l.powspctrm + p_h.powspctrm) / 2);
-        % Put SNR into a fieldtrip structure for plotting
-        snr{i_freq} = p;
-        snr{i_freq}.powspctrm = s;
-        clear s p p_h p_l cfg
+        snr{i_freq} = rs_snr(spec, f_tag(i_freq));
     end
 
     save([exp_dir 'spectra\' fname '\snr'], 'snr')
 end
+
 
 %% Compute high-freq TFR time-locked to stimulus onset
 
