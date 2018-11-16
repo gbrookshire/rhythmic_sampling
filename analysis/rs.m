@@ -512,12 +512,22 @@ for i_subject = 8:height(subject_info)
 end
 
 
-%% Compute high-freq TFR around the tagged frequencies
+%% Compute TFRs
 
 clear variables
 rs_setup
+
+%%%% Change these variables to run different analyses
 segment_type = 'trial'; % Or target
-save_dir = [exp_dir 'tfr\high_freq\' segment_type '\'];
+freq_band = 'high_freq'; % Or low_freq
+
+if strcmp(segment_type, 'trial')
+    toi = -0.5:0.05:1.5;
+else
+    toi = -1:0.05:1;
+end
+
+save_dir = [exp_dir 'tfr/' freq_band '/' segment_type '/'];
 parfor i_subject = 1:height(subject_info)
     
     if subject_info.exclude(i_subject)
@@ -526,27 +536,37 @@ parfor i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
     d = rs_preproc(fname, segment_type);
 
-    % Compute TFR to look at power around the tagged frequencies
     cfg = [];
     cfg.method = 'mtmconvol';
     cfg.taper = 'hanning';
-    cfg.tapsmofrq = 2; 
-    cfg.foi = 55:100;
-    cfg.t_ftimwin =  ones(length(cfg.foi), 1).* 0.5;
-    cfg.toi = -0.5:0.05:1.5;
+    cfg.toi = toi;
     cfg.keeptrials = 'no'; 
-    freq_data = ft_freqanalysis(cfg, d);
 
+    if strcmp(freq_band, 'high_freq') % TFR around the tagged frequencies
+        time_window = 0.1;
+        %cfg.tapsmofrq = 2; 
+        cfg.foi = 55:100;
+        cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
+        freq_data = ft_freqanalysis(cfg, d);
+    elseif strcmp(freq_band, 'low_freq') % TFR at low freqs (theta, alpha)
+        n_cycles = 3;
+        cfg.foi = 2:13;
+        cfg.t_ftimwin = (1 ./ f) * n_cycles;
+        cfg.pad = 3;
+        cfg.padtype = 'mirror';
+        freq_data = ft_freqanalysis(cfg, d);
+    end
+    
     [~,~,~] = mkdir(save_dir, fname);
-    %save([save_dir fname '\high_freq'], 'freq_data')
-    parsave([save_dir fname '\high_freq'], freq_data)
+    %save([save_dir fname '/high_freq'], 'freq_data')
+    parsave([save_dir fname '/' freq_band], freq_data)
 end
 
 
-%% Compute power at the tagged frequencies
-% Segment by trial
-% Fill artifacts with NaN
-% Downsample to 250 Hz
+
+
+
+
 
 
 %% Does hit rate depend on theta/alpha phase?
