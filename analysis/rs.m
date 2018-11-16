@@ -514,6 +514,9 @@ end
 
 %% Compute TFRs
 
+% One reason to think about switching to the Hilbert transform for TFRs:
+% the FFT basis functions don't land exactly on the rFT tagging freqs.
+
 clear variables
 rs_setup
 
@@ -524,7 +527,7 @@ freq_band = 'high_freq'; % Or low_freq
 if strcmp(segment_type, 'trial')
     toi = -0.5:0.05:1.5;
 else
-    toi = -1:0.05:1;
+    toi = -0.5:0.05:0.5;
 end
 
 save_dir = [exp_dir 'tfr/' freq_band '/' segment_type '/'];
@@ -536,19 +539,22 @@ parfor i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
     d = rs_preproc(fname, segment_type);
 
+    % Set up the basic cfg options for both freq bands
     cfg = [];
     cfg.method = 'mtmconvol';
     cfg.taper = 'hanning';
     cfg.toi = toi;
-    cfg.keeptrials = 'no'; 
+    cfg.keeptrials = 'yes'; 
 
     if strcmp(freq_band, 'high_freq') % TFR around the tagged frequencies
-        time_window = 0.1;
+        time_window = 0.1; % What freq resolution does this give?
+        cfg.output = 'pow';
         cfg.foi = 55:100;
         cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
         freq_data = ft_freqanalysis(cfg, d);
     elseif strcmp(freq_band, 'low_freq') % TFR at low freqs (theta, alpha)
         n_cycles = 3;
+        cfg.output = 'fourier';
         cfg.foi = 2:13;
         cfg.t_ftimwin = n_cycles / cfg.foi;
         cfg.pad = 3;
@@ -557,8 +563,41 @@ parfor i_subject = 1:height(subject_info)
     end
     
     [~,~,~] = mkdir(save_dir, fname);
-    %save([save_dir fname '/high_freq'], 'freq_data')
     parsave([save_dir fname '/' freq_band], freq_data)
+end
+
+
+%% Compute power at the tagged freqs using BP-filters and Hilbert transform
+
+clear variables
+rs_setup
+
+%%%% Change these variables to run different analyses
+segment_type = 'trial'; % Or target
+
+save_dir = [exp_dir 'tfr/' freq_band '/' segment_type '/'];
+parfor i_subject = 1:height(subject_info)
+    
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    d = rs_preproc(fname, segment_type);
+
+    h = cell(1,2);
+    for i_freq = exp_params.tagged_freqs
+        f = exp_params.tagged_freqs(i_freq);
+        % Get power with bandpass filter and Hilbert transform
+        cfg = [];
+        cfg.bpfilter = 'yes';
+        cfg.bpfreq = f + [-2 2];
+        %cfg.bpfilttype = 'fir'; % Better than 'but' for Hilbert phase est.
+        cfg.hilbert = 'abs';
+        h{i_freq} = ft_preprocessing(d, cfg);
+    end
+    
+    
+    
 end
 
 
@@ -569,32 +608,13 @@ end
 
 
 
-
-
-
-
-
-
-%% Does hit rate depend on power at the tagged freq?
-
-% Same as above, but replace 'theta/alpha phase' with 'power at the tagged
-% frequencies'.
-
-
 %% Does power at the tagged freqs depend on theta/alpha phase?
 
-% Read in trial-onset-aligned data
-% Compute
-%     theta/alpha phase
-%     power at tagged frequencies
-% Reject artifacts by filling with NaNs
-% Look at Phase-amplitude coupling (PAC)
 
 
 %% Relationship of power at the tagged frequencies
 
-% Same as above, but look at cross-corr of power at the two tagged
-% frequencies.
+% Cross-corr of power at the two tagged frequencies.
 % Check whether the strength of that cross-corr is modulated by theta/alpha
 % phase. Any better way to do this than with a median split?
 
