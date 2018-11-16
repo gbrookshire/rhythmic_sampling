@@ -15,6 +15,7 @@ else
     run('~/startup.m')
 end
 addpath('rhythmic_sampling/analysis/')
+addpath('matlab_helpers/')
 rs_setup
 cd(exp_dir)
 
@@ -511,13 +512,13 @@ for i_subject = 8:height(subject_info)
 end
 
 
-%% Compute high-freq TFR time-locked to stimulus onset
+%% Compute high-freq TFR around the tagged frequencies
 
 clear variables
 rs_setup
 segment_type = 'trial'; % Or target
 save_dir = [exp_dir 'tfr\high_freq\' segment_type '\'];
-for i_subject = 1:height(subject_info)
+parfor i_subject = 1:height(subject_info)
     
     if subject_info.exclude(i_subject)
         continue
@@ -528,16 +529,17 @@ for i_subject = 1:height(subject_info)
     % Compute TFR to look at power around the tagged frequencies
     cfg = [];
     cfg.method = 'mtmconvol';
-    cfg.taper = 'hanning'; %'dpss';
+    cfg.taper = 'hanning';
     cfg.tapsmofrq = 2; 
     cfg.foi = 55:100;
-    cfg.t_ftimwin =  ones(length(cfg.foi),1).* 0.5;
+    cfg.t_ftimwin =  ones(length(cfg.foi), 1).* 0.5;
     cfg.toi = -0.5:0.05:1.5;
     cfg.keeptrials = 'no'; 
     freq_data = ft_freqanalysis(cfg, d);
 
     [~,~,~] = mkdir(save_dir, fname);
-    save([save_dir fname '\high_freq'], 'freq_data')
+    %save([save_dir fname '\high_freq'], 'freq_data')
+    parsave([save_dir fname '\high_freq'], freq_data)
 end
 
 
