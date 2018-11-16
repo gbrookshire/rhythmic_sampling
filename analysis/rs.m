@@ -544,14 +544,13 @@ parfor i_subject = 1:height(subject_info)
 
     if strcmp(freq_band, 'high_freq') % TFR around the tagged frequencies
         time_window = 0.1;
-        %cfg.tapsmofrq = 2; 
         cfg.foi = 55:100;
         cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
         freq_data = ft_freqanalysis(cfg, d);
     elseif strcmp(freq_band, 'low_freq') % TFR at low freqs (theta, alpha)
         n_cycles = 3;
         cfg.foi = 2:13;
-        cfg.t_ftimwin = (1 ./ f) * n_cycles;
+        cfg.t_ftimwin = n_cycles / cfg.foi;
         cfg.pad = 3;
         cfg.padtype = 'mirror';
         freq_data = ft_freqanalysis(cfg, d);
@@ -569,51 +568,7 @@ end
 
 
 
-%% Does hit rate depend on theta/alpha phase?
 
-% Read in target-aligned raw data
-% Reject any trials that have artifacts
-% Compute theta/alpha phase
-% Split into hits/misses
-% Compare distribution of theta/alpha phase for hits/misses
-%   Other methods?
-
-% Extract delta/alpha phase
-
-i_subject = 1;
-
-fname = subject_info.meg{i_subject};
-d = rs_preproc(fname, 'targets');
-assert(length(d.trial) == 336); %% Some targets are missing!
-
- % Only look at pre-stim period
-cfg = [];
-cfg.latency = [-1.0 0.2];
-d = ft_selectdata(cfg, d);
-
-% Extract phase using Fourier methods
-cfg = [];
-cfg.method = 'mtmconvol';
-cfg.keeptrials = 'yes';
-cfg.taper = 'hanning';
-cfg.output = 'fourier';
-cfg.toi = -0.5:0.01:0.2; % Assuming trials are the same length
-cfg.foi = 5:8;
-cfg.t_ftimwin = 3 ./ cfg.foi;
-cfg.pad = 4;
-cfg.padtype = 'mirror';
-freq_data = ft_freqanalysis(cfg, d);
-phase_data = angle(freq_data.fourierspctrm); % Get the phase angle
-
-% Extract phase using Hilbert methods
-cfg = [];
-cfg.bpfilter = 'yes';
-cfg.bpfreq = [7 14];
-cfg.bpfilttype = 'fir'; % or 'firls' (slower), but avoid the default 'but'
-                        % (= not well-suited for hilbert phase estimate)
-cfg.hilbert = 'angle'; % this gives you just the phase, you can
-                       % specify 'complex' to get both phase and amplitude
-phase_data = ft_preprocessing(cfg, data);
 
 
 
