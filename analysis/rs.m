@@ -548,17 +548,17 @@ for i_subject = 1:height(subject_info)
     cfg.keeptrials = 'yes'; 
 
     if strcmp(freq_band, 'high_freq') % TFR around the tagged frequencies
-        time_window = 0.1; % What freq resolution does this give?
+        time_window = 0.1; % Smaller window -> more temporal smoothing
         cfg.output = 'pow';
         cfg.foi = 55:100;
         cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
         freq_data = ft_freqanalysis(cfg, d);
     elseif strcmp(freq_band, 'low_freq') % TFR at low freqs (theta, alpha)
         n_cycles = 3;
-        cfg.output = 'fourier';
+        cfg.output = 'fourier'; % Get phase with `angle(...)`
         cfg.foi = 4:13;
         cfg.t_ftimwin = n_cycles ./ cfg.foi;
-        cfg.pad = 7; % Doesn't work for pad < 7
+        cfg.pad = 7; % Doesn't work for pad < 7, but I'm not sure why
         cfg.padtype = 'zero'; % Is this an OK choice for estimating phase?
         freq_data = ft_freqanalysis(cfg, d);
     end
