@@ -19,7 +19,7 @@ addpath('matlab_helpers/')
 rs_setup
 cd(exp_dir)
 
-addpath([base_dir 'fieldtrip-20180805/'])
+addpath([base_dir 'fieldtrip-20181118/'])
 ft_defaults
 
 
@@ -102,7 +102,6 @@ for i_subject = 1:height(subject_info)
     % Save the results
     save([exp_dir 'forward_model\' fname '\fm'], 'headmodel', 'grid')
 end
-
 
 
 %% Identify artifacts
@@ -521,8 +520,10 @@ clear variables
 rs_setup
 
 %%%% Change these variables to run different analyses
-segment_type = 'trial'; % Or target
-freq_band = 'high_freq'; % Or low_freq
+segment_type = 'trial'; % 'trial' or 'target' or 'repsonse'
+freq_band = 'low'; % 'high' or 'low'
+
+freq_band = [freq_band '_freq']; 
 
 if strcmp(segment_type, 'trial')
     toi = -0.5:0.05:1.5;
@@ -572,10 +573,9 @@ end
 clear variables
 rs_setup
 
-%%%% Change these variables to run different analyses
 segment_type = 'trial'; % Or target
 
-save_dir = [exp_dir 'tfr/' freq_band '/' segment_type '/'];
+save_dir = [exp_dir 'tfr/hilbert/high_freq/' segment_type '/'];
 parfor i_subject = 1:height(subject_info)
     
     if subject_info.exclude(i_subject)
@@ -593,11 +593,13 @@ parfor i_subject = 1:height(subject_info)
         cfg.bpfreq = f + [-2 2];
         %cfg.bpfilttype = 'fir'; % Better than 'but' for Hilbert phase est.
         cfg.hilbert = 'abs';
+        cfg.padding = 3;
+        cfg.padtype = 'mirror';
         h{i_freq} = ft_preprocessing(d, cfg);
     end
     
-    
-    
+    [~,~,~] = mkdir(save_dir, fname);
+    parsave([save_dir fname '/high_freq/'], h)
 end
 
 
