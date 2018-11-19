@@ -66,9 +66,13 @@ for i_trial = 1:length(trial_onset_inx)
             resp_t = event(inx + 2).sample;
             offset_t = resp_t;
             % Make sure it falls within the window to be considered a hit
-            if (resp_t - target_t) / hdr.Fs < hit_window
+            if resp_t - onset_t > max_trial_dur % Resp isn't in this trial
+                resp_t = NaN;
+                hit = 0;
+                offset_t = onset_t + max_trial_dur;
+            elseif (resp_t - target_t) / hdr.Fs < hit_window % It's a hit
                 hit = 1;
-            else
+            else % Miss
                 hit = 0;
             end
         else % No response was given
@@ -101,3 +105,29 @@ trl.trial = trl_trial;
 trl.target = trl_target;
 trl.response = trl_response;
 trl.event = event;
+
+
+%% Test the trl objects -- make sure they're the expected length
+%{
+rs_setup
+for i_subject = 1:height(subject_info)
+    disp(['Subject: ' num2str(i_subject)])
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    
+    fname = subject_info.meg{i_subject};
+    trl_dir = [exp_dir 'trialdef\' fname '\'];
+
+    for i_block = block_info.all
+        x = load([trl_dir num2str(i_block)]);
+        trial_length = x.trl.trial(:,2) - x.trl.trial(:,1);
+        too_big = trial_length > 7000;
+        if sum(too_big) > 0
+            disp(['Weird: ' num2str(find(too_big))])
+            keyboard
+        end
+    end
+
+end
+%}
