@@ -38,12 +38,12 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    [~,~,~] = mkdir([exp_dir 'trialdef\'], fname);
-    base_dir = [exp_dir 'trialdef\' fname '\'];
+    [~,~,~] = mkdir([exp_dir 'trialdef/'], fname);
+    trl_dir = [exp_dir 'trialdef/' fname '/'];
 
     for i_block = block_info.all
         % Common setup for segmenting based on different events
-        dataset = [exp_dir 'raw\' fname '\' num2str(i_block) '.fif'];
+        dataset = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
         if ~exist(dataset, 'file')
             warning('No MEG data file: %s\\%d.fif', fname, i_block)
             input('Press ENTER to continue')
@@ -51,7 +51,7 @@ for i_subject = 1:height(subject_info)
         end
         
         trl = rs_trialfun2(dataset);
-        save([base_dir num2str(i_block)], 'trl')
+        save([trl_dir num2str(i_block)], 'trl')
     end
 end
 
@@ -63,11 +63,11 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    dataset = [exp_dir 'raw\' fname '\1.fif'];
+    dataset = [exp_dir 'raw/' fname '/1.fif'];
     hdr = ft_read_header(dataset);
     grad = hdr.grad;
-    [~,~,~] = mkdir([exp_dir 'grad\'], fname);
-    save([exp_dir 'grad\' fname '\grad'], 'grad')
+    [~,~,~] = mkdir([exp_dir 'grad/'], fname);
+    save([exp_dir 'grad/' fname '/grad'], 'grad')
 end
 
 
@@ -519,11 +519,7 @@ end
 clear variables
 rs_setup
 
-%%%% Change these variables to run different analyses
 segment_type = 'trial'; % 'trial' or 'target' or 'repsonse'
-freq_band = 'low'; % 'high' or 'low'
-
-freq_band = [freq_band '_freq']; 
 
 if strcmp(segment_type, 'trial')
     toi = -0.5:0.05:1.5;
@@ -531,7 +527,6 @@ else
     toi = -0.5:0.05:0.5;
 end
 
-save_dir = [exp_dir 'tfr/' freq_band '/' segment_type '/'];
 for i_subject = 1:height(subject_info)
     
     if subject_info.exclude(i_subject)
@@ -540,31 +535,38 @@ for i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
     d = rs_preproc(fname, segment_type);
 
-    % Set up the basic cfg options for both freq bands
-    cfg = [];
-    cfg.method = 'mtmconvol';
-    cfg.taper = 'hanning';
-    cfg.toi = toi;
-    cfg.keeptrials = 'yes'; 
-
-    if strcmp(freq_band, 'high_freq') % TFR around the tagged frequencies
-        time_window = 0.1; % Smaller window -> more temporal smoothing
-        cfg.output = 'pow';
-        cfg.foi = 55:100;
-        cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
-        freq_data = ft_freqanalysis(cfg, d);
-    elseif strcmp(freq_band, 'low_freq') % TFR at low freqs (theta, alpha)
-        n_cycles = 3;
-        cfg.output = 'fourier'; % Get phase with `angle(...)`
-        cfg.foi = 4:13;
-        cfg.t_ftimwin = n_cycles ./ cfg.foi;
-        cfg.pad = 7; % Doesn't work for pad < 7, but I'm not sure why
-        cfg.padtype = 'zero'; % Is this an OK choice for estimating phase?
-        freq_data = ft_freqanalysis(cfg, d);
-    end
-    
+    save_dir = [exp_dir 'tfr/%s/' segment_type '/'];
     [~,~,~] = mkdir(save_dir, fname);
-    parsave([save_dir fname '/' freq_band], freq_data)
+    
+    % Set up the basic cfg options for both freq bands
+    cfg_base = [];
+    cfg_base.method = 'mtmconvol';
+    cfg_base.taper = 'hanning';
+    cfg_base.toi = toi;
+    cfg_base.keeptrials = 'yes'; 
+
+    % TFR around the tagged frequencies
+    time_window = 0.1; % Smaller window -> more temporal smoothing
+    cfg = cfg_base;
+    cfg.output = 'pow';
+    cfg.foi = 55:100;
+    cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
+    high_freq_data = ft_freqanalysis(cfg, d);
+    parsave([sprintf(save_dir, 'high') fname '/x'], high_freq_data)
+    clear cfg high_freq_data
+
+    % TFR at low freqs (theta, alpha)
+    n_cycles = 3;
+    cfg = cfg_base;
+    cfg.output = 'fourier'; % Get phase with `angle(...)`
+    cfg.foi = 4:13;
+    cfg.t_ftimwin = n_cycles ./ cfg.foi;
+    cfg.pad = 7; % Pad trials out to 7 sec
+    cfg.padtype = 'mirror'; % Is this OK for estimating phase?
+    low_freq_data = ft_freqanalysis(cfg, d);
+    parsave([sprintf(save_dir, 'low') fname '/x'], high_freq_data)
+    clear cfg low_freq_data
+    
 end
 
 
