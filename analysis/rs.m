@@ -535,7 +535,7 @@ for i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
     d = rs_preproc(fname, segment_type);
 
-    save_dir = [exp_dir 'tfr/%s/' segment_type '/'];
+    save_dir = [exp_dir 'tfr/' segment_type '/'];
     [~,~,~] = mkdir(save_dir, fname);
     
     % Set up the basic cfg options for both freq bands
@@ -552,7 +552,7 @@ for i_subject = 1:height(subject_info)
     cfg.foi = 55:100;
     cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
     high_freq_data = ft_freqanalysis(cfg, d);
-    parsave([sprintf(save_dir, 'high') fname '/x'], high_freq_data)
+    parsave([save_dir '/' fname '/high'], high_freq_data)
     clear cfg high_freq_data
 
     % TFR at low freqs (theta, alpha)
@@ -564,7 +564,7 @@ for i_subject = 1:height(subject_info)
     cfg.pad = 7; % Pad trials out to 7 sec
     cfg.padtype = 'mirror'; % Is this OK for estimating phase?
     low_freq_data = ft_freqanalysis(cfg, d);
-    parsave([sprintf(save_dir, 'low') fname '/x'], high_freq_data)
+    parsave([save_dir '/' fname '/low'], high_freq_data)
     clear cfg low_freq_data
     
 end
