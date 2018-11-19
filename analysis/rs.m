@@ -564,7 +564,7 @@ for i_subject = 1:height(subject_info)
     cfg.pad = 7; % Pad trials out to 7 sec
     cfg.padtype = 'mirror'; % Is this OK for estimating phase?
     low_freq_data = ft_freqanalysis(cfg, d);
-    parsave([save_dir '/' fname '/low'], high_freq_data)
+    parsave([save_dir '/' fname '/low'], low_freq_data)
     clear cfg low_freq_data
     
 end
