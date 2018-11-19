@@ -532,7 +532,7 @@ else
 end
 
 save_dir = [exp_dir 'tfr/' freq_band '/' segment_type '/'];
-parfor i_subject = 1:height(subject_info)
+for i_subject = 1:height(subject_info)
     
     if subject_info.exclude(i_subject)
         continue
@@ -556,10 +556,10 @@ parfor i_subject = 1:height(subject_info)
     elseif strcmp(freq_band, 'low_freq') % TFR at low freqs (theta, alpha)
         n_cycles = 3;
         cfg.output = 'fourier';
-        cfg.foi = 2:13;
+        cfg.foi = 4:13;
         cfg.t_ftimwin = n_cycles ./ cfg.foi;
-        cfg.pad = 3;
-        cfg.padtype = 'mirror';
+        cfg.pad = 7; % Doesn't work for pad < 7
+        cfg.padtype = 'zero'; % Is this an OK choice for estimating phase?
         freq_data = ft_freqanalysis(cfg, d);
     end
     
