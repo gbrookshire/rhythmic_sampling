@@ -79,7 +79,7 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-    behav = readtable(fn);
+    behav = rs_behavior(fn);
 
     trials_per_block = size(behav,1) / 5;
     block_num = repelem((1:10)', trials_per_block / 2, 1);
@@ -87,15 +87,16 @@ for i_subject = 1:height(subject_info)
 
     % Only look at the the 'real' trials
     behav = behav(behav.target_t > 1.0, :);
-
+    
     % Get the numbers of hits and FAs for each block
     hits = accumarray(behav.block_num, ...
-        strcmp(behav.hit, 'True'), ...
+        behav.hit, ...
         [], @mean);
     fas = accumarray(behav.block_num, ...
-        strcmp(behav.false_alarm, 'True'), ...
+        behav.false_alarm, ...
         [], @mean);
 
+    
     cols = [0 0.6 0; 0.6 0 0.6];
 
     %Plot the results
@@ -136,7 +137,7 @@ for i_subject = 1:height(subject_info)
             mask = mask & strcmp(behav.target_side, sides{i_side});
             mask = mask & ...
                 behav.target_side_freq == exp_params.tagged_freqs(i_freq);
-            x = mean(strcmp(behav.hit(mask), 'True'));
+            x = mean(behav.hit(mask));
             means(i_side, i_freq) = x;
         end
     end
@@ -163,7 +164,7 @@ end
 clear variables
 rs_setup
 
-roi_type = 'functional'; % 'anatomical' or 'functional'
+roi_type = 'anatomical'; % 'anatomical' or 'functional'
 
 approx_eq = @(x,y) abs(x - y) < 0.1;
 
@@ -174,7 +175,7 @@ for i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
 
     hf = load([exp_dir 'tfr/high_freq/trial/' fname '/high_freq']);
-    freq_data = hf.freq_data;
+    freq_data = hf.x;
 
     if strcmp(roi_type, 'anatomical')
         % Anatomical ROI
@@ -239,8 +240,15 @@ for i_subject = 1:height(subject_info)
     hold off
 
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/stim_onset/' strrep(fname,'\','_')])
+        [exp_dir 'plots/stim_onset/' strrep(fname,'/','_')])
 end
+
+
+%% Instead of plotting power at tagged freq, plot instantaneous SNR at the
+%  tagged frequency.
+
+
+
 
 
 
