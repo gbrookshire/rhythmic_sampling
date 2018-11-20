@@ -32,6 +32,7 @@ ft_defaults
 
 
 %% Define trials -- 2nd version
+clear variables
 rs_setup
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
@@ -50,7 +51,7 @@ for i_subject = 1:height(subject_info)
             continue
         end
         
-        trl = rs_trialfun2(dataset);
+        trl = rs_trialfun(dataset);
         save([trl_dir num2str(i_block)], 'trl')
     end
 end
@@ -122,7 +123,7 @@ end
 %       - ICA
 
 clear variables
-i_subject = 14;
+i_subject = 15;
 
 %% Visually identify artifacts
 
