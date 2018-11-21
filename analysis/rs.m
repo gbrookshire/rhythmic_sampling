@@ -101,7 +101,7 @@ for i_subject = 1:height(subject_info)
     cfg.grid.unit = 'cm';
     grid = ft_prepare_leadfield(cfg);
     % Save the results
-    save([exp_dir 'forward_model\' fname '\fm'], 'headmodel', 'grid')
+    save([exp_dir 'forward_model/' fname '/fm'], 'headmodel', 'grid')
 end
 
 
@@ -192,14 +192,14 @@ for chan_type = {'grad'} % Separately examine grads and mags
     end
 end
 
-[~,~,~] = mkdir([exp_dir 'artifacts\'], fname);
-save([exp_dir 'artifacts\' fname '\visual'], 'bad_chans', 'cfg_art')
+[~,~,~] = mkdir([exp_dir 'artifacts/'], fname);
+save([exp_dir 'artifacts/' fname '/visual'], 'bad_chans', 'cfg_art')
 
 
 %% Use ICA to identify eye and cardiac artifacts
 
 fname = subject_info.meg{i_subject};
-a = load([exp_dir 'artifacts\' fname '\visual']);
+a = load([exp_dir 'artifacts/' fname '/visual']);
 
 % Only keep MEG channels and reject bad channels
 if isfield(a.bad_chans, 'mag')
@@ -289,7 +289,7 @@ ft_databrowser(cfg, comp);
 
 % Save the list of components to reject
 reject_comp = input('Components to reject: ');
-save([exp_dir 'artifacts\' fname '\ica'], 'comp', 'reject_comp')
+save([exp_dir 'artifacts/' fname '/ica'], 'comp', 'reject_comp')
 
 
 %% Look for irregularities in the photo-diode
@@ -410,7 +410,7 @@ for i_block = block_info.all
     
 end
 
-save([exp_dir 'artifacts\' fname '\photodiode'], ...
+save([exp_dir 'artifacts/' fname '/photodiode'], ...
     'anomalies', 'photo_artfctdef')
 
 
@@ -423,7 +423,7 @@ rs_setup
 for i_subject = 1:height(subject_info)
 
     fname = subject_info.meg{i_subject};
-    art_ica = load([exp_dir 'artifacts\' fname '\ica']); % Artifact defs
+    art_ica = load([exp_dir 'artifacts/' fname '/ica']); % Artifact defs
 
     data_by_block = cell(size(block_info.all));
     for i_block = block_info.main
@@ -487,8 +487,8 @@ for i_subject = 1:height(subject_info)
     freq_data = ft_freqanalysis(cfg, data);
     warning('TODO: Make sure this correctly pads trials to 4.096 s')
 
-    [~,~,~] = mkdir([exp_dir 'spectra\'], fname);
-    save([exp_dir 'spectra\' fname '\spectra'], 'freq_data')
+    [~,~,~] = mkdir([exp_dir 'spectra/'], fname);
+    save([exp_dir 'spectra/' fname '/spectra'], 'freq_data')
 end
 
 
@@ -498,7 +498,7 @@ rs_setup
 for i_subject = 8:height(subject_info)
 
     fname = subject_info.meg{i_subject};
-    spec = load([exp_dir 'spectra\' fname '\spectra']);
+    spec = load([exp_dir 'spectra/' fname '/spectra']);
     spec = spec.freq_data;
 
     f_tag = exp_params.tagged_freqs; % Tagged frequencies
@@ -508,7 +508,7 @@ for i_subject = 8:height(subject_info)
         snr{i_freq} = rs_snr(spec, f_tag(i_freq));
     end
 
-    save([exp_dir 'spectra\' fname '\snr'], 'snr')
+    save([exp_dir 'spectra/' fname '/snr'], 'snr')
 end
 
 
