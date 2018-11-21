@@ -34,7 +34,7 @@ ft_defaults
 %% Define trials -- 2nd version
 clear variables
 rs_setup
-for i_subject = 1:height(subject_info)
+for i_subject = 10:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
@@ -43,7 +43,6 @@ for i_subject = 1:height(subject_info)
     trl_dir = [exp_dir 'trialdef/' fname '/'];
 
     for i_block = block_info.all
-        % Common setup for segmenting based on different events
         dataset = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
         if ~exist(dataset, 'file')
             warning('No MEG data file: %s\\%d.fif', fname, i_block)
@@ -51,8 +50,20 @@ for i_subject = 1:height(subject_info)
             continue
         end
         
-        trl = rs_trialfun(dataset);
-        save([trl_dir num2str(i_block)], 'trl')
+        try
+            trl = rs_trialfun(dataset);
+            save([trl_dir num2str(i_block)], 'trl')
+        catch ME
+            if strcmp(ME.identifier, 'rs_trialfun:noTarget')
+                if ismember(i_block, block_info.main)
+                    error('Target wasn''t found in main block.')
+                else
+                    warning('Target wasn''t found in QUEST block.')
+                end
+            else
+                rethrow(ME)
+            end
+        end
     end
 end
 

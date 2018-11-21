@@ -4,7 +4,7 @@ rs_setup
 
 %% for testing
 %{
-i_subject = 5;
+i_subject = 10;
 i_block = 5;
 fname = subject_info.meg{i_subject};
 dataset = [exp_dir 'raw\' fname '\' num2str(i_block) '.fif'];
@@ -83,14 +83,17 @@ for i_trial = 1:length(trial_onset_inx)
         end
         
     else % No target or response in this trial (Shouldn't happen)
-        error('Expected a target or a response -- got %s', ...
-            event(inx + 1).type)
+        msg = [];
+        msg.message = sprintf(...
+            'Expected a target or a response -- got %s', ...
+            event(inx + 1).type);
+        msg.identifier = 'rs_trialfun:noTarget';
+        error(msg);
+ 
         target_t = NaN;
         resp_t = NaN;
         hit = NaN;
         end_t = begin_t + 1; % Trial end sample
-
-    
     end
 
     % Make the lines for the trl arrays
