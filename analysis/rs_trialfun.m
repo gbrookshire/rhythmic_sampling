@@ -4,10 +4,10 @@ rs_setup
 
 %% for testing
 %{
-i_subject = 10;
-i_block = 5;
+i_subject = 12;
+i_block = 3;
 fname = subject_info.meg{i_subject};
-dataset = [exp_dir 'raw\' fname '\' num2str(i_block) '.fif'];
+dataset = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
 %}
 
 % read the header information and the events from the data
@@ -83,17 +83,15 @@ for i_trial = 1:length(trial_onset_inx)
         end
         
     else % No target or response in this trial (Shouldn't happen)
-        msg = [];
-        msg.message = sprintf(...
-            'Expected a target or a response -- got %s', ...
-            event(inx + 1).type);
-        msg.identifier = 'rs_trialfun:noTarget';
-        error(msg);
+        msg = sprintf(...
+            'Missing target or response trigger in file %s', ...
+            dataset);
+        warning(msg);
  
         target_t = NaN;
         resp_t = NaN;
         hit = NaN;
-        end_t = begin_t + 1; % Trial end sample
+        end_t = begin_t + 1; % Make the trial 1 sample long
     end
 
     % Make the lines for the trl arrays

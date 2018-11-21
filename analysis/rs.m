@@ -34,7 +34,7 @@ ft_defaults
 %% Define trials -- 2nd version
 clear variables
 rs_setup
-for i_subject = 10:height(subject_info)
+for i_subject = 12:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
@@ -50,21 +50,9 @@ for i_subject = 10:height(subject_info)
             continue
         end
         
-        try
-            trl = rs_trialfun(dataset);
-            save([trl_dir num2str(i_block)], 'trl')
-        catch ME
-            if strcmp(ME.identifier, 'rs_trialfun:noTarget')
-                if ismember(i_block, block_info.main)
-                    error('Target wasn''t found in main block.')
-                else
-                    warning('Target wasn''t found in QUEST block.')
-                end
-            else
-                rethrow(ME)
-            end
-        end
-    end
+        trl = rs_trialfun(dataset);
+        save([trl_dir num2str(i_block)], 'trl')
+     end
 end
 
 
