@@ -4,7 +4,7 @@ rs_setup
 
 %% for testing
 %{
-i_subject = 12;
+i_subject = 16;
 i_block = 3;
 fname = subject_info.meg{i_subject};
 dataset = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
@@ -72,8 +72,6 @@ for i_trial = 1:length(trial_onset_inx)
                 hit = 1;
             else % It's a miss
                 hit = 0;
-                resp_t = NaN;
-                end_t = begin_t + max_trial_dur;
             end
             
         else % No response was given
