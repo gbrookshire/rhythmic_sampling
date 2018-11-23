@@ -1,5 +1,10 @@
 rs_base_path
+
+addpath([base_dir 'fieldtrip-20181118/'])
+ft_defaults
+
 exp_dir = [base_dir 'rhythmic_sampling_data/'];
+cd(exp_dir);
 
 % Genearal experiment parameters
 exp_params = [];

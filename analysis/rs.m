@@ -7,20 +7,7 @@
 
 clear variables
 close all
-
-if strcmp(computer, 'PCWIN64')
-    cd('Z:/gb/')
-else
-    cd('/rds/projects/2017/jenseno-02/gb/')
-    run('~/startup.m')
-end
-addpath('rhythmic_sampling/analysis/')
-addpath('matlab_helpers/')
 rs_setup
-cd(exp_dir)
-
-addpath([base_dir 'fieldtrip-20181118/'])
-ft_defaults
 
 
 %% TODO
@@ -34,7 +21,7 @@ ft_defaults
 %% Define trials -- 2nd version
 clear variables
 rs_setup
-for i_subject = 12:height(subject_info)
+for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
@@ -122,7 +109,7 @@ end
 %       - ICA
 
 clear variables
-i_subject = 15;
+i_subject = 16;
 
 %% Visually identify artifacts
 
@@ -414,7 +401,8 @@ save([exp_dir 'artifacts/' fname '/photodiode'], ...
 
 
 %% Compute spectra of MEG signals for each trial
-% Note that this doesn't reject visually identified artifacts!
+% Note that this doesn't reject visually identified artifacts because that
+% eliminates whole trials
 
 clear variables
 rs_setup
