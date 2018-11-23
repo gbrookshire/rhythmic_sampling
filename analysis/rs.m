@@ -47,61 +47,8 @@ rs_apply_over_subjects(@rs_spectra_snr, false)
 
 %% Compute TFRs
 
-% One reason to think about switching to the Hilbert transform for TFRs:
-% the FFT basis functions don't land exactly on the rFT tagging freqs.
-
-clear variables
-rs_setup
-
-segment_type = 'trial'; % 'trial' or 'target' or 'repsonse'
-
-if strcmp(segment_type, 'trial')
-    toi = -0.5:0.05:1.5;
-else
-    toi = -0.5:0.05:0.5;
-end
-
-for i_subject = 1:height(subject_info)
-    
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fname = subject_info.meg{i_subject};
-    d = rs_preproc(fname, segment_type);
-
-    save_dir = [exp_dir 'tfr/' segment_type '/'];
-    [~,~,~] = mkdir(save_dir, fname);
-    
-    % Set up the basic cfg options for both freq bands
-    cfg_base = [];
-    cfg_base.method = 'mtmconvol';
-    cfg_base.taper = 'hanning';
-    cfg_base.toi = toi;
-    cfg_base.keeptrials = 'yes'; 
-
-    % TFR around the tagged frequencies
-    time_window = 0.1; % Smaller window -> more temporal smoothing
-    cfg = cfg_base;
-    cfg.output = 'pow';
-    cfg.foi = 55:100;
-    cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
-    high_freq_data = ft_freqanalysis(cfg, d);
-    parsave([save_dir '/' fname '/high'], high_freq_data)
-    clear cfg high_freq_data
-
-    % TFR at low freqs (theta, alpha)
-    n_cycles = 3;
-    cfg = cfg_base;
-    cfg.output = 'fourier'; % Get phase with `angle(...)`
-    cfg.foi = 4:13;
-    cfg.t_ftimwin = n_cycles ./ cfg.foi;
-    cfg.pad = 7; % Pad trials out to 7 sec
-    cfg.padtype = 'mirror'; % Is this OK for estimating phase?
-    low_freq_data = ft_freqanalysis(cfg, d);
-    parsave([save_dir '/' fname '/low'], low_freq_data)
-    clear cfg low_freq_data
-    
-end
+tfr_fun = @(i_subj) rs_tfr(i_subj, 'trial');
+rs_apply_over_subjects(tfr_fun, true);
 
 
 %% Compute power at the tagged freqs using BP-filters and Hilbert transform
