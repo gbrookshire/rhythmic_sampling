@@ -41,22 +41,8 @@ rs_apply_over_subjects(@rs_spectra, true)
 
 %% Compute the SNR at each channel to get an ROI of power at tagged freqs
 
-rs_setup
-for i_subject = 8:height(subject_info)
+rs_apply_over_subjects(@rs_spectra_snr, false)
 
-    fname = subject_info.meg{i_subject};
-    spec = load([exp_dir 'spectra/' fname '/spectra']);
-    spec = spec.freq_data;
-
-    f_tag = exp_params.tagged_freqs; % Tagged frequencies
-
-    snr = cell(size(f_tag));
-    for i_freq = 1:length(f_tag)
-        snr{i_freq} = rs_snr(spec, f_tag(i_freq));
-    end
-
-    save([exp_dir 'spectra/' fname '/snr'], 'snr')
-end
 
 
 %% Compute TFRs
