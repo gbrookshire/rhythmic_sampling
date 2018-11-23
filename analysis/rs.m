@@ -18,30 +18,9 @@ rs_setup
 %     Check EOG traces
 
 
-%% Define trials -- 2nd version
-clear variables
-rs_setup
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fname = subject_info.meg{i_subject};
-    [~,~,~] = mkdir([exp_dir 'trialdef/'], fname);
-    trl_dir = [exp_dir 'trialdef/' fname '/'];
+%% Define the trials
 
-    for i_block = block_info.all
-        dataset = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
-        if ~exist(dataset, 'file')
-            warning('No MEG data file: %s\\%d.fif', fname, i_block)
-            input('Press ENTER to continue')
-            continue
-        end
-        
-        trl = rs_trialfun(dataset);
-        save([trl_dir num2str(i_block)], 'trl')
-     end
-end
-
+rs_apply_over_subjects(@rs_definetrials, false)
 
 %% Save grad structures for each subject
 rs_setup
