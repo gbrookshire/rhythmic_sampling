@@ -56,13 +56,7 @@ for i_trial = 1:length(data.trial)
 end
 
 % Only look at trials that are long enough to have useful data
-try
-    trial_len = cellfun(@(x) size(x, 2), data.time) / 250;
-catch err
-    keyboard
-    disp(['subject ' num2str(i_subject)])
-    rethrow(err)
-end
+trial_len = cellfun(@(x) size(x, 2), data.time) / 250;
 cfg = [];
 cfg.trials = trial_len > 1.5;
 data = ft_selectdata(cfg, data);
