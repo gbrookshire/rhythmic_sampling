@@ -75,6 +75,7 @@ for i_trial = 1:length(trial_onset_inx)
                 hit = 0;
                 if rt > exp_params.max_trial_dur %Resp wasn't in this trial
                     resp_t = NaN;
+                    end_t = begin_t + 1000;
                 end
             end
             
