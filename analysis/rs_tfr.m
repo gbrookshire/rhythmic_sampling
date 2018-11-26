@@ -9,7 +9,7 @@ function rs_tfr(i_subject, segment_type)
 rs_setup
 
 if strcmp(segment_type, 'trial')
-    toi = -0.5:0.05:1.5;
+    toi = -0.5:0.05:1.5; %%%% Would this work for -0.5:0.05:6?
 else
     toi = -0.5:0.05:0.5;
 end
@@ -34,7 +34,7 @@ cfg.output = 'pow';
 cfg.foi = 55:100;
 cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
 high_freq_data = ft_freqanalysis(cfg, d);
-save([save_dir '/' fname '/high'], high_freq_data)
+save([save_dir '/' fname '/high'], 'high_freq_data')
 clear cfg high_freq_data
 
 % TFR at low freqs (theta, alpha)
@@ -46,5 +46,5 @@ cfg.t_ftimwin = n_cycles ./ cfg.foi;
 cfg.pad = 7; % Pad trials out to 7 sec
 cfg.padtype = 'mirror'; % Is this OK for estimating phase?
 low_freq_data = ft_freqanalysis(cfg, d);
-save([save_dir '/' fname '/low'], low_freq_data)
+save([save_dir '/' fname '/low'], 'low_freq_data')
    
