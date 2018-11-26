@@ -67,7 +67,7 @@ for i_subject = 1:height(subject_info)
     xlabel('Frequency (Hz)')
     ylabel('Power (dB)')
 
-    print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'\','_')])
+    print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'/','_')])
 end
 
 
@@ -154,7 +154,7 @@ for i_subject = 1:height(subject_info)
     text(2, 0.8, '78 Hz', 'color', b(2).FaceColor)
 
     fname = subject_info.behav{i_subject};
-    print('-dpng', [exp_dir 'plots/behav/' strrep(fname,'\','_')])
+    print('-dpng', [exp_dir 'plots/behav/' strrep(fname,'/','_')])
 
 end
 
@@ -173,9 +173,9 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-
-    hf = load([exp_dir 'tfr/high_freq/trial/' fname '/high_freq']);
-    freq_data = hf.x;
+    hf = load([exp_dir 'tfr/trial/' fname '/high']);
+    freq_data = hf.high_freq_data;
+    clear hf;
 
     if strcmp(roi_type, 'anatomical')
         % Anatomical ROI
@@ -195,11 +195,20 @@ for i_subject = 1:height(subject_info)
 %         cfg.layout = 'neuromag306planar.lay';
 %         
     end
-
+    
+    % Exclude the trials that are all NaNs
+    % (How did that happen? Check those trials)
+    nan_trial = all(all(all(isnan(freq_data.powspctrm), 2), 3), 4);
+    cfg = [];
+    cfg.trials = find(~nan_trial);
+    cfg.avgoverrpt = 'yes';
+    freq_data = ft_selectdata(cfg, freq_data);
+    
     close all
     % Plot of frequency tagging response from trial onset
     subplot(2,1,1)
     cfg = [];
+%     cfg.trials = ~nan_trial;
     cfg.channel = union(roi{:});
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
@@ -218,16 +227,16 @@ for i_subject = 1:height(subject_info)
     cfg = [];
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
-    freq_bl = ft_freqbaseline(cfg, freq_data);
+    freq_data = ft_freqbaseline(cfg, freq_data);
 
     clr = [0.9 0 0.9; 0 0.5 1];
     for i_freq = 1:2
-        chan_sel = ismember(freq_bl.label, roi{i_freq});
-        freq_inx = approx_eq(freq_bl.freq, ...
+        chan_sel = ismember(freq_data.label, roi{i_freq});
+        freq_inx = approx_eq(freq_data.freq, ...
             exp_params.tagged_freqs(i_freq));
-        x = freq_bl.powspctrm(chan_sel, freq_inx, :);
+        x = freq_data.powspctrm(chan_sel, freq_inx, :);
         x = squeeze(nanmean(x, 1)); % Average over channels
-        plot(freq_bl.time, x, 'LineWidth', 2, 'color', clr(i_freq,:));
+        plot(freq_data.time, x, 'LineWidth', 2, 'color', clr(i_freq,:));
         ypos = max(x);
         text(-0.4, ypos, ...
             [num2str(exp_params.tagged_freqs(i_freq)) ' Hz'], ...
