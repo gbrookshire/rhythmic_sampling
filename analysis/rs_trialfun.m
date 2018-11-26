@@ -68,10 +68,14 @@ for i_trial = 1:length(trial_onset_inx)
             end_t = resp_t;
         
             % Make sure it falls within the window to be considered a hit
-            if ((resp_t - target_t) / hdr.Fs) < hit_window % It's a hit
+            rt = (resp_t - target_t) / hdr.Fs;
+            if rt < hit_window % It's a hit
                 hit = 1;
             else % It's a miss
                 hit = 0;
+                if rt > exp_params.max_trial_dur %Resp wasn't in this trial
+                    resp_t = NaN;
+                end
             end
             
         else % No response was given
