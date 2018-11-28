@@ -161,6 +161,9 @@ end
 
 %% Plot power at the tagged freqs time-locked to stimulus onset
 
+% Instead of plotting power at tagged freq, plot instantaneous SNR at the
+%  tagged frequency? Not at first.
+
 clear variables
 rs_setup
 
@@ -173,7 +176,11 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    hf = load([exp_dir 'tfr/trial/' fname '/high']);
+    disp(fname)
+    hf_fname = [exp_dir 'tfr/trial/' fname '/high.mat'];
+    finfo = dir(hf_fname);
+    disp(finfo.date)
+    hf = load(hf_fname);
     freq_data = hf.high_freq_data;
     clear hf;
 
@@ -188,12 +195,7 @@ for i_subject = 1:height(subject_info)
             'UniformOutput', false);
         roi = {roi roi}; % Duplicate for 2 frequencies
     elseif strcmp(roi_type, 'functional')
-        roi = rs_roi(fname, 1);
-%         disp(roi{1})
-%         disp(roi{2})
-%         cfg = [];
-%         cfg.layout = 'neuromag306planar.lay';
-%         
+        roi = rs_roi(fname, 1);     
     end
     
     % Exclude the trials that are all NaNs
@@ -253,13 +255,7 @@ for i_subject = 1:height(subject_info)
 end
 
 
-%% Instead of plotting power at tagged freq, plot instantaneous SNR at the
-%  tagged frequency.
-
-
-
-
-
+%% 
 
 
 
@@ -329,35 +325,7 @@ end
 %%%%%% Beyond this point are scripts from the old expt.
 
 
-%% Power at the tagged freq for hits/misses
 
-clear variables
-close all
-rs_setup
-
-i_subject = 1;
-fname = subject_info.meg{i_subject};
-d = load([exp_dir 'tfr\high_freq\' fname '\high_freq']);
-froi = load([exp_dir 'froi\' fname '\froi']);
-trialdef_fname = [exp_dir 'trialdef\' fname '\targets_'];
-
-behav_fname = [exp_dir 'behav\' subject_info.behav{i_subject} '_main.csv'];
-[behav_trials, behav_targets] = rs_behavior(behav_fname);
-
-% Re-segment around targets
-power = cell([1 size(d.power, 1)]); % One for each frequency
-for i_freq = 1:length(d.tagged_freqs)
-    pow = cell([1, size(d.power, 2)]);
-    for i_block = 1:size(d.power, 2)
-        trdef = load([trialdef_fname num2str(i_block)]);
-        cfg = [];
-        cfg.trl = trdef.cfg.trl;
-        pow{i_block} = ft_redefinetrial(cfg, d.power{i_freq,i_block});
-    end
-    % Combine the files
-    power{i_freq} = ft_appenddata([], pow{:});
-    power{i_freq} = rmfield(power{i_freq}, 'sampleinfo');
-end
 
 %% Split trials into hits/misses with the target at each freq
 data_by_cond = cell(2,2); % Freq x (Hit/Miss)
