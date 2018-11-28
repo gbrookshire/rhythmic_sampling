@@ -53,7 +53,7 @@ for i_trial = 1:length(trial_onset_inx)
         % Exclude these trials by setting to NaNs in the target trl
         target_t = NaN;
         resp_t = event(inx + 1).sample;
-        hit = NaN;
+        hit = -1;
         end_t = event(inx + 1).sample; % Trial end sample
     
     % The next trigger is a target
@@ -71,15 +71,15 @@ for i_trial = 1:length(trial_onset_inx)
             rt = (resp_t - target_t) / hdr.Fs;
             if rt < hit_window % It's a hit
                 hit = 1;
-            else % It's a miss
-                hit = 0;
+            else % There was a response, but it was too slow
+                hit = 2;
                 if rt > exp_params.max_trial_dur %Resp wasn't in this trial
                     resp_t = NaN;
                     end_t = begin_t + 1000;
                 end
             end
             
-        else % No response was given
+        else % No response was given -- miss
             hit = 0;
             resp_t = NaN;
             end_t = begin_t + max_trial_dur;
