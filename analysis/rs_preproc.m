@@ -22,13 +22,21 @@ for i_block = block_info.main
         continue
     end
     trialdef = load(fn);
+    
+    % When segmenting by targets, exclude trials in which there was no targ
+    if strcmp(evt, 'target')
+        trl = trialdef.trl.target;
+        trl = trl(~isnan(trialdef.trl.trial(:,4)),:);
+    else
+        trl = trialdef.trl.(evt);
+    end
 
     % Preprocess the data
     fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
     cfg = [];
     cfg.dataset = fn;
     cfg.event = trialdef.trl.event;
-    cfg.trl = trialdef.trl.(evt);   
+    cfg.trl = trl;   
 
     % Preprocess the data
     cfg.channel = art.ica.comp.cfg.channel; % Select the good channels
