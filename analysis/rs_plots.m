@@ -210,7 +210,6 @@ for i_subject = 1:height(subject_info)
     % Plot of frequency tagging response from trial onset
     subplot(2,1,1)
     cfg = [];
-%     cfg.trials = ~nan_trial;
     cfg.channel = union(roi{:});
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
@@ -251,12 +250,149 @@ for i_subject = 1:height(subject_info)
     hold off
 
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/stim_onset/' strrep(fname,'/','_')])
+        [exp_dir 'plots/stim_onset/' strrep(fname, '/', '_')])
 end
 
 
-%% 
+%% Plot difference between hits and misses
 
+
+clear variables
+rs_setup
+
+roi_type = 'anatomical'; % 'anatomical' or 'functional'
+
+approx_eq = @(x,y) abs(x - y) < 0.1;
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    disp(fname)
+    hf_fname = [exp_dir 'tfr/target/' fname '/high.mat'];
+    hf = load(hf_fname);
+    freq_data = hf.high_freq_data;
+    clear hf;
+
+    if strcmp(roi_type, 'anatomical')
+        % Anatomical ROI
+        roi = [2012 2013 ... % occipital gradiometers
+            2022 2023 ...
+            2032 2033 ...
+            2042 4043 ...
+            2112 2113];
+        roi = cellfun(@(n) ['MEG' num2str(n)], num2cell(roi), ...
+            'UniformOutput', false);
+        roi = {roi roi}; % Duplicate for 2 frequencies
+    elseif strcmp(roi_type, 'functional')
+        roi = rs_roi(fname, 1);     
+    end
+    
+    % Load the behavioral data
+    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
+    behav = rs_behavior(fn);
+    behav = behav(225:end, :); % main blocks of trials
+    assert(all(behav.hit == freq_data.trialinfo))
+    continue
+
+    % Load the trialdefs to get hits/misses
+    hit = [];
+    missing = [];
+    for i_rec = block_info.main
+        fn = [exp_dir 'trialdef/' fname '/' num2str(i_rec) '.mat'];
+        trialdef = load(fn);
+        missing = [missing isnan(trialdef.trl.target(:,1))']; % Trials w/o a target
+        hit = [hit trialdef.trl.trial(:, 4)'];
+    end
+    hit = hit(~missing);
+    
+    % Select hits/misses for each target frequency
+    % Along the way, exclude the trials that are all NaNs
+    % (How did that happen? Check those trials)
+    nan_trial = all(all(all(isnan(freq_data.powspctrm), 2), 3), 4)';
+    
+    % Plot the overall TFR
+    clr = [0.9 0 0.9; 0 0.5 1];
+    close all
+    for i_freq = 1:2
+        targ_freq = exp_params.tagged_freqs(i_freq);
+        freq_inx = (behav.target_side_freq(~missing) == targ_freq)';
+        cfg = [];
+        cfg.avgoverrpt = 'yes';
+        % Hits
+        cfg.trials = hit & ~nan_trial & freq_inx;
+        hit_data = ft_selectdata(cfg, freq_data);
+        % Misses
+        cfg.trials = ~hit & ~nan_trial & freq_inx;
+        miss_data = ft_selectdata(cfg, freq_data);
+        % Diff
+        diff_data = hit_data;
+        diff_data.powspctrm = hit_data.powspctrm - miss_data.powspctrm;
+    
+        % Plot of frequency tagging response from trial onset
+        cfg = [];
+        cfg.channel = union(roi{:});
+        cfg.title = ' ';
+        cfg.colorbar = 'no';
+
+        figure(1) % Overall TFR
+        subplot(2, 3, 1 + (3 * (i_freq - 1)))
+        ft_singleplotTFR(cfg, hit_data);
+        subplot(2, 3, 2 + (3 * (i_freq - 1)))
+        ft_singleplotTFR(cfg, miss_data);
+        subplot(2, 3, 3 + (3 * (i_freq - 1)))
+        ft_singleplotTFR(cfg, diff_data);
+        
+        figure(2) % Time-course of power at tagged frequencies
+        hold on
+        cfg = [];
+        cfg.frequency = [-0.5 0.5] + targ_freq;
+        cfg.avgoverfreq = 'yes';
+        cfg.channel = union(roi{:});
+        cfg.avgoverchan = 'yes';
+        cfg.nanmean = 'yes';
+        hit_data = ft_selectdata(cfg, hit_data);
+        miss_data = ft_selectdata(cfg, miss_data);
+        diff_data = hit_data;
+        diff_data.powspctrm = hit_data.powspctrm - miss_data.powspctrm;
+        plot(diff_data.time, squeeze(diff_data.powspctrm), ...
+            'color', clr(i_freq,:))
+        hold off
+    end
+    
+    figure(1)
+    subplot(2,3,1)
+    title('Hit')
+    subplot(2,3,2)
+    title('Miss')
+    subplot(2,3,3)
+    title('Difference')
+    
+    subplot(2,3,1)
+    text(-1, 70, '63 Hz', 'Rotation', 90)
+    ylabel('Frequency (Hz)')
+    subplot(2,3,4)
+    text(-1, 70, '78 Hz', 'Rotation', 90)
+    ylabel('Frequency (Hz)')
+    
+    subplot(2, 3, 4)
+    xlabel('Time (s)')
+
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/hit_miss/tfr_' strrep(fname, '/', '_')])
+
+    figure(2)
+    xlabel('Time (s)')
+    ylabel('Power (Hit - Miss)')
+    hold on
+    plot([-0.5 0.5], [0 0], '--k')
+    hold off
+    
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/hit_miss/timecourse_' strrep(fname, '/', '_')])
+       
+end
 
 
 

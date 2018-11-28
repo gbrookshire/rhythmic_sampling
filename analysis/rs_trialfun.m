@@ -26,6 +26,7 @@ trl_response = nan([trials_per_block, 3]);
 
 % Time window within which responses are considered hits (seconds)
 hit_window = 1;
+hit_window = hit_window - (1/120); % Give it 1 screen refresh of leeway
 
 % Maximum trial duration (samples)
 max_trial_dur = exp_params.max_trial_dur * hdr.Fs;
