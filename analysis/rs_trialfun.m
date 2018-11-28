@@ -2,7 +2,7 @@ function trl = rs_trialfun(dataset)
 
 rs_setup
 
-%% for testing
+% for testing
 %{
 i_subject = 16;
 i_block = 3;
@@ -61,7 +61,7 @@ for i_trial = 1:length(trial_onset_inx)
         target_t = event(inx + 1).sample;
     
         % The trigger after the target (i+2) is a response
-        if length(event) > (inx + 2) && ...
+        if length(event) >= (inx + 2) && ...
                 strcmp(event(inx + 2).type, triggers.response)
             % Get the response time and set it as trial offset time
             resp_t = event(inx + 2).sample;
@@ -114,7 +114,6 @@ trl.trial = trl_trial;
 trl.target = trl_target;
 trl.response = trl_response;
 trl.event = event;
-
 
 %% Test the trl objects -- make sure they're the expected length
 %{
