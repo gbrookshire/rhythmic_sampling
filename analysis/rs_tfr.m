@@ -8,10 +8,11 @@ function rs_tfr(i_subject, segment_type)
 
 rs_setup
 
+step_size = 0.04; % Should be divisible by 1/Fs to preserve time-bins
 if strcmp(segment_type, 'trial')
-    toi = -0.5:0.05:1.5; %%%% Would this work for -0.5:0.05:6?
+    toi = -0.5:step_size:1.5; %%%% Would this work up to 6 s post-stim?
 else
-    toi = -0.5:0.05:0.5;
+    toi = -0.5:step_size:0.5;
 end
 
 fname = subject_info.meg{i_subject};
@@ -26,9 +27,11 @@ cfg_base.method = 'mtmconvol';
 cfg_base.taper = 'hanning';
 cfg_base.toi = toi;
 cfg_base.keeptrials = 'yes'; 
+cfg_base.pad = 'nextpow2';
+cfg_base.padtype = 'zero';
 
 % TFR around the tagged frequencies
-time_window = 0.1; % Smaller window -> more temporal smoothing
+time_window = 0.2; % Smaller window -> more temporal smoothing
 cfg = cfg_base;
 cfg.output = 'pow';
 cfg.foi = 55:100;
