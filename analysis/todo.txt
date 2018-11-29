@@ -1,0 +1,13 @@
+- Artifacts
+    - Blinks
+    - Eye movements
+    - Photodiode
+-ROI
+    - How to select channels?
+    - Source space or sensor space?
+- Analyses
+    - Does power at tagged frequencies correlate with accuracy?
+    - Does low-freq phase correlate with accuracy?
+    - Does power at tagged frequencies vary with low-freq phase?
+    - How does power at the two tagged frequencies covary?
+
