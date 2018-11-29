@@ -186,14 +186,7 @@ for i_subject = 1:height(subject_info)
 
     if strcmp(roi_type, 'anatomical')
         % Anatomical ROI
-        roi = [2012 2013 ... % occipital gradiometers
-            2022 2023 ...
-            2032 2033 ...
-            2042 4043 ...
-            2112 2113];
-        roi = cellfun(@(n) ['MEG' num2str(n)], num2cell(roi), ...
-            'UniformOutput', false);
-        roi = {roi roi}; % Duplicate for 2 frequencies
+        roi = {occip_roi occip_roi}; % Duplicate for 2 frequencies
     elseif strcmp(roi_type, 'functional')
         roi = rs_roi(fname, 1);     
     end
