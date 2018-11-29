@@ -388,6 +388,54 @@ for i_subject = 1:height(subject_info)
 end
 
 
+%% Cross-correlations
+
+clear variables
+rs_setup
+x_overall = nan(height(subject_info), 51); % Subject * Time
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    disp(fname)
+    x = load([exp_dir 'xcorr/' fname '/x']);
+    keepchans = ismember(x.label, occip_roi);
+    x_overall(i_subject,:) = squeeze(mean(mean(x.x(:,keepchans,:), 1), 2));
+end
+
+%%
+% Plot the cross-correlations
+subplot(1,2,1)
+plot(x.time, x_overall, '-', 'color', [0.7 0.7 1]);
+hold on
+plot(x.time, nanmean(x_overall, 1), '-b', 'LineWidth', 3)
+plot([-1 1], [0 0], '--k')
+hold off
+xlabel('Lag (s)')
+ylabel('Correlation')
+
+% Compute and plot the FFT of the cross-correlation
+% uk.mathworks.com/help/matlab/examples/fft-for-spectral-analysis.html
+subplot(1,2,2)
+nfft = 2^6;
+sample_per = mean(diff(x.time));
+Fs = 1 / sample_per;
+f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+y = fft(x_overall, nfft, 2);
+Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; %Compute power
+
+plot(f, log10(Pyy), '-', 'color', [0.7 0.7 1]);
+hold on
+plot(f, log10(nanmean(Pyy, 1)), '-b', 'LineWidth', 3)
+hold off
+xlabel('Frequency (Hz)')
+ylabel('Power (dB/Hz)')
+xlim([0 12])
+
+
+
+
 
 
 
