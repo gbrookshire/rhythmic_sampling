@@ -1,4 +1,4 @@
-function [hits nans] = rs_resptype(i_subject)
+function [hits, nans] = rs_resptype(i_subject)
 
 % Return a vector of hits/misses/etc
 
