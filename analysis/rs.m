@@ -19,7 +19,7 @@ rs_setup
 
 
 %% Define the trials
-rs_apply_over_subjects(@rs_definetrials, false)
+rs_apply_over_subjects(@rs_definetrials, true)
 
 
 %% Save grad structures for each subject
@@ -31,7 +31,8 @@ rs_apply_over_subjects(@rs_forward_model, true)
 
 
 %% Identify artifacts
-% Use the code in rs_identify_artifacts
+% Use the script `rs_identify_artifacts`
+
 
 %% Compute spectra of MEG signals for each trial
 % Note that this doesn't reject visually identified artifacts because that
@@ -40,15 +41,37 @@ rs_apply_over_subjects(@rs_spectra, true)
 
 
 %% Compute the SNR at each channel to get an ROI of power at tagged freqs
-
 rs_apply_over_subjects(@rs_spectra_snr, false)
 
 
-
 %% Compute TFRs
+% High- and low-frequency
+for segment_event = {'trial' 'target'}
+    tfr_fun = @(i_subj) rs_tfr(i_subj, segment_event{1});
+    rs_apply_over_subjects(tfr_fun, true);
+end
 
-tfr_fun = @(i_subj) rs_tfr(i_subj, 'trial');
-rs_apply_over_subjects(tfr_fun, true);
+
+%% Did power at the tagged frequencies differ b/w hits and misses?
+rs_apply_over_subjects(@rs_tfr_stats, true);
+
+
+%% Does accuracy vary with the phase of LF oscillations?
+rs_apply_over_subjects(@rs_accuracy_phase, true)
+
+
+%% Compute cross-correlations between power at tagged freqs
+rs_apply_over_subjects(@rs_tagged_xcorr, true)
+
+
+%% Does power at the tagged freq depend on the phase of LF oscillations?
+rs_apply_over_subjects(@FILL_IN, true)
+
+
+
+
+
+
 
 
 %% Compute power at the tagged freqs using BP-filters and Hilbert transform
@@ -86,20 +109,4 @@ parfor i_subject = 1:height(subject_info)
 end
 
 
-
-
-
-
-
-
-
-%% Does power at the tagged freqs depend on theta/alpha phase?
-
-
-
-%% Relationship of power at the tagged frequencies
-
-% Cross-corr of power at the two tagged frequencies.
-% Check whether the strength of that cross-corr is modulated by theta/alpha
-% phase. Any better way to do this than with a median split?
 
