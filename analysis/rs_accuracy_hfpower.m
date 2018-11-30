@@ -66,7 +66,7 @@ for i_t = 1:length(d.time)
     end
 end
 
-save([exp_dir 'tfr/target/' fname '/high_acc_stats'])
+save([exp_dir 'tfr/target/' fname '/high_power_acc_stats'], stats)
 
 % Extract p-values like this:
 % pvals = cellfun(@(c) c{'Hit', 'pValue'}, stats);

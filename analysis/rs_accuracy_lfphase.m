@@ -99,10 +99,10 @@ end
 
 % Run an FFT to get the strength with which it's modulated by phase
 y = fft(hit_rate, n_bins, 1);
-z = squeeze(abs(y(2,:,:))); % Get periodicity at the main freq
+z = squeeze(abs(y(2,:,:))); % Get periodicity at the freq of interest
 
-save([exp_dir 'tfr/target/' fname '/high_acc_stats'])
-[hit_rate, n_trials, z] = 
+save([exp_dir 'tfr/target/' fname '/high_power_acc_stats'], ...
+    'hit_rate', 'n_trials', 'z')
 
 % % Plot it
 % roi = ismember(d.label, occip_roi);
