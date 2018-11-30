@@ -395,16 +395,20 @@ for i_subject = 1:height(subject_info)
     disp(fname)
     x = load([exp_dir 'xcorr/' fname '/x']);
     keepchans = ismember(x.label, occip_roi);
-    x_subj = squeeze(nanmean(nanmean(x.x(:,keepchans,:), 1), 2));
+    x_subj = squeeze(mean(nanmean(x.x(:,keepchans,:), 1), 2));
     x_overall(i_subject,:) = x_subj;
 end
 
 %%
+
+close all
+figure('position', [500, 500, 500, 200])
+
 % Plot the cross-correlations
 subplot(1,2,1)
 plot(x.time, x_overall, '-', 'color', [0.7 0.7 1]);
 hold on
-plot(x.time, nanmean(x_overall, 1), '-b', 'LineWidth', 3)
+plot(x.time, nanmean(x_overall, 1), '-b', 'LineWidth', 1.5)
 plot([-1 1], [0 0], '--k')
 hold off
 xlabel('Lag (s)')
@@ -418,11 +422,11 @@ sample_per = mean(diff(x.time));
 Fs = 1 / sample_per;
 f = (1/sample_per) * (0:(nfft / 2)) / nfft;
 y = fft(x_overall, nfft, 2);
-Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; %Compute power
+Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
 
 plot(f, db(Pyy, 'power'), '-', 'color', [0.7 0.7 1]);
 hold on
-plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 3)
+plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 1.5)
 hold off
 xlabel('Frequency (Hz)')
 ylabel('Power (dB/Hz)')
