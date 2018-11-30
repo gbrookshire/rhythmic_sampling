@@ -8,9 +8,9 @@ rs_setup
 
 devcode = @(x) x - 0.5; % Move DV from 0/1 to +/-0.5 regression coding
 
-% Load in a sample 
-i_subject = 15;
-
+% % Load in a sample 
+% i_subject = 15;
+% 
 % Read in the data segmented around targets
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'tfr/target/' fname '/high']; %%%% CHANGE TO TARGET

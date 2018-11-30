@@ -270,14 +270,7 @@ for i_subject = 1:height(subject_info)
 
     if strcmp(roi_type, 'anatomical')
         % Anatomical ROI
-        roi = [2012 2013 ... % occipital gradiometers
-            2022 2023 ...
-            2032 2033 ...
-            2042 4043 ...
-            2112 2113];
-        roi = cellfun(@(n) ['MEG' num2str(n)], num2cell(roi), ...
-            'UniformOutput', false);
-        roi = {roi roi}; % Duplicate for 2 frequencies
+        roi = {occip_roi occip_roi}; % Duplicate for 2 frequencies
     elseif strcmp(roi_type, 'functional')
         roi = rs_roi(fname, 1);     
     end
@@ -388,8 +381,9 @@ for i_subject = 1:height(subject_info)
 end
 
 
-%% Cross-correlations
+%% Cross-correlation of power at the tagged frequencies
 
+% Load the data
 clear variables
 rs_setup
 x_overall = nan(height(subject_info), 51); % Subject * Time
@@ -401,7 +395,8 @@ for i_subject = 1:height(subject_info)
     disp(fname)
     x = load([exp_dir 'xcorr/' fname '/x']);
     keepchans = ismember(x.label, occip_roi);
-    x_overall(i_subject,:) = squeeze(mean(mean(x.x(:,keepchans,:), 1), 2));
+    x_subj = squeeze(nanmean(nanmean(x.x(:,keepchans,:), 1), 2));
+    x_overall(i_subject,:) = x_subj;
 end
 
 %%
@@ -425,15 +420,16 @@ f = (1/sample_per) * (0:(nfft / 2)) / nfft;
 y = fft(x_overall, nfft, 2);
 Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; %Compute power
 
-plot(f, log10(Pyy), '-', 'color', [0.7 0.7 1]);
+plot(f, db(Pyy, 'power'), '-', 'color', [0.7 0.7 1]);
 hold on
-plot(f, log10(nanmean(Pyy, 1)), '-b', 'LineWidth', 3)
+plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 3)
 hold off
 xlabel('Frequency (Hz)')
 ylabel('Power (dB/Hz)')
 xlim([0 12])
 
-
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/xcorr'])
 
 
 
@@ -503,91 +499,6 @@ end
 
 
 
-
-%% Split trials into hits/misses with the target at each freq
-data_by_cond = cell(2,2); % Freq x (Hit/Miss)
-hit_vals = [true false];
-for i_hit = 1:length(hit_vals)
-    hit_sel = behav_targets.hit == hit_vals(i_hit);
-    for i_freq = 1:length(power)
-        freq_sel = behav_targets.freq == d.tagged_freqs(i_freq);
-        cfg = [];
-        cfg.trials = hit_sel & freq_sel;
-        cfg.avgoverrpt = 'no';
-        cfg.latency = [-0.0001 0.0001]; % Time of the target onset
-        cfg.avgovertime = 'yes';
-        cfg.channel = froi.froi.grad; % Select the best gradiometers
-        cfg.avgoverchan = 'yes';
-        data_by_cond{i_freq,i_hit} = ft_selectdata(cfg, power{i_freq});
-    end
-end
-
-% Make boxplots
-d = []; % Data vector
-g = []; % Grouping vector
-counter = 1;
-for i_freq = 1:length(tagged_freqs)
-    for i_hit = 1:length(hit_vals)
-        x = cell2mat(data_by_cond{i_freq,i_hit}.trial);
-        d = [d x];
-        g = [g counter*ones(size(x))];
-        counter = counter + 1;
-    end
-end
-
-h = boxplot(d, g, ...
-    'Positions', [1 2 4 5], 'Colors', 'rbrb');
-set(h, ...
-    'LineStyle', '-', ...
-    'LineWidth', 2)
-
-xticks([1.5 4.5])
-xticklabels(tagged_freqs)
-xlabel('Tagged frequency')
-ylabel('Amplitude')
-
-text(4.5, max(d) * 1.15, 'Hit', 'Color', 'r')
-text(4.5, max(d) * 1.05, 'Miss', 'Color', 'b')
-ylim([min(d) * 0.8, max(d) * 1.2])
-
-
-%% Plot timecourse of amplitude at tagged freq
-
-data_by_cond = cell(2,2); % Freq x (Hit/Miss)
-hit_vals = [true false];
-for i_hit = 1:length(hit_vals)
-    hit_sel = behav_targets.hit == hit_vals(i_hit);
-    for i_freq = 1:length(power)
-        freq_sel = behav_targets.freq == tagged_freqs(i_freq);
-        cfg = [];
-        cfg.trials = hit_sel & freq_sel;
-        cfg.avgoverrpt = 'no';
-        cfg.channel = froi.froi.grad; % Select the best gradiometers
-        cfg.avgoverchan = 'no';
-        data_by_cond{i_freq,i_hit} = ft_selectdata(cfg, power{i_freq});
-    end
-end
-
-matrify = @(i_freq, i_hit) ...
-    squeeze(nanmean(cat(3, data_by_cond{i_freq,i_hit}.trial{:}), 1));
-sterr = @(x) std(x,1) / sqrt(size(x,1));
-
-for i_freq = 1:length(tagged_freqs)
-    subplot(length(tagged_freqs), 1, i_freq)
-    t = data_by_cond{1,1}.time{1};
-    m = matrify(i_freq, 1);
-    fill([t fliplr(t)], ...
-        [mean(m,2) + sterr(m); fliplr(mean(m,2) + sterr(m))]', ...
-        'r')
-    hold on
-    plot(data_by_cond{1,1}.time{1}, ...
-        nanmean(m, 2), '-r')
-    plot(data_by_cond{1,1}.time{1}, ...
-        nanmean(matrify(i_freq,2), 2), '-b')
-    hold off
-end
-
-%%% Why is this so jagged?
 
 %% plot theta phase at target time for hits/misses
 
