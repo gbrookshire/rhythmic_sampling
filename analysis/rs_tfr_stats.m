@@ -10,10 +10,10 @@ devcode = @(x) x - 0.5; % Move DV from 0/1 to +/-0.5 regression coding
 
 % % Load in a sample 
 % i_subject = 15;
-% 
+
 % Read in the data segmented around targets
 fname = subject_info.meg{i_subject};
-fn = [exp_dir 'tfr/target/' fname '/high']; %%%% CHANGE TO TARGET
+fn = [exp_dir 'tfr/target/' fname '/high'];
 d = load(fn);
 d = d.high_freq_data;
 
@@ -55,7 +55,7 @@ for i_t = 1:length(d.time)
         for i_chan = 1:length(d.label)
             % Set up variables for a regression
             tbl = table(normalize(pwr(:, i_chan)), ...
-                devcode(hit), ...
+                devcode(hit'), ...
                 devcode(strcmp(behav.target_side, 'right')), ...
                 devcode(behav.target_side_freq == 78), ...
                 'VariableNames', {'Power', 'Hit', 'Side', 'Freq'});
@@ -66,7 +66,7 @@ for i_t = 1:length(d.time)
     end
 end
 
-save([exp_dir 'tfr/trial/' fname '/high_hit_lm'])
+save([exp_dir 'tfr/target/' fname '/high_acc_stats'])
 
 % Extract p-values like this:
 % pvals = cellfun(@(c) c{'Hit', 'pValue'}, stats);
