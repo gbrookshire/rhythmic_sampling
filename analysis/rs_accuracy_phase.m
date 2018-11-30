@@ -1,4 +1,4 @@
-function z = rs_accuracy_phase(i_subject)
+function [hit_rate, n_trials, z] = rs_accuracy_phase(i_subject)
 
 % Replicate analysis from Fiebelkorn et al (2018, Neuron)
 
@@ -15,8 +15,6 @@ function z = rs_accuracy_phase(i_subject)
 % Apply an FFT to it
 % Take the 2nd component, which represents a 1-cycle sine wave
 % The amplitude of that sine wave is your effect for this freq
-
-i_subject = 1;
 
 rs_setup
 
