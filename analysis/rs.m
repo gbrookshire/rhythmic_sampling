@@ -5,19 +5,6 @@
 %   [1-2].fif is the QUEST thresholding procedure
 %   [3-5].fif are the main experiment
 
-clear variables
-close all
-rs_setup
-
-
-%% TODO
-
-% Reject segments with blinks
-% Look at microsaccades
-%     Check eye-tracking traces
-%     Check EOG traces
-
-
 %% Define the trials
 rs_apply_over_subjects(@rs_definetrials, true)
 
