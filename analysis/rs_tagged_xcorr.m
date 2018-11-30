@@ -14,7 +14,9 @@ save_dir = [exp_dir 'xcorr/'];
 [~,~,~] = mkdir(save_dir, fname);
 
 % TFR around the tagged frequencies
-time_window = 0.2; % Smaller window -> more temporal smoothing
+% time_window = 0.1; % 10 Hz smoothing
+% time_window = 0.2; % 5 Hz smoothing
+time_window = 0.5; % 2 Hz smoothing
 cfg = [];
 cfg.method = 'mtmconvol';
 cfg.taper = 'hanning';
