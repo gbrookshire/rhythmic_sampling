@@ -22,15 +22,21 @@ fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
 behav = rs_behavior(fn);
 behav = behav(225:end, :); % main blocks of trials
 
-% Select only trials that are hits and misses
-if any(isnan(behav.hit))
-    trial_inx = ~isnan(behav.hit);
-    behav = behav(trial_inx, :);
-    cfg = [];
-    cfg.trials = trial_inx;
-    d = ft_selectdata(cfg, d);
-    clear trial_inx cfg
-end
+% Select only hits and misses
+[hits, nans] = rs_resptype(i_subject);
+
+% Exclude the trials with NaNs in the target trialdef
+hits = hits(~nans);
+behav = behav(~nans,:);
+hits_and_misses_inx = ismember(hits, [0 1]);
+
+% Keep only the hits and misses (no FAs or late responses)
+cfg = [];
+cfg.trials = hits_and_misses_inx;
+d = ft_selectdata(cfg, d);
+behav = behav(hits_and_misses_inx,:);
+hit = hits(hits_and_misses_inx);
+clear hits nan
 
 % The following code is extremely slow (est 4.5 hrs for 1 subj)
 % Run a regression for each (time,freq) pair
@@ -39,8 +45,8 @@ for i_t = 1:length(d.time)
     for i_f = 1:length(d.freq)
         % Extract power at this (time,freq) point
         % Make a matrix of Trial x Channel
-        pwr = nan([length(d.trialinfo) length(d.label)]);
-        for i_trial = 1:length(d.trialinfo)
+        pwr = nan([size(d.powspctrm, 1) length(d.label)]);
+        for i_trial = 1:size(d.powspctrm, 1)
             pwr(i_trial,:) = squeeze(d.powspctrm(i_trial,:,i_f,i_t));
         end
         % Run a regression on power and hit/miss, controlling for side of
@@ -49,7 +55,7 @@ for i_t = 1:length(d.time)
         for i_chan = 1:length(d.label)
             % Set up variables for a regression
             tbl = table(normalize(pwr(:, i_chan)), ...
-                devcode(behav.hit), ...
+                devcode(hit), ...
                 devcode(strcmp(behav.target_side, 'right')), ...
                 devcode(behav.target_side_freq == 78), ...
                 'VariableNames', {'Power', 'Hit', 'Side', 'Freq'});
