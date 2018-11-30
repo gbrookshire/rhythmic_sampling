@@ -44,7 +44,7 @@ clear cfg high_freq_data
 n_cycles = 2; % As in Fiebelkorn et al (2018, Neuron)
 cfg = cfg_base;
 cfg.output = 'fourier'; % Get phase with `angle(...)`
-cfg.foi = 2:13;
+cfg.foi = 3:13;
 cfg.t_ftimwin = n_cycles ./ cfg.foi;
 cfg.pad = 7; % Pad trials out to 7 sec
 cfg.padtype = 'mirror'; % Is this OK for estimating phase?

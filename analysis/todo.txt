@@ -4,10 +4,19 @@
     - Photodiode
 -ROI
     - How to select channels?
-    - Source space or sensor space?
+    - Analyze in source space or in sensor space?
 - Analyses
     - Does power at tagged frequencies correlate with accuracy?
+        - Double-check rs_tfr_stats.
+            - Simulate known data and make sure you can reconstruct it
     - Does low-freq phase correlate with accuracy?
-    - Does power at tagged frequencies vary with low-freq phase?
+        - Re-run LF TFRs (changed a couple parameters)
+        - Replicate Fiebelkorn et al (2018)
+    - Does low-freq phase predict power at tagged frequencies?
     - How does power at the two tagged frequencies covary?
+        - Initial analysis: positive xcorr at t=0
+        - Find a way to factor out broadband power?
 
+- Microsaccades?
+    - Check EyeLink traces
+    - Check EOG
