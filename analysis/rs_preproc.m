@@ -26,7 +26,7 @@ for i_block = block_info.main
     % When segmenting by targets, exclude trials in which there was no targ
     if strcmp(evt, 'target')
         trl = trialdef.trl.target;
-        trl = trl(~isnan(trialdef.trl.trial(:,4)),:);
+        trl = trl(~isnan(trialdef.trl.target(:,1)),:);
     else
         trl = trialdef.trl.(evt);
     end
