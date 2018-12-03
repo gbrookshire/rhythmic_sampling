@@ -22,27 +22,6 @@ ylabel('Count')
 xlabel('Length (samples)')
 
 
-%% Check the behavioral thresholds
-
-close all
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    % Load the behavioral data
-    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-    behav = rs_behavior(fn);
-    subplot(4,4,i_subject)
-    hold on
-    for s = {'left' 'right'}
-        for f = [63 78]
-            inx = strcmp(behav.target_side, s) & (behav.target_side_freq == f);
-            plot(behav.target_opacity(inx))
-        end
-    end
-end
-
-
 %% Cross-check hits & FAs in the behavioral & trl structs
 % The presentation script coded late responses as FAs, but they should be
 % noted as a distinct kind of response. Don't use the behavioral data for

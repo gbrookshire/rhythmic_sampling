@@ -1,3 +1,180 @@
+%% Plot the target threshold over the course of the experiment
+
+rs_setup
+close all
+
+clrs = [0 0.6 0; 0.6 0 0.6];
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    % Load the behavioral data
+    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
+    behav = rs_behavior(fn);
+    subplot(4,4,i_subject)
+    hold on
+    for s = {'left' 'right'}
+        for f = [63 78]
+            if f == 63
+                clr = clrs(1,:);
+            else
+                clr = clrs(2,:);
+            end
+            if strcmp(s, 'left')
+                clr = clr + (1 - max(clr)); % Left - lighter
+            else
+                clr = clr * 0.8; % Right - darker
+            end
+            inx = strcmp(behav.target_side,s) & (behav.target_side_freq==f);
+            plot(behav.target_opacity(inx), '-', 'color', clr)
+            ylim([0 0.4])
+        end
+    end
+end
+
+subplot(4,4,1)
+ylabel('Target Opacity')
+xlabel('Trial')
+
+subplot(4,4,5)
+text(1,1,'Left', 'color', [1 1 1] * 0.7)
+text(2,1,'Right', 'color', [1 1 1] * 0.3)
+xlim([1 3])
+ylim([0 2])
+axis off
+
+subplot(4,4,5)
+text(1,1, 'Left', 'color', [1 1 1] * 0.7)
+text(2,1, 'Right', 'color', [1 1 1] * 0.3)
+text(1,0, '63 Hz', 'color', clrs(1,:))
+text(2,0, '78 Hz', 'color', clrs(2,:))
+xlim([1 3])
+ylim([0 2])
+axis off
+
+print('-dpng', [exp_dir 'plots/behav/opacity'])
+
+
+%% Behavioral performance over course of expt
+
+rs_setup
+
+% Subject * Side (left/right) * Freq (63/78)
+accuracy = nan(height(subject_info), 2, 2);
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
+    behav = rs_behavior(fn);
+
+    trials_per_block = size(behav,1) / 5;
+    block_num = repelem((1:10)', trials_per_block / 2, 1);
+    behav.block_num = block_num;
+
+    % Only look at the the 'real' trials
+    behav = behav(behav.target_t > 1.0, :);
+    
+    % Get the numbers of hits and FAs for each block
+    hits = accumarray(behav.block_num, ...
+        behav.hit, ...
+        [], @mean);
+    fas = accumarray(behav.block_num, ...
+        behav.false_alarm, ...
+        [], @mean);
+
+    
+    cols = [0 0.6 0; 0.6 0 0.6];
+
+    %Plot the results
+    close all
+    figure('position', [500, 500, 500, 200])
+    subplot(1,2,1)
+    plot(1:10, hits, '-b')
+    hold on
+    plot([1 10], [0.5 0.5], '--b') % Expected performance
+    plot(1:10, fas, '-r')
+
+    % Make bars for different parts of the experiment
+    rectangle('Position', [1 0.9 3.5 0.1], ...
+        'EdgeColor', [1 1 1], 'FaceColor', 0.5 * [1 1 1])
+    text(1.5, 0.95, 'Thresh', 'color', [1 1 1])
+
+    rectangle('Position', [4.75 0.9 6 0.1], ...
+        'EdgeColor', [1 1 1], 'FaceColor', 0.5 * [1 1 1])
+    text(6.5, 0.95, 'Test', 'color', [1 1 1])
+
+    hold off
+    text(8, 0.8, 'Hit', 'color', 'b')
+    text(8, 0.7, 'FA', 'color', 'r')
+    xticks(1:10)
+    xlim([1 10])
+    ylim([0 1])
+    xlabel('Block')
+    ylabel('Proportion')
+
+    % Plot accuracy in each condition in the main test phase
+    subplot(1,2,2)
+    means = nan(2,2);
+    sides = {'left' 'right'};
+    for i_side = 1:2
+        for i_freq = 1:2
+            mask = behav.block_num >= 5;
+            mask = mask & behav.target_t > 1.5;
+            mask = mask & strcmp(behav.target_side, sides{i_side});
+            mask = mask & ...
+                behav.target_side_freq == exp_params.tagged_freqs(i_freq);
+            x = mean(behav.hit(mask));
+            means(i_side, i_freq) = x;
+            accuracy(i_subject, i_side, i_freq) = x;
+        end
+    end
+    b = bar(means, 'EdgeColor', 'none');
+    %hold on
+    %plot([0.5 2.5], [0.5 0.5], '--k')
+    %hold off
+    ylim([0 1])
+    xlim([0.5 2.5])
+    ylabel('Proportion hits')
+    xticklabels(sides)
+    xlabel('Side')
+    text(2, 0.9, '63 Hz', 'color', b(1).FaceColor)
+    text(2, 0.8, '78 Hz', 'color', b(2).FaceColor)
+
+    fname = subject_info.behav{i_subject};
+    print('-dpng', [exp_dir 'plots/behav/' strrep(fname,'/','_')])
+
+end
+
+
+%% Plot the overall accuracy
+figure('position', [500, 500, 200, 200])
+means = squeeze(nanmean(accuracy, 1));
+sterrs = squeeze(nanstd(accuracy, 1) ./ sqrt(sum(~isnan(accuracy), 1)));
+b = bar(means, 'EdgeColor', 'none');
+hold on
+% Add error bars
+for i_side = 1:2
+    for i_freq = 1:2
+        y = means(i_side, i_freq) + (sterrs(i_side, i_freq) * [-1 1]);
+        x = i_side + ((i_freq - 1.5) * ([1 1] * 0.3));
+        plot(x, y, '-k')
+    end
+end
+hold off
+ylim([0 1])
+xlim([0.5 2.5])
+ylabel('Proportion hits')
+xticklabels(sides)
+xlabel('Side')
+text(2, 0.9, '63 Hz', 'color', b(1).FaceColor)
+text(2, 0.8, '78 Hz', 'color', b(2).FaceColor)
+
+print('-dpng', [exp_dir 'plots/behav/overall_accuracy'])
+
+
 %% Scalp topo of the SNR for the tagged frequencys
 % SNR: Compare power in a narrow frequency to power at nearby frequencies
 
@@ -68,94 +245,6 @@ for i_subject = 1:height(subject_info)
     ylabel('Power (dB)')
 
     print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'/','_')])
-end
-
-
-%% Behavioral performance over course of expt
-
-rs_setup
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-    behav = rs_behavior(fn);
-
-    trials_per_block = size(behav,1) / 5;
-    block_num = repelem((1:10)', trials_per_block / 2, 1);
-    behav.block_num = block_num;
-
-    % Only look at the the 'real' trials
-    behav = behav(behav.target_t > 1.0, :);
-    
-    % Get the numbers of hits and FAs for each block
-    hits = accumarray(behav.block_num, ...
-        behav.hit, ...
-        [], @mean);
-    fas = accumarray(behav.block_num, ...
-        behav.false_alarm, ...
-        [], @mean);
-
-    
-    cols = [0 0.6 0; 0.6 0 0.6];
-
-    %Plot the results
-    close all
-    figure('position', [500, 500, 500, 200])
-    subplot(1,2,1)
-    plot(1:10, hits, '-b')
-    hold on
-    plot([1 10], [0.5 0.5], '--b') % Expected performance
-    plot(1:10, fas, '-r')
-
-    % Make bars for different parts of the experiment
-    rectangle('Position', [1 0.9 3.5 0.1], ...
-        'EdgeColor', [1 1 1], 'FaceColor', 0.5 * [1 1 1])
-    text(1.5, 0.95, 'Thresh', 'color', [1 1 1])
-
-    rectangle('Position', [4.75 0.9 6 0.1], ...
-        'EdgeColor', [1 1 1], 'FaceColor', 0.5 * [1 1 1])
-    text(6.5, 0.95, 'Test', 'color', [1 1 1])
-
-    hold off
-    text(8, 0.8, 'Hit', 'color', 'b')
-    text(8, 0.7, 'FA', 'color', 'r')
-    xticks(1:10)
-    xlim([1 10])
-    ylim([0 1])
-    xlabel('Block')
-    ylabel('Proportion')
-
-    % Plot accuracy in each condition in the main test phase
-    subplot(1,2,2)
-    means = nan(2,2);
-    sides = {'left' 'right'};
-    for i_side = 1:2
-        for i_freq = 1:2
-            mask = behav.block_num >= 5;
-            mask = mask & behav.target_t > 1.5;
-            mask = mask & strcmp(behav.target_side, sides{i_side});
-            mask = mask & ...
-                behav.target_side_freq == exp_params.tagged_freqs(i_freq);
-            x = mean(behav.hit(mask));
-            means(i_side, i_freq) = x;
-        end
-    end
-    b = bar(means, 'EdgeColor', 'none');
-    hold on
-    plot([0.5 2.5], [0.5 0.5], '--k')
-    hold off
-    ylim([0 1])
-    xlim([0.5 2.5])
-    ylabel('Proportion hits')
-    xticklabels(sides)
-    xlabel('Side')
-    text(2, 0.9, '63 Hz', 'color', b(1).FaceColor)
-    text(2, 0.8, '78 Hz', 'color', b(2).FaceColor)
-
-    fname = subject_info.behav{i_subject};
-    print('-dpng', [exp_dir 'plots/behav/' strrep(fname,'/','_')])
-
 end
 
 
@@ -248,6 +337,8 @@ end
 
 
 %% Plot difference between hits and misses
+%%% DON'T USE THIS
+%%% INSTEAD USE the version that computed regressions
 
 
 clear variables
