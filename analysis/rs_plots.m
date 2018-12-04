@@ -260,6 +260,10 @@ roi_type = 'anatomical'; % 'anatomical' or 'functional'
 
 approx_eq = @(x,y) abs(x - y) < 0.1;
 
+% Hold onto the data for all subject
+% Subject * Freq * Time
+overall_data = nan(height(subject_info), 46, 51);
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -267,8 +271,8 @@ for i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
     disp(fname)
     hf_fname = [exp_dir 'tfr/trial/' fname '/high.mat'];
-    finfo = dir(hf_fname);
-    disp(finfo.date)
+    %finfo = dir(hf_fname);
+    %disp(finfo.date)
     hf = load(hf_fname);
     freq_data = hf.high_freq_data;
     clear hf;
@@ -279,14 +283,20 @@ for i_subject = 1:height(subject_info)
     elseif strcmp(roi_type, 'functional')
         roi = rs_roi(fname, 1);     
     end
+    chan_sel = ismember(freq_data.label, roi{1});
     
     % Exclude the trials that are all NaNs
-    % (How did that happen? Check those trials)
+    % (How did that happen? Check those trials. There are a lot of them)
     nan_trial = all(all(all(isnan(freq_data.powspctrm), 2), 3), 4);
     cfg = [];
     cfg.trials = find(~nan_trial);
+    fprintf('%i trials are only NaNs \n', sum(nan_trial))
     cfg.avgoverrpt = 'yes';
+    cfg.nanmean = 'yes';
     freq_data = ft_selectdata(cfg, freq_data);
+    x = mean(freq_data.powspctrm(chan_sel,:,:), 1);
+    overall_data(i_subject,:,:) = x;
+    clear x
     
     close all
     % Plot of frequency tagging response from trial onset
@@ -314,7 +324,6 @@ for i_subject = 1:height(subject_info)
 
     clr = [0.9 0 0.9; 0 0.5 1];
     for i_freq = 1:2
-        chan_sel = ismember(freq_data.label, roi{i_freq});
         freq_inx = approx_eq(freq_data.freq, ...
             exp_params.tagged_freqs(i_freq));
         x = freq_data.powspctrm(chan_sel, freq_inx, :);
@@ -335,11 +344,53 @@ for i_subject = 1:height(subject_info)
         [exp_dir 'plots/stim_onset/' strrep(fname, '/', '_')])
 end
 
+% Plot the averages over all subjects
+freq_data.powspctrm = nanmean(overall_data, 1);
+freq_data.label = {'averaged'};
+subplot(2,1,1)
+cfg = [];
+% cfg.channel = union(roi{:});
+cfg.baseline = [-0.5 -0.1];
+cfg.baselinetype = 'relative';
+cfg.title = ' ';
+cfg.colorbar = 'no';
+ft_singleplotTFR(cfg, freq_data);
+xlabel('Time (s)')
+ylabel('Frequency (Hz)')
+hold on
+scatter([0 0], exp_params.tagged_freqs, 'w>', 'filled')
+hold off
 
-%% Plot difference between hits and misses
-%%% DON'T USE THIS
-%%% INSTEAD USE the version that computed regressions
+% % Plot of power at the tagged frequencies over time
+subplot(2,1,2)
+cfg = [];
+cfg.baseline = [-0.5 -0.1];
+cfg.baselinetype = 'relative';
+freq_data = ft_freqbaseline(cfg, freq_data);
 
+clr = [0.9 0 0.9; 0 0.5 1];
+for i_freq = 1:2
+    freq_inx = approx_eq(freq_data.freq, ...
+        exp_params.tagged_freqs(i_freq));
+    x = freq_data.powspctrm(:, freq_inx, :);
+    x = squeeze(nanmean(x, 1)); % Average over channels
+    plot(freq_data.time, x, 'LineWidth', 2, 'color', clr(i_freq,:));
+    ypos = max(x);
+    text(-0.4, ypos, ...
+        [num2str(exp_params.tagged_freqs(i_freq)) ' Hz'], ...
+        'color', clr(i_freq,:))
+    hold on
+end
+xlabel('Time (s)')
+ylabel('Power (relative change)')
+plot([-0.5 1.5], [1 1], '--k')
+hold off
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/stim_onset/overall'])
+
+
+%% Plot difference in HF power between hits and misses
 
 clear variables
 rs_setup
@@ -366,12 +417,12 @@ for i_subject = 1:height(subject_info)
         roi = rs_roi(fname, 1);     
     end
     
-    % Load the behavioral data
-    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-    behav = rs_behavior(fn);
-    behav = behav(225:end, :); % main blocks of trials
-    assert(all(behav.hit == freq_data.trialinfo))
-    continue
+%     % Load the behavioral data
+%     fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
+%     behav = rs_behavior(fn);
+%     behav = behav(225:end, :); % main blocks of trials
+%     assert(all(behav.hit == freq_data.trialinfo))
+%     continue
 
     % Load the trialdefs to get hits/misses
     hit = [];
