@@ -417,12 +417,10 @@ for i_subject = 1:height(subject_info)
         roi = rs_roi(fname, 1);     
     end
     
-%     % Load the behavioral data
-%     fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-%     behav = rs_behavior(fn);
-%     behav = behav(225:end, :); % main blocks of trials
-%     assert(all(behav.hit == freq_data.trialinfo))
-%     continue
+    % Load the behavioral data
+    fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
+    behav = rs_behavior(fn);
+    behav = behav(225:end, :); % main blocks of trials
 
     % Load the trialdefs to get hits/misses
     hit = [];
@@ -449,10 +447,10 @@ for i_subject = 1:height(subject_info)
         cfg = [];
         cfg.avgoverrpt = 'yes';
         % Hits
-        cfg.trials = hit & ~nan_trial & freq_inx;
+        cfg.trials = (hit == 1) & ~nan_trial & freq_inx;
         hit_data = ft_selectdata(cfg, freq_data);
         % Misses
-        cfg.trials = ~hit & ~nan_trial & freq_inx;
+        cfg.trials = (hit == 0) & ~nan_trial & freq_inx;
         miss_data = ft_selectdata(cfg, freq_data);
         % Diff
         diff_data = hit_data;
@@ -523,6 +521,40 @@ for i_subject = 1:height(subject_info)
 end
 
 
+%% Does hit-rate differ by LF phase?
+
+clear variables
+rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    x = load([exp_dir 'tfr/target/' fname '/low_power_acc_stats.mat']);
+    
+    % Anatomical ROI
+    h = x.hit_rate(ismember(x.label, occip_roi));
+%     h = squeeze(mean(x.hit_rate, 2));
+    
+    bin_start = linspace(-pi, pi, x.n_bins);
+    imagesc(bin_start, x.freq, h')
+    
+    xticks([-pi 0 pi])
+    xticklabels({'-\pi' '0' '\pi'})
+    xlabel('Phase')
+    ylabel('Frequency (Hz)')
+    set(gca, 'YDir', 'normal')
+    
+    cbh = colorbar('v');
+    set(cbh,'YTick',[min(min(h)) max(max(h))])
+    ylabel(cbh, 'Prop. hits')
+  
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/hit_miss/lf_' strrep(fname, '/', '_')])
+
+end
+
 %% Cross-correlation of power at the tagged frequencies
 
 % Load the data
@@ -540,8 +572,6 @@ for i_subject = 1:height(subject_info)
     x_subj = squeeze(mean(nanmean(x.x(:,keepchans,:), 1), 2));
     x_overall(i_subject,:) = x_subj;
 end
-
-%%
 
 close all
 figure('position', [500, 500, 500, 200])
@@ -581,56 +611,6 @@ print('-dpng', '-r300', ...
 
 
 
-%% Check eye-tracking
-% Don't save plots, just go through and plot a lot of examples
-
-clear variables
-close all
-rs_setup
-i_subject = 4;
-
-fname = subject_info.meg{i_subject};
-
-data_by_block = cell(size(block_info.all));
-
-for i_block = 1:length(block_info.main)
-    n_block = block_info.main(i_block);
-    
-    % Read in the trial definition
-    fn = [exp_dir 'trialdef\' fname '\trials_' num2str(n_block) '.mat'];
-    if ~exist(fn, 'file')
-        warning('No trialdef for sub %s, block %d', fname, n_block)
-        continue
-    end
-
-    % Preprocess the data
-    cfg = load(fn);
-    cfg = cfg.cfg;
-    cfg.channel = {'BIO001' 'BIO002' 'MISC001' 'MISC002'};
-    d = ft_preprocessing(cfg);
-
-    data_by_block{i_block} = d;
-end
-d = data_by_block;
-clear data_by_block
-
-i_block = 1;
-
-cfg = [];
-cfg.channel = 'BIO*';
-eog = ft_selectdata(cfg, d{i_block});
-
-cfg.channel = 'MISC*';
-eyelink = ft_selectdata(cfg, d{i_block});
-
-
-for i_trial = 1:length(eog.trial)
-    subplot(2,1,1)
-    plot(eog.time{i_trial}, eog.trial{i_trial})
-    subplot(2,1,2)
-    plot(eyelink.time{i_trial}, eyelink.trial{i_trial})
-    input('')
-end
 
 
 
