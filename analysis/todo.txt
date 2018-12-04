@@ -6,7 +6,10 @@
     - How to select channels?
     - Analyze in source space or in sensor space?
 - Analyses
+    - Trials with NaN-tagged artifacts get turned into *all* NaNs after TFR calc.
+    - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
     - Does power at tagged frequencies correlate with accuracy?
+        - Why are there so many trials with all NaNs in the trial-defined data?
         - Double-check rs_tfr_stats.
             - Simulate known data and make sure you can reconstruct it
     - Does low-freq phase correlate with accuracy?
@@ -20,4 +23,3 @@
 - Microsaccades?
     - Check EyeLink traces
     - Check EOG
-
