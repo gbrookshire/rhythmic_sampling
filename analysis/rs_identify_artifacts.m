@@ -307,3 +307,67 @@ end
 
 save([exp_dir 'artifacts/' fname '/photodiode'], ...
     'anomalies', 'photo_artfctdef')
+
+
+%% Look for eye-blinks in the Eyetracker recordings
+
+clear variables
+rs_setup
+
+amp_threshold = 0.2;
+size_threshold = 5;
+exclude_pre = 0.1;
+exclude_post = 0.1;
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+
+    % Read in the raw eyelink recordings
+    eyes_artfctdef = cell(size(block_info.all));
+    for i_block = block_info.main
+
+        % Read in the trial definition
+        fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
+        trialdef = load(fn);
+
+        % Preprocess the data
+        fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+        cfg = [];
+        cfg.dataset = fn;
+        cfg.event = trialdef.trl.event;
+        cfg.trl = trialdef.trl.trial;
+        cfg.channel = {'MISC001' 'MISC002'};
+        cfg.polyremoval = 'yes';
+        cfg.polyorder = 0;
+        d = ft_preprocessing(cfg);
+
+        % Find the eye blink artifacts in this subject
+        eye_artifact = nan(0, 2);
+        for i_trial = 1:length(d.trial)
+            flag_samps = all(abs(d.trial{i_trial}) > amp_threshold, 1);
+            flag_regions = bwconncomp(flag_samps);
+            flag_region_size = cellfun(@length, flag_regions.PixelIdxList);
+            blink_regions = find(flag_region_size >= size_threshold);
+            blink_samps = flag_regions.PixelIdxList(blink_regions);
+            blink_starts = cellfun(@(x) x(1), blink_samps);
+            blink_ends = cellfun(@(x) x(end), blink_samps);
+            art_def = [blink_starts' - (exclude_pre * d.fsample), ...
+                       blink_ends' + (exclude_post * d.fsample)];
+            % Adjust for the sample that the trial starts on
+            art_def = art_def + d.sampleinfo(i_trial, 1);
+            eye_artifact = [eye_artifact; art_def];
+        end
+        eyes_artfctdef{i_block} = eye_artifact;
+
+        % % Check the length of the artifacts
+        % hist(diff(eye_artifact, 1, 2), 50);
+    end
+
+    save([exp_dir 'artifacts/' fname '/eye'], 'eyes_artfctdef')
+    
+end
+    
+
