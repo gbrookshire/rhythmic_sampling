@@ -11,6 +11,7 @@ art = [];
 art.ica = load([art_path 'ica']); % Artifact defs
 art.visual = load([art_path 'visual']);
 art.photo = load([art_path 'photodiode']);
+art.eye = load([art_path 'eye']);
 
 data_by_block = cell(size(block_info.all));
 for i_block = block_info.main
@@ -57,6 +58,7 @@ for i_block = block_info.main
     cfg.artfctdef.grad = art.visual.cfg_art.grad{i_block}.artfctdef.visual;
     %%%cfg.artfctdef.mag = art.visual.cfg_art.mag{i_block}.artfctdef.visual;
     %%%cfg.artfctdef.photodiode.artifact = art.photo.photo_artfctdef{i_block};
+    %%%cfg.artfctdef.eye.artifact = art.eye.eyes_artfctdef{i_block};
     d = ft_rejectartifact(cfg, d);
     warning('Make sure artifacts are being rejected correctly!')
     
