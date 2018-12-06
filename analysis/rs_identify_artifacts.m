@@ -360,7 +360,21 @@ for i_subject = 1:height(subject_info)
             art_def = art_def + d.sampleinfo(i_trial, 1);
             eye_artifact = [eye_artifact; art_def];
         end
-        eyes_artfctdef{i_block} = eye_artifact;
+        
+        % Merge overlapping artifacts
+        eye_art_old = eye_artifact;
+        eye_art_merged = eye_art_old(1,:);
+        clear eye_artifact
+        for i_art = 2:size(eye_art_old, 1)
+            if eye_art_old(i_art, 1) < eye_art_merged(end, 2)
+                eye_art_merged(end, 2) = eye_art_old(i_art, 2);
+            else
+                eye_art_merged(end + 1, :) = eye_art_old(i_art, :);
+            end
+        end
+        
+        % Add to the overall cell object
+        eyes_artfctdef{i_block} = eye_art_merged;
 
         % % Check the length of the artifacts
         % hist(diff(eye_artifact, 1, 2), 50);
