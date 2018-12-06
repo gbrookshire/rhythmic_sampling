@@ -5,7 +5,7 @@ function rs_tagged_xcorr(i_subject)
 rs_setup
 
 step_size = 0.04; % Should be divisible by 1/Fs to preserve time-bins
-toi = 1.0:step_size:5.0;
+toi = 0.5:step_size:(exp_params.max_trial_dur-0.5);
 
 fname = subject_info.meg{i_subject};
 d = rs_preproc(fname, 'trial');
@@ -15,8 +15,8 @@ save_dir = [exp_dir 'xcorr/'];
 
 % TFR around the tagged frequencies
 % time_window = 0.1; % 10 Hz smoothing
-% time_window = 0.2; % 5 Hz smoothing
-time_window = 0.5; % 2 Hz smoothing
+time_window = 0.2; % 5 Hz smoothing
+% time_window = 0.5; % 2 Hz smoothing
 cfg = [];
 cfg.method = 'mtmconvol';
 cfg.taper = 'hanning';
@@ -54,6 +54,7 @@ time = -maxlag_sec:step_size:maxlag_sec;
 save([save_dir '/' fname '/x'], 'x', 'label', 'time')
 end
 
+
 function out = nanxcorr(a, b, maxlag)
 % Cross-correlation ignoring NaNs
 % This is much slower than the built-in xcorr
@@ -64,6 +65,7 @@ for i = 1:length(lags)
     out(i) = corr(a', shift(b, t)', 'rows', 'pairwise');
 end
 end
+
 
 function out = shift(in, n)
 % Shift a vector to the left or right
