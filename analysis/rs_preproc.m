@@ -2,6 +2,7 @@ function data = rs_preproc(fname, evt)
 
 % fname: Base filename for this subject
 % evt: Which event type to segment out (trials|targets|responses)
+% reject: Which artifacts to reject: visual, photo, eye
 
 rs_setup
 art_path = [exp_dir 'artifacts/' fname '/'];
@@ -52,15 +53,15 @@ for i_block = block_info.main
     d = ft_preprocessing(cfg);
     
     % Reject artifacts visually-identified and photodiode artifacts
-    cfg = [];
-    cfg.artfctdef.reject = 'nan';
-    cfg.artfctdef.minaccepttim = 0.5;
-    cfg.artfctdef.grad = art.visual.cfg_art.grad{i_block}.artfctdef.visual;
-    %%%cfg.artfctdef.mag = art.visual.cfg_art.mag{i_block}.artfctdef.visual;
-    %%%cfg.artfctdef.photodiode.artifact = art.photo.photo_artfctdef{i_block};
-    %%%cfg.artfctdef.eye.artifact = art.eye.eyes_artfctdef{i_block};
+    a = []; % Make the artfctdef object
+    a.reject = 'nan';
+    a.minaccepttim = 0.5;
+    a.visual = art.visual.cfg_art.grad{i_block}.artfctdef.visual;
+    a.photodiode.artifact = art.photo.photo_artfctdef{i_block};
+    a.eye.artifact = art.eye.eyes_artfctdef{i_block};
+    cfg = []; % Put it into a cfg
+    cfg.artfctdef = a;
     d = ft_rejectartifact(cfg, d);
-    warning('Make sure artifacts are being rejected correctly!')
     
     % Downsample
     cfg = [];
