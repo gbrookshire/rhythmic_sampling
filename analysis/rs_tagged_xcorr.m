@@ -26,17 +26,18 @@ cfg.pad = 'nextpow2';
 cfg.padtype = 'zero';
 cfg.output = 'pow';
 cfg.foi = exp_params.tagged_freqs;
-cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
+cfg.t_ftimwin = ones(length(cfg.foi), 1) .* time_window;
 d = ft_freqanalysis(cfg, d);
 
 % Compute the cross-correlation
 maxlag_sec = 1;
 maxlag_samp = round(maxlag_sec / step_size);
 xcorr_length = (maxlag_samp * 2) + 1;
-x = nan(... % Trial * Channel * Lag
+x = nan(... % xcorr: Trial * Channel * Lag
     size(d.powspctrm, 1), ...
     length(d.label), ...
     xcorr_length);
+nsamps = nan([1 size(d.powspctrm, 1)]); % Number of samples in each trial
 for i_trial = 1:size(d.powspctrm, 1)
     for i_channel = 1:length(d.label)
         % Extract the data
@@ -46,12 +47,13 @@ for i_trial = 1:size(d.powspctrm, 1)
         c = nanxcorr(a, b, maxlag_samp);
         x(i_trial, i_channel, :) = c;
     end
+    nsamps(i_trial) = sum(~isnan(d.trial(i_trial,1,1,:)));
 end
 
 % Save the data
 label = d.label;
 time = -maxlag_sec:step_size:maxlag_sec;
-save([save_dir '/' fname '/x'], 'x', 'label', 'time')
+save([save_dir '/' fname '/x'], 'x', 'label', 'time', 'nsamps')
 end
 
 
