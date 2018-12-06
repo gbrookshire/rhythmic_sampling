@@ -47,7 +47,7 @@ for i_trial = 1:size(d.powspctrm, 1)
         c = nanxcorr(a, b, maxlag_samp);
         x(i_trial, i_channel, :) = c;
     end
-    nsamps(i_trial) = sum(~isnan(d.trial(i_trial,1,1,:)));
+    nsamps(i_trial) = sum(~isnan(d.powspctrm(i_trial,1,1,:)));
 end
 
 % Save the data
