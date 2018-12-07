@@ -48,6 +48,7 @@ pbi = (c_hit - c_all) .* (c_miss - c_all);
 
 label = d.label;
 freq = d.freq;
+dimord = d.dimord;
 save([exp_dir 'tfr/target/' fname '/low_acc_pbi'], ...
     'pbi', 'label', 'freq')
 

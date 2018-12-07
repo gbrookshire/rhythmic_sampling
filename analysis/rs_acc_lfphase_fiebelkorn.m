@@ -103,8 +103,9 @@ z = squeeze(abs(y(2,:,:))); % Get periodicity at the freq of interest
 
 label = d.label;
 freq = d.freq;
-save([exp_dir 'tfr/target/' fname '/low_power_acc_stats'], ...
-    'hit_rate', 'n_trials', 'z', 'n_bins', 'label', 'freq')
+dimord = 'phasebin_chan_freq';
+save([exp_dir 'tfr/target/' fname '/low_acc_fieb'], ...
+    'hit_rate', 'n_trials', 'z', 'n_bins', 'label', 'freq', 'dimord')
 
 % % Plot it
 % roi = ismember(d.label, occip_roi);
