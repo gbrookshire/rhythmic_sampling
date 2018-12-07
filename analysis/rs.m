@@ -40,11 +40,11 @@ end
 
 
 %% Did power at the tagged frequencies differ b/w hits and misses?
-rs_apply_over_subjects(@rs_accuracy_hfpower, true);
+rs_apply_over_subjects(@rs_acc_hfpower_regression, true);
 
 
 %% Does accuracy vary with the phase of LF oscillations?
-rs_apply_over_subjects(@rs_accuracy_lfphase, true)
+rs_apply_over_subjects(@rs_accuracy_lfphase, false)
 
 
 %% Compute cross-correlations between power at tagged freqs

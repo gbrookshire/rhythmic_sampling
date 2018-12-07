@@ -1,4 +1,4 @@
-function rs_accuracy_hfpower(i_subject)
+function rs_acc_hfpower_regression(i_subject)
 
 % Does accuracy correlate with power at the tagged freq?
 % This function runs VERY slowly (~4.5 hrs / subj). Find a different way to
