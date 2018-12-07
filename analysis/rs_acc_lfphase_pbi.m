@@ -1,5 +1,6 @@
-function pbi = rs_pbi(i_subject)
+function pbi = rs_acc_lfphase_pbi(i_subject)
 
+% Compute PBI on low-frequency phase between hits and misses.
 % Phase bifurcation index as in Busch, Dubois, VanRullen (2009)
 % PBI_{t,f} = (C_{hits(t,f)} - C_{all(t,f)}) * (C_{misses(t,f)} - C_{all(t,f)})
 %   where C is the inter-trial phase coherence for that condition
