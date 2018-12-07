@@ -44,7 +44,7 @@ rs_apply_over_subjects(@rs_acc_hfpower_regression, true);
 
 
 %% Does accuracy vary with the phase of LF oscillations?
-rs_apply_over_subjects(@rs_accuracy_lfphase, false)
+rs_apply_over_subjects(@rs_acc_lfphase_fiebelkorn, false)
 
 
 %% Compute cross-correlations between power at tagged freqs

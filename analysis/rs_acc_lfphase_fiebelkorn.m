@@ -1,4 +1,4 @@
-function rs_accuracy_lfphase(i_subject)
+function rs_acc_lfphase_fiebelkorn(i_subject)
 
 % Replicate analysis from Fiebelkorn et al (2018, Neuron)
 
