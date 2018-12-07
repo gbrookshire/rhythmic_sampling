@@ -625,6 +625,47 @@ for i_subject = 1:height(subject_info)
 end
 
 
+%% Results of the HF power regression
+
+clear variables
+rs_setup
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    x = load([exp_dir 'tfr/target/' fname '/high_power_acc_stats']);
+    
+    % Channels in the ROI
+    keep_chans = ismember(x.label, occip_roi);
+    
+    % Extract the regression coefficients for hit/miss predicting HF power
+    coef = cellfun(@(c) c{'Hit', 'Coefficient'}, x.stats);
+    avg_coef = mean(coef(:,:,keep_chans), 3);
+    % Extract p-values
+    pval = cellfun(@(c) c{'Hit', 'Coefficient'}, x.stats);
+    avg_pval = geomean(pval(:,:,keep_chans), 3); %%% <-------------- FIX ME
+    
+    % Plot it
+    close all
+    
+    subplot(1,2,1)
+    imagesc(x.time, x.freq, avg_coef)
+    xlabel('Time (s)')
+    ylabel('Frequency (Hz)')
+    
+    subplot(1,2,2)
+    imagesc(x.time, x.freq, avg_coef)
+    xlabel('Time (s)')
+    ylabel('Frequency (Hz)')
+
+    print(FILL_IN)
+end
+    
+% Plot the averages over subjects
+    
+    
+    
 %% Does hit-rate differ by LF phase?
 
 clear variables
