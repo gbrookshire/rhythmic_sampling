@@ -1,25 +1,35 @@
 - Artifacts
-    - Blinks
     - Eye movements
-    - Photodiode
+    - How can we exclude artifacts without messing up the trials with NaNs?
 -ROI
-    - How to select channels?
-    - Analyze in source space or in sensor space?
+    - Start with 3 combined gradiometers (6 gradiometers) from SNR topos
+    - Look at the SNR separately for L & R stimuli
+    - Check whether freq tagging shows up in ICA. Start with Tjerk.
+    - Look into Gulbainate and Cohen SSVEP method
 - Analyses
     - Trials with NaN-tagged artifacts get turned into *all* NaNs after TFR calc.
     - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
+    - Establish rhythmic sampling
+        - Look into reproducing the analyses from Landau et al (2015)
+        - power spectrum of RFT power (FFT on power in every trial, then average)
+        - Find a way to avoid the stimulus-driven response
+            - Start at 0.5 s after stim onset
+            - subtract the average response
+        - Before averaging over subjects, divide out the area under the curve from 1-40 Hz
     - Does power at tagged frequencies correlate with accuracy?
-        - Why are there so many trials with all NaNs in the trial-defined data?
-        - Double-check rs_tfr_stats.
+        - Double-check rs_accuracy_hfpower
             - Simulate known data and make sure you can reconstruct it
     - Does low-freq phase correlate with accuracy?
-        - Re-run LF TFRs (changed a couple parameters)
         - Replicate Fiebelkorn et al (2018)
+        - Phase-bifurcation index (VanRullen)
     - Does low-freq phase predict power at tagged frequencies?
+    - Does power at each tagged frequency vary rhythmically?
+        - FFT or autocorrelation of each power time-course
     - How does power at the two tagged frequencies covary?
-        - Initial analysis: positive xcorr at t=0
-        - Find a way to factor out broadband power?
+        - Rerun this analysis
+        - Factor out broadband power?
+            - Use the SNR (instantaneous) of both time courses?
 
-- Microsaccades?
+- Micro-saccades?
     - Check EyeLink traces
     - Check EOG
