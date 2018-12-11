@@ -688,26 +688,28 @@ for i_subject = 1:height(subject_info)
     x = load([exp_dir 'tfr/target/' fname '/low_power_acc_stats.mat']);
     
     % Anatomical ROI
-    h = x.hit_rate(ismember(x.label, occip_roi));
-%     h = squeeze(mean(x.hit_rate, 2));
+    keep_chans = ismember(x.label, occip_roi);
+    
+    hit_rate = x.hit_rate(:, keep_chans, :);
+    hit_rate = squeeze(mean(hit_rate, 2));
     
     bin_start = linspace(-pi, pi, x.n_bins);
-    imagesc(bin_start, x.freq, h')
+    imagesc(bin_start, x.freq, hit_rate')
     
     xticks([-pi 0 pi])
-    xticklabels({'-\pi' '0' '\pi'})
+    xticklabels({'-\pi', '0', '\pi'})
     xlabel('Phase')
     ylabel('Frequency (Hz)')
     set(gca, 'YDir', 'normal')
     
     cbh = colorbar('v');
-    set(cbh,'YTick',[min(min(h)) max(max(h))])
+    set(cbh,'YTick', [min(min(hit_rate)) max(max(hit_rate))])
     ylabel(cbh, 'Prop. hits')
   
     print('-dpng', '-r300', ...
         [exp_dir 'plots/hit_miss/lf_' strrep(fname, '/', '_')])
-
 end
+
 
 %% Cross-correlation of power at the tagged frequencies
 
