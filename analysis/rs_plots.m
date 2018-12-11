@@ -640,25 +640,34 @@ for i_subject = 1:height(subject_info)
     keep_chans = ismember(x.label, occip_roi);
     
     % Extract the regression coefficients for hit/miss predicting HF power
-    coef = cellfun(@(c) c{'Hit', 'Coefficient'}, x.stats);
+    coef = cellfun(@(c) c{'Hit', 'Estimate'}, x.stats);
     avg_coef = mean(coef(:,:,keep_chans), 3);
     % Extract p-values
-    pval = cellfun(@(c) c{'Hit', 'Coefficient'}, x.stats);
+    pval = cellfun(@(c) c{'Hit', 'pValue'}, x.stats);
     avg_pval = geomean(pval(:,:,keep_chans), 3); %%% <-------------- FIX ME
     
     % Plot it
     close all
     
-    subplot(1,2,1)
-    imagesc(x.time, x.freq, avg_coef)
+    figure(1)
+    imagesc(x.time, x.freq, avg_coef');
+    set(gca, 'YDir', 'normal')
     xlabel('Time (s)')
     ylabel('Frequency (Hz)')
+    c = colorbar;
+    ylabel(c, 'Beta')
+    colormap('parula')
     
-    subplot(1,2,2)
-    imagesc(x.time, x.freq, avg_coef)
+    figure(2)
+    imagesc(x.time, x.freq, log10(avg_pval)');
+    set(gca, 'YDir', 'normal')
     xlabel('Time (s)')
     ylabel('Frequency (Hz)')
-
+    caxis([min(min(log10(avg_pval))) 0])
+    c = colorbar;
+    ylabel(c, 'log10 p-value')
+    colormap(flipud(bone))
+    
     print(FILL_IN)
 end
     
