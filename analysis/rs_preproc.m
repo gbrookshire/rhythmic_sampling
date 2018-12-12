@@ -13,7 +13,8 @@ art = [];
 art.ica = load([art_path 'ica']); % Artifact defs
 art.visual = load([art_path 'visual']);
 art.photo = load([art_path 'photodiode']);
-art.eye = load([art_path 'eye']);
+art.eye = load([art_path 'eye']); % eye-tracker
+art.eog = load([art_path 'eog']);
 
 data_by_block = cell(size(block_info.all));
 for i_block = block_info.main
@@ -58,13 +59,15 @@ for i_block = block_info.main
     a.minaccepttim = 0.5;
     a.visual = art.visual.cfg_art.grad{i_block}.artfctdef.visual;
     a.photodiode.artifact = art.photo.photo_artfctdef{i_block};
-    a.eye.artifact = art.eye.eyes_artfctdef{i_block};
+    %a.eye.artifact = art.eye.eyes_artfctdef{i_block};
+    a.eog.artifact = art.eog.eog_artfctdef{i_block};
     cfg = []; % Put it into a cfg
     cfg.artfctdef = a;
-    % Check whether artifacts are as expected
+    % Check whether artifacts are in sensible places
     %{
-    cfg.viewmode = 'vertical';
+    cfg.viewmode = 'butterfly';
     cfg.layout = chan.grad.layout;
+    cfg.artifactalpha = 0.5;
     ft_databrowser(cfg, d);
     %}
     d = ft_rejectartifact(cfg, d);
