@@ -71,3 +71,21 @@ end
 fprintf('\n')
 
 
+%% Look for NaNs in the data
+% The HF TFRs have many trials that are only NaN.
+% Find where this happens.
+
+% Check for NaN in
+% - Preprocessed
+% - After rejecting artifacts
+%   - Blink
+%   - Photodiode
+%   - Visually identified
+% - TFR
+
+clear variables
+rs_setup
+i_subject = 1;
+
+fname = subject_info.meg{i_subject};
+d = rs_preproc(fname, 'trial');
