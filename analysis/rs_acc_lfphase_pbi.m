@@ -1,4 +1,4 @@
-function rs_acc_lfphase_pbi(i_subject)
+unction rs_acc_lfphase_pbi(i_subject)
 
 % Compute PBI on low-frequency phase between hits and misses.
 % Phase bifurcation index as in Busch, Dubois, VanRullen (2009)
@@ -49,7 +49,7 @@ pbi = (c_hit - c_all) .* (c_miss - c_all);
 label = d.label;
 freq = d.freq;
 dimord = d.dimord;
-save([exp_dir 'tfr/target/' fname '/low_acc_pbi'], ...
+save([exp_dir 'tfr/target/' fname '/lfphase_acc_pbi'], ...
     'pbi', 'label', 'freq')
 
 end
