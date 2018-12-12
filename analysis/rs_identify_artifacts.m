@@ -412,7 +412,7 @@ for i_subject = 1:height(subject_info)
         cfg.continuous = 'no';
         cfg.trl = trialdef.trl.trial;
         cfg.artfctdef.eog.channel = {'BIO001' 'BIO002'};
-        cfg.artfctdef.eog.cutoff = 4;
+        cfg.artfctdef.eog.cutoff = 4; % Z-score threshold
         %cfg.artfctdef.eog.interactive = 'yes';
         [cfg, artifact] = ft_artifact_eog(cfg);
 
