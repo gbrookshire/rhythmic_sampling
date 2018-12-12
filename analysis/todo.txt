@@ -1,4 +1,6 @@
 - Artifacts
+    - Go over manual artifact rejection again
+        - After previous rounds (and after ICA)
     - Eye movements
     - How can we exclude artifacts without messing up the trials with NaNs?
 -ROI
@@ -8,6 +10,10 @@
     - Look into Gulbainate and Cohen SSVEP method
 - Analyses
     - Trials with NaN-tagged artifacts get turned into *all* NaNs after TFR calc.
+        - This means very little data remains for analysis
+        - Is this true for both LF and HF analyses?
+        - How can we fix this?
+            - Reject using 'partial' instead of 'nan'?
     - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
     - Establish rhythmic sampling
         - Look into reproducing the analyses from Landau et al (2015)
@@ -15,6 +21,7 @@
         - Find a way to avoid the stimulus-driven response
             - Start at 0.5 s after stim onset
             - subtract the average response
+            - subtract the power at adjacent frequencies (Use SNR?)
         - Before averaging over subjects, divide out the area under the curve from 1-40 Hz
     - Does power at tagged frequencies correlate with accuracy?
         - Double-check rs_accuracy_hfpower
