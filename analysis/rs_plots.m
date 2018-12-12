@@ -176,112 +176,12 @@ print('-dpng', [exp_dir 'plots/behav/overall_accuracy'])
 
 
 %% Look at artifact counts for each subject
-% Plot over the course of the trial:
-% - Trial start
-% - Trial end
-% - Density of artifacts at each timepoint
-% This doesn't seem to reflect trialcounts after rejecting artifacts
+% Look at the number of NaNs in each sample over the trials
 
 clear variables
 close all
 rs_setup
 
-
-%%% This doesn't reflect outcome of rs_preproc -- don't use it
-%{
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fname = subject_info.meg{i_subject};
-    art_dir = [exp_dir 'artifacts/' fname];
-    eye_art = load([art_dir '/eye']);
-    photo_art = load([art_dir '/photodiode']);
-
-    % Make objects to keep track of events
-    fsample = 1000;
-    t = -1:(1/fsample):6; % Time in seconds
-    t_samp = t * fsample; % Time in samples
-    trial_on = zeros(size(t));
-    blink_on = zeros(size(t));
-    photo_on = zeros(size(t));
-    
-    % Go through each recording
-    for i_rec = block_info.main
-        trialdef = load([exp_dir 'trialdef/' fname '/' num2str(i_rec)]);
-        for i_trial = 1:size(trialdef.trl.(evt), 1) % Go through the trials
-            start_samp = trialdef.trl.(evt)(i_trial, 1);
-            if isnan(start_samp)
-                continue
-            end
-            end_samp = trialdef.trl.(evt)(i_trial, 2);
-            trial_dur = end_samp - start_samp;
-            % Log how much of time this trial covers
-            slice = ((start_samp + 1):end_samp) - start_samp;
-            trial_on(slice) = trial_on(slice) + 1;
-            % Select the artifacts in the current trial
-            eye_art_rel = eye_art.eyes_artfctdef{i_rec} - start_samp;
-            eye_curr = (eye_art_rel(:,1)>0) & (eye_art_rel(:,1)<trial_dur);
-            eye_curr = find(eye_curr);
-            photo_art_rel = photo_art.photo_artfctdef{i_rec} - start_samp;
-            photo_curr = (photo_art_rel(:,1)>0) & (photo_art_rel(:,1)<trial_dur);
-            photo_curr = find(photo_curr);
-            % Log how much time those artifacts cover
-            if ~isempty(eye_curr)
-                for i = eye_curr'
-                    this_art = eye_art_rel(i,:);
-                    slice = this_art(1):this_art(2);
-                    slice(slice > max(t_samp)) = [];
-                    blink_on(slice) = blink_on(slice) + 1;
-                end
-            end
-            if ~isempty(photo_curr)
-                for i = photo_curr'
-                    this_art = photo_art_rel(i,:);
-                    slice = this_art(1):this_art(2);
-                    slice(slice > max(t_samp)) = [];
-                    photo_on(slice) = photo_on(slice) + 1;
-                end
-            end
-        end
-    end
-    
-    subplot(4, 4, i_subject)
-    plot(t, trial_on, '-k')
-    hold on
-    plot(t, blink_on, '-g')
-    plot(t, photo_on, '-b')
-    plot(t, trial_on - blink_on - photo_on, '-r')
-    hold off
-    box off
-    ylim([0 400])
-    yticks([0 336])
-    if strcmp(evt, 'trial')
-        xlim([-1 5])
-        xticks([-1 0 5])
-    else
-        xlim([-1 1])
-        xticks([-1 0 1])
-    end
-end
-
-subplot(4,4,1)
-xlabel('Time (s)')
-ylabel('Number of trials')
-
-subplot(4,4,5)
-text(1, 4, 'Trials overall', 'color', 'k')
-text(1, 3, 'Photodiode artifact', 'color', 'b')
-text(1, 2, 'Blink artifact', 'color', 'g')
-text(1, 1, 'Trials after exclusion', 'color', 'r')
-axis off
-xlim([1 4])
-ylim([0 5])
-
-print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' evt])
-%}
-
-close all
 for segment_type = {'target' 'trial'}
     segment_type = segment_type{1};
     for i_subject = 1:height(subject_info)
@@ -332,6 +232,7 @@ for segment_type = {'target' 'trial'}
 
     print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' segment_type])
 end
+
 
 %% Scalp topo of the SNR for the tagged frequencys
 % SNR: Compare power in a narrow frequency to power at nearby frequencies
