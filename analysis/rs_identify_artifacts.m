@@ -385,3 +385,40 @@ for i_subject = 1:height(subject_info)
 end
     
 
+%% Get eye-blink artifacts from the EOG
+
+clear variables
+rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+
+    % Read in the raw eyelink recordings
+    eog_artfctdef = cell(size(block_info.all));
+    for i_block = block_info.main
+
+        % Read in the trial definition
+        fn = [exp_dir 'trialdef/' fname '/' num2str(i_block) '.mat'];
+        trialdef = load(fn);
+
+        % Identify eye-blink artifacts
+        fn = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
+        cfg = [];
+        cfg.datafile = fn;
+        cfg.headerfile = fn;
+        cfg.continuous = 'yes';
+        cfg.trl = trialdef.trl.trial;
+        cfg.artfctdef.eog.channel = {'BIO001' 'BIO002'};
+        cfg.artfctdef.eog.cutoff = 4;
+        %cfg.artfctdef.eog.interactive = 'yes';
+        [cfg, artifact] = ft_artifact_eog(cfg);
+
+        % Add to the overall cell object
+        eog_artfctdef{i_block} = artifact;
+    end
+
+    save([exp_dir 'artifacts/' fname '/eog'], 'eog_artfctdef')
+ end
