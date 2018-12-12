@@ -180,11 +180,15 @@ print('-dpng', [exp_dir 'plots/behav/overall_accuracy'])
 % - Trial start
 % - Trial end
 % - Density of artifacts at each timepoint
+% This doesn't seem to reflect trialcounts after rejecting artifacts
 
 clear variables
 close all
 rs_setup
 
+
+%%% This doesn't reflect outcome of rs_preproc -- don't use it
+%{
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -201,8 +205,6 @@ for i_subject = 1:height(subject_info)
     trial_on = zeros(size(t));
     blink_on = zeros(size(t));
     photo_on = zeros(size(t));
-    
-    evt = 'target';
     
     % Go through each recording
     for i_rec = block_info.main
@@ -277,7 +279,59 @@ xlim([1 4])
 ylim([0 5])
 
 print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' evt])
+%}
 
+close all
+for segment_type = {'target' 'trial'}
+    segment_type = segment_type{1};
+    for i_subject = 1:height(subject_info)
+        if subject_info.exclude(i_subject)
+            continue
+        end
+
+        %fname = subject_info.meg{i_subject};
+        %data = rs_preproc(fname, 'trial');
+
+        % Load preprocessed data
+        fname = subject_info.meg{i_subject};
+        disp(fname)
+        data = load([exp_dir 'preproc/' segment_type '/' fname '/preproc']);
+        data = data.data;
+
+        trial_len = cellfun(@(x) size(x,2), data.trial);
+        nan_counts = zeros([1 max(trial_len)]);
+        trial_counts = nan_counts;
+        for i_trial = 1:length(data.trial)
+            x = data.trial{i_trial}(1,:); % Look for NaNs in one channel
+            nan_counts(1:length(x)) = nan_counts(1:length(x)) + isnan(x);
+            trial_counts(1:length(x)) = trial_counts(1:length(x)) + ~isnan(x);
+        end
+        subplot(4,4,i_subject)
+        plot(nan_counts, '-r')
+        hold on
+        plot(trial_counts, '-k')
+        hold off
+        xlim([0 max(trial_len)])
+        ylim([0 336])
+        xticks([])
+        yticks([])
+    end
+
+    subplot(4,4,13)
+    xlabel('Time (sample)')
+    ylabel('Count')
+    xticks([0 max(trial_len)])
+    yticks([0 336])
+
+    subplot(4,4,5)
+    text(1, 2, 'Data after exclusion', 'color', 'k')
+    text(1, 1, 'NaN', 'color', 'r')
+    axis off
+    xlim([1 4])
+    ylim([0 5])
+
+    print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' segment_type])
+end
 
 %% Scalp topo of the SNR for the tagged frequencys
 % SNR: Compare power in a narrow frequency to power at nearby frequencies
@@ -360,14 +414,13 @@ end
 clear variables
 rs_setup
 
-roi_type = 'anatomical'; % 'anatomical' or 'functional'
-
 approx_eq = @(x,y) abs(x - y) < 0.1;
 
 % Hold onto the data for all subject
 % Subject * Freq * Time
 overall_data = nan(height(subject_info), 46, 51);
 
+close all
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -381,20 +434,17 @@ for i_subject = 1:height(subject_info)
     freq_data = hf.high_freq_data;
     clear hf;
 
-    if strcmp(roi_type, 'anatomical')
-        % Anatomical ROI
-        roi = {occip_roi occip_roi}; % Duplicate for 2 frequencies
-    elseif strcmp(roi_type, 'functional')
-        roi = rs_roi(fname, 1);     
-    end
-    chan_sel = ismember(freq_data.label, roi{1});
+    % Select channels in this roi
+    chan_sel = ismember(freq_data.label, snr_roi);
     
     % Exclude the trials that are all NaNs
-    % (How did that happen? Check those trials. There are a lot of them)
+    % Those appeared while computing TFRs of trials with NaNs
     nan_trial = all(all(all(isnan(freq_data.powspctrm), 2), 3), 4);
+    fprintf('%i NaN; %i numeric \n', ...
+        sum(nan_trial), sum(~nan_trial))
+
     cfg = [];
     cfg.trials = find(~nan_trial);
-    fprintf('%i trials are only NaNs \n', sum(nan_trial))
     cfg.avgoverrpt = 'yes';
     cfg.nanmean = 'yes';
     freq_data = ft_selectdata(cfg, freq_data);
@@ -402,11 +452,10 @@ for i_subject = 1:height(subject_info)
     overall_data(i_subject,:,:) = x;
     clear x
     
-    close all
     % Plot of frequency tagging response from trial onset
     subplot(2,1,1)
     cfg = [];
-    cfg.channel = union(roi{:});
+    cfg.channel = freq_data.label(chan_sel);
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
     cfg.title = ' ';
@@ -416,6 +465,7 @@ for i_subject = 1:height(subject_info)
     ylabel('Frequency (Hz)')
     hold on
     scatter([0 0], exp_params.tagged_freqs, 'w>', 'filled')
+    title(sprintf('%i trials', sum(~nan_trial)))
     hold off
     % zlabel('Power')
 
@@ -734,9 +784,9 @@ figure('position', [500, 500, 500, 200])
 
 % Plot the cross-correlations
 subplot(1,2,1)
-plot(x.time, x_overall, '-', 'color', [0.7 0.7 1]);
+plot(x.time, x_overall, '-'); %, 'color', [0.7 0.7 1]);
 hold on
-plot(x.time, nanmean(x_overall, 1), '-b', 'LineWidth', 1.5)
+plot(x.time, nanmean(x_overall, 1), '-b', 'LineWidth', 2.5)
 plot([-1 1], [0 0], '--k')
 hold off
 xlabel('Lag (s)')
@@ -752,9 +802,9 @@ f = (1/sample_per) * (0:(nfft / 2)) / nfft;
 y = fft(x_overall, nfft, 2);
 Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
 
-plot(f, db(Pyy, 'power'), '-', 'color', [0.7 0.7 1]);
+plot(f, db(Pyy, 'power'), '-'); %, 'color', [0.7 0.7 1]);
 hold on
-plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 1.5)
+plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 2.5)
 hold off
 xlabel('Frequency (Hz)')
 ylabel('Power (dB/Hz)')
@@ -764,7 +814,7 @@ print('-dpng', '-r300', ...
     [exp_dir 'plots/xcorr'])
 
 
-
+%% Plot the autocorrelation of RTF power and its spectrum
 
 
 
