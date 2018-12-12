@@ -15,8 +15,10 @@ else
     toi = -0.5:step_size:0.5;
 end
 
+% Load preprocessed data
 fname = subject_info.meg{i_subject};
-d = rs_preproc(fname, segment_type);
+d = load([exp_dir 'preproc/' segment_type '/' fname '/preproc']);
+d = d.data;
 
 save_dir = [exp_dir 'tfr/' segment_type '/'];
 [~,~,~] = mkdir(save_dir, fname);

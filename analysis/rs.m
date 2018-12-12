@@ -31,6 +31,13 @@ rs_apply_over_subjects(@rs_spectra, true)
 rs_apply_over_subjects(@rs_spectra_snr, false)
 
 
+%% Save preprocessed data
+for segment_event = {'trial' 'target'}
+    preproc_fun = @(i_subj) rs_preproc(i_subj, segment_event{1});
+    rs_apply_over_subjects(preproc_fun, true)
+end
+
+
 %% Compute TFRs
 % High- and low-frequency
 for segment_event = {'trial' 'target'}
