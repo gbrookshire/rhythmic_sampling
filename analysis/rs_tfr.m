@@ -10,7 +10,7 @@ rs_setup
 
 step_size = 0.04; % Should be divisible by 1/Fs to preserve time-bins
 if strcmp(segment_type, 'trial')
-    toi = -0.5:step_size:1.5; %%%% Would this work up to 6 s post-stim?
+    toi = -0.5:step_size:(exp_params.max_trial_dur + 0.5);
 else
     toi = -0.5:step_size:0.5;
 end
@@ -29,8 +29,8 @@ cfg_base.method = 'mtmconvol';
 cfg_base.taper = 'hanning';
 cfg_base.toi = toi;
 cfg_base.keeptrials = 'yes'; 
-cfg_base.pad = 'nextpow2';
-cfg_base.padtype = 'zero';
+% cfg_base.pad = 'nextpow2';
+% cfg_base.padtype = 'zero';
 
 % TFR around the tagged frequencies
 time_window = 0.2; % Smaller window -> more temporal smoothing
@@ -39,7 +39,7 @@ cfg.output = 'pow';
 cfg.foi = 55:100;
 cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
 high_freq_data = ft_freqanalysis(cfg, d);
-save([save_dir '/' fname '/high'], 'high_freq_data')
+save([save_dir '/' fname '/high'], 'high_freq_data', '-v7.3')
 clear cfg high_freq_data
 
 % TFR at low freqs (theta, alpha)
