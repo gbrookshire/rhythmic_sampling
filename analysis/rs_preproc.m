@@ -4,6 +4,7 @@ function data = rs_preproc(i_subject, segment_type)
 % evt: Which event type to segment out (trials|targets|responses)
 % reject: Which artifacts to reject: visual, photo, eye
 
+
 rs_setup
 fname = subject_info.meg{i_subject};
 art_path = [exp_dir 'artifacts/' fname '/'];
@@ -51,11 +52,10 @@ for i_block = block_info.main
     cfg.padding = 8; % Pad the data to reduce filtering artifacts
     cfg.padtype = 'data';
     d = ft_preprocessing(cfg);
-    %nan_check(d) %% No NaNs at this stage
     
     % Reject artifacts visually-identified and photodiode artifacts
     a = []; % Make the artfctdef object
-    a.reject = 'nan';
+    a.reject = 'partial';
     a.minaccepttim = 0.5;
     a.visual = art.visual.cfg_art.grad{i_block}.artfctdef.visual;
     a.photodiode.artifact = art.photo.photo_artfctdef{i_block};
@@ -71,19 +71,16 @@ for i_block = block_info.main
     ft_databrowser(cfg, d);
     %}
     d = ft_rejectartifact(cfg, d);
-    %nan_check(d) %% More NaNs than expected
     
     % Downsample
     cfg = [];
     cfg.resamplefs = 250;
     d = ft_resampledata(cfg, d);
-    %nan_check(d) %% No big change from after rejecting artifacts
 
     % Reject artifact ICs
     cfg = [];
     cfg.component = art.ica.reject_comp;
     d = ft_rejectcomponent(cfg, art.ica.comp, d);
-    %nan_check(d) %% Same as after downsampling
     
     % Save the preproc data in a cell obj
     data_by_block{i_block} = d;
@@ -93,9 +90,9 @@ end
 % Combine all the data
 data = ft_appenddata([], data_by_block{block_info.main});
 
-% Save the data
-save_dir = [exp_dir 'preproc/' segment_type '/'];
-[~,~,~] = mkdir(save_dir, fname);
-save([save_dir '/' fname '/preproc'], 'data')
+% % Save the data
+% save_dir = [exp_dir 'preproc/' segment_type '/'];
+% [~,~,~] = mkdir(save_dir, fname);
+% save([save_dir '/' fname '/preproc'], 'data')
 
 end
