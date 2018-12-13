@@ -1,8 +1,6 @@
 function data = rs_preproc(i_subject, segment_type)
 
-% fname: Base filename for this subject
-% evt: Which event type to segment out (trials|targets|responses)
-% reject: Which artifacts to reject: visual, photo, eye
+% segment_type: Which event type to segment out (trials|targets|responses)
 
 
 rs_setup
