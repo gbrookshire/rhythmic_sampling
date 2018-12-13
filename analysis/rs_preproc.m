@@ -1,5 +1,6 @@
 function data = rs_preproc(i_subject, segment_type)
 
+% i_subject: Subject number in subject_info
 % segment_type: Which event type to segment out (trials|targets|responses)
 
 
@@ -12,7 +13,7 @@ art = [];
 art.ica = load([art_path 'ica']); % Artifact defs
 art.visual = load([art_path 'visual']);
 art.photo = load([art_path 'photodiode']);
-art.eye = load([art_path 'eye']); % eye-tracker
+%art.eye = load([art_path 'eye']); % eye-tracker
 art.eog = load([art_path 'eog']);
 
 data_by_block = cell(size(block_info.all));
@@ -25,13 +26,11 @@ for i_block = block_info.main
         continue
     end
     trialdef = load(fn);
+    trl = trialdef.trl.(segment_type);
     
     % When segmenting by targets, exclude trials in which there was no targ
     if strcmp(segment_type, 'target')
-        trl = trialdef.trl.target;
-        trl = trl(~isnan(trialdef.trl.target(:,1)),:);
-    else
-        trl = trialdef.trl.(segment_type);
+        trl = trl(~isnan(trl(:,1)),:);
     end
 
     % Preprocess the data
@@ -88,9 +87,9 @@ end
 % Combine all the data
 data = ft_appenddata([], data_by_block{block_info.main});
 
-% % Save the data
-% save_dir = [exp_dir 'preproc/' segment_type '/'];
-% [~,~,~] = mkdir(save_dir, fname);
-% save([save_dir '/' fname '/preproc'], 'data')
+% Save the data
+save_dir = [exp_dir 'preproc/' segment_type '/'];
+[~,~,~] = mkdir(save_dir, fname);
+save([save_dir '/' fname '/preproc'], 'data')
 
 end
