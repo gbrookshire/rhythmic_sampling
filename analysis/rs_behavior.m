@@ -1,10 +1,7 @@
-function behav = rs_behavior(fn)
-
-% Give this function the complete path to the file
+function behav = rs_behavior(i_subject)
 
 % Load the behavioral data
-% fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-    
+fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
 behav = readtable(fn);
 
 % Add a column for recording number
