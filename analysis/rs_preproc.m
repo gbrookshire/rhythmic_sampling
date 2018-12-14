@@ -3,7 +3,6 @@ function data = rs_preproc(i_subject, segment_type)
 % i_subject: Subject number in subject_info
 % segment_type: Which event type to segment out (trials|targets|responses)
 
-
 rs_setup
 fname = subject_info.meg{i_subject};
 art_path = [exp_dir 'artifacts/' fname '/'];
@@ -49,6 +48,10 @@ for i_block = block_info.main
     cfg.padding = 8; % Pad the data to reduce filtering artifacts
     cfg.padtype = 'data';
     d = ft_preprocessing(cfg);
+    
+    % Append the trial number to the trialinfo field
+    trialnum = ((i_block - 1) * 112) + (1:112);
+    d.trialinfo(:,2) = trialnum;
     
     % Reject artifacts visually-identified and photodiode artifacts
     a = []; % Make the artfctdef object
