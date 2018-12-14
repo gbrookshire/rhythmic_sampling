@@ -46,6 +46,10 @@ for segment_event = {'trial' 'target'}
 end
 
 
+%% Does power at the tagged frequencies vary rhythmically?
+rs_apply_over_subjects(@rs_tagged_spect, true)
+
+
 %% Did power at the tagged frequencies differ b/w hits and misses?
 rs_apply_over_subjects(@rs_acc_hfpower_regression, true);
 
