@@ -1,6 +1,7 @@
 function behav = rs_behavior(i_subject)
 
 % Load the behavioral data
+rs_setup
 fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
 behav = readtable(fn);
 
