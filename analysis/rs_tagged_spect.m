@@ -12,9 +12,6 @@ function rs_tagged_spect(i_subject, segment_type)
 %   Start at 0.5 s?
 %   Subtract out the average response across trials?
 
-% TODO
-% ignore stuff after the response
-
 % i_subject = 1;
 % segment_type = 'trial';
 
@@ -57,14 +54,14 @@ cfg.length = 1; % Split into n-second segments
 cfg.overlap = 0.8; % Segments overlap by this prop
 d = ft_redefinetrial(cfg, d);
 
-% Find trials that overlap with the response
+% Find trials that overlap with the response, or occur after the response
 behav = rs_behavior(i_subject);
 includes_resp = nan(size(d.time));
 for i_rpt = 1:length(d.time)
     n_trial = d.trialinfo(i_rpt, 2);
     resp_time = behav.rt(behav.TrialNumber == n_trial);
     t = d.time{i_rpt};
-    includes_resp(i_rpt) = (min(t) < resp_time) & (resp_time < max(t));
+    includes_resp(i_rpt) = (min(t) < resp_time);
 end
 
 % Compute the spectra
