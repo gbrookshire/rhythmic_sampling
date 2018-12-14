@@ -12,11 +12,8 @@ function rs_tagged_spect(i_subject, segment_type)
 %   Start at 0.5 s?
 %   Subtract out the average response across trials?
 
-% TODO:
-% - Split into separate segments of equal length
-% - Toss segments smaller than that length (or zero-pad?)
-% - Toss segments close to the response (0.5 s from the end)
-% - Divide by area under the curve
+% TODO
+% ignore stuff after the response
 
 % i_subject = 1;
 % segment_type = 'trial';
@@ -33,33 +30,54 @@ d = d.high_freq_data;
 cfg = [];
 cfg.channel = snr_roi;
 cfg.avgoverchan = 'yes';
-cfg.latency = [0.5 4]; %FIXME - does this keep post-response stuff?
+cfg.latency = [0.5 4];
 d = ft_selectdata(cfg, d);
 
-% Compute the spectrum of power at the tagged freq for each trial
-fsample = 1 / mean(diff(d.time));
-nfft = 2 ^ nextpow2(size(d.powspctrm, 4));
-f = fsample / 2 * linspace(0, 1, nfft / 2 + 1); % Frequencies of the FFT
-spectra = nan([... % Trial * Time-step * Freq (averaged over channel)
-    size(d.powspctrm, 1) ...
-    nfft / 2 + 1 ...
-    length(d.freq)]);
-%     length(exp_params.tagged_freqs)]);
-for i_freq = 1:length(d.freq) %length(exp_params.tagged_freqs)
-    %freq_inx = approx_eq(exp_params.tagged_freqs(i_freq), d.freq);
-    freq_inx = i_freq;
-    for i_trial = 1:size(d.powspctrm, 1)
-        % Get rid of NaNs in the TFR (from trials shorter than the max time
-        x = squeeze(d.powspctrm(i_trial, :, freq_inx, :));
-        x(isnan(x)) = [];
-        y = fft(x, nfft); % Compute FFT for each trial
-        y = y / nfft; % Normalize the amplitude
-        y_amp = 2 * abs(y(1:nfft/2+1)); % Single-sided amplitude spect
-        spectra(i_trial,:,i_freq) = y_amp; % Store the amplitude spectra
-    end
+% Make into a data structure for getting FFTs
+d_new = [];
+d_new.fsample = 1 / mean(diff(d.time));
+d_new.trialinfo = d.trialinfo;
+d_new.grad = d.grad;
+d_new.label = cellfun(@(x) num2str(x), num2cell(d.freq)'); % 'chan' = freq
+d_new.trial = cell([1 size(d.powspctrm, 1)]);
+d_new.time = cell([1 size(d.powspctrm, 1)]);
+for i_rpt = 1:size(d.powspctrm, 1)
+    curr_rpt = squeeze(d.powspctrm(i_rpt,1,:,:)); % Data from current rpt
+    active_samples = all(~isnan(curr_rpt), 1); % CHECK: Right dimension?
+    d_new.time{i_rpt} = d.time(active_samples);;
+    d_new.trial{i_rpt} = curr_rpt(:, active_samples);
 end
-warning('Make sure that we dont get power at the trial length!')
+d = d_new;
+clear d_new
 
-plot(f, squeeze(mean(spectra, 1)))
-xlabel('Frequency (Hz)')
-ylabel('Power')
+% Split into separate segments
+cfg = [];
+cfg.minlength = 1; % Toss segments smaller than 1 s
+cfg.length = 1; % Split into n-second segments
+cfg.overlap = 0.8; % Segments overlap by this prop
+d = ft_redefinetrial(cfg, d);
+
+% Find trials that overlap with the response
+behav = rs_behavior(i_subject);
+includes_resp = nan(size(d.time));
+for i_rpt = 1:length(d.time)
+    n_trial = d.trialinfo(i_rpt, 2);
+    resp_time = behav.rt(behav.TrialNumber == n_trial);
+    t = d.time{i_rpt};
+    includes_resp(i_rpt) = (min(t) < resp_time) & (resp_time < max(t));
+end
+
+% Compute the spectra
+cfg = [];
+cfg.trials = ~includes_resp; % Exclude segments that overlap with a resp
+cfg.method = 'mtmfft';
+cfg.output = 'pow';
+cfg.taper = 'hanning';
+cfg.polyremoval = 1; % Remove linear trends
+spectra = ft_freqanalysis(cfg, d);
+
+save([exp_dir 'tfr/' segment_type '/' '/' fname '/spect'], 'spectra')
+
+% plot(f, squeeze(mean(spectra, 1)))
+% xlabel('Frequency (Hz)')
+% ylabel('Power')
