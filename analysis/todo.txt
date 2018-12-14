@@ -2,12 +2,16 @@
     - Go over manual artifact rejection again
         - After previous rounds (and after ICA)
     - Eye movements
-    - How can we exclude artifacts without messing up the trials with NaNs?
 -ROI
     - Start with 3 combined gradiometers (6 gradiometers) from SNR topos
     - Look at the SNR separately for L & R stimuli
     - Check whether freq tagging shows up in ICA. Start with Tjerk.
     - Look into Gulbainate and Cohen SSVEP method
+    - Comparison of spatial filter methods:
+        - http://mikexcohen.com/data/cohen2017_linearspatfilters.pdf
+        - GEDb seems to be the best, especially for shorter recordings (fig 4D)
+        - http://iopscience.iop.org/article/10.1088/1741-2560/12/6/066020/pdf
+        - https://github.com/svendaehne/matlab_SPoC/blob/master/SSD/ssd.m
 - Analyses
     - Trials with NaN-tagged artifacts get turned into *all* NaNs after TFR calc.
         - This means very little data remains for analysis
@@ -36,6 +40,7 @@
         - Rerun this analysis
         - Factor out broadband power?
             - Use the SNR (instantaneous) of both time courses?
+        - Could test for alternation by adapting Gulbanaite & Cohen to maximize activity that discriminates the two RFT frequencies...?
 
 - Micro-saccades?
     - Check EyeLink traces
