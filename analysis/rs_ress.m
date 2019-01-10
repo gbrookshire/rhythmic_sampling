@@ -17,17 +17,21 @@ function [data_out, maps] = rs_ress(data_in, f, fwhm)
 % Append all trials into one big matrix (Channel * Time)
 x = cat(2, data_in.trial{:});
 
+% Normalize matrix
+x = normalize(x)
+
 % Mean-center each row before getting covariance matrix
 center = @(x) bsxfun(@minus, x, mean(x, 2));
 
 % Get covariance matrix of the broadband activity
-cov_bb = cov(center(x)', 1);
+cov_bb = cov(center(normalize(x))', 1);
 
 % Get covariance matrix of narrowband-filtered activity
 % signal_band = [f_low, f_high];
 % [b,a] = butter(filter_order, signal_band / (data.fsample / 2));
 % x_filt = filtfilt(b, a, x); % Does this need to be transposed?
-x_filt = filterFGx(x, data_in.fsample, f, fwhm);
+fsample = 1 / mean(diff(data_in.time{1}));
+x_filt = filterFGx(x, fsample, f, fwhm);
 cov_filt = cov(center(x_filt)', 1);
 
 % perform generalized eigendecomposition
