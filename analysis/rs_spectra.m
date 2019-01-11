@@ -71,7 +71,6 @@ cfg.pad = 'nextpow2'; % (2 ^ 11) / (250 Hz) = 8.192 s
 cfg.padtype = 'zero';
 cfg.polyremoval = 1; % Remove linear trends
 freq_data = ft_freqanalysis(cfg, data);
-warning('TODO: Make sure this correctly pads trials to 4.096 s')
 
 [~,~,~] = mkdir([exp_dir 'spectra/'], fname);
 save([exp_dir 'spectra/' fname '/spectra'], 'freq_data')
