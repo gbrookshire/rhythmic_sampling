@@ -41,23 +41,26 @@ cov_filt = cov(center(x_filt)', 1);
 if ~isreal(evecs)
     warning('GED found complex-valued eigenvectors')
 end
-% find maximum component
-[~, comp2plot] = max(diag(evals));
+
+% Sort the eigenvalues and -vectors
+[srtd, srt_ind] = sort(diag(evals), 'descend');
+evals = diag(srtd); % diag matrix of sorted eigenvalues
+evecs = evecs(:, srt_ind); % sort the eigenvectors
+
 % normalize vectors (not really necessary, but OK)
 evecs = bsxfun(@rdivide, evecs, sqrt(sum(evecs .^ 2, 1)));
 
-% extract components and force sign
-% maps = inv(evecs'); % get maps (this is fine for full-rank matrices)
 % Get maps in a way that's robust to rank-deficiency
+% For full-rank matrices, it's fine to do: maps = inv(evecs');
 maps = cov_filt * evecs / (evecs' * cov_filt * evecs);
-[~,idx] = max(abs(maps(:, comp2plot))); % find biggest component
-maps = maps * sign(maps(idx, comp2plot)); % force to positive sign
 
-% % reconstruct RESS component time series
-% ress_ts1 = zeros(EEG.pnts, size(data,3));
-% for ti=1:size(data,3)
-%     ress_ts1(:,ti) = evecs(:,comp2plot)' * squeeze(data(:,:,ti));
-% end
+% Make component maps have positive sign
+[~,peak_ind] = max(abs(maps), [], 1); % find peak activation in each map
+peak_sign = nan(size(peak_ind)); % Init
+for i_map = 1:length(peak_ind)
+    peak_sign(i_map) = sign(maps(peak_ind(i_map), i_map));
+end
+maps = maps * diag(peak_sign);
 
 % Make Fieldtrip-style object to return out
 data_out = [];
@@ -68,83 +71,8 @@ data_out.time = data_in.time;
 data_out.trial = cell(size(data_in.trial));
 for i_trial = 1:length(data_in.trial)
     trial_data = data_in.trial{i_trial};
-    data_out.trial{i_trial} = evecs(:, comp2plot)' * squeeze(trial_data);
+    % Keep only the top component
+    data_out.trial{i_trial} = evecs(:,1)' * squeeze(trial_data);
 end
 
 end
-
-%% Testing
-%{
-
-% Try looking at neighboring frequencies instead of BB activity
-
-rs_setup
-i_subject = 1;
-fname = subject_info.meg{i_subject};
-data_preproc = rs_preproc(i_subject, 'trial');
-grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
-behav = rs_behavior(i_subject);
-
-filter_freq = exp_params.tagged_freqs(2);
-
-% Select trials with consistent freq/side mapping
-keep_trials = ismember(...
-    data_preproc.trialinfo(:,2), ...
-    find(behav.freq_right == filter_freq));
-cfg = [];
-cfg.trials = keep_trials;
-data_sub = ft_selectdata(cfg, data_preproc);
-
-% Compute RESS components
-[data_ress, maps] = rs_ress(data_sub, filter_freq, 0.5);
-
-% Plot the RESS component maps
-% Make aggregated data structure
-n_maps = size(maps, 2);
-d_maps = [];
-d_maps.label = data_sub.label;
-d_maps.time = 1:n_maps; % Actually not time, but component number
-d_maps.avg = real(maps);
-d_maps.dimord = 'chan_time';
-d_maps.grad = grad.grad;
-% Combine planar gradiometers
-cfg = [];
-cfg.method = 'sum';
-d_maps = ft_combineplanar(cfg, d_maps);
-% Plot the maps
-figure
-for i_map = 1:6
-    subplot(4, 3, i_map)
-    cfg = [];
-    cfg.marker = 'off';
-    cfg.comment = 'no';
-    cfg.style = 'straight';
-    cfg.layout = chan.grad_cmb.layout;
-    cfg.xlim = [-0.1 0.1] + i_map;
-    ft_topoplotER(cfg, d_maps)
-end
-subplot(4,3,1)
-title('Retained comp')
-
-% Check the spectra of the time-course
-% Compute the spectra
-cfg = [];
-cfg.channel = {'RESS'};
-cfg.method = 'mtmfft';
-cfg.output = 'pow';
-cfg.taper = 'hanning';
-cfg.pad = 'nextpow2';
-cfg.padtype = 'zero';
-cfg.polyremoval = 1; % Remove linear trends
-spec = ft_freqanalysis(cfg, data_ress);
-subplot(2,1,2)
-pow = 20 * log10(spec.powspctrm);
-plot(spec.freq, pow)
-xlabel('Frequency (Hz)')
-ylabel('Power (dB)')
-xlim([0 100])
-%ylim([-580 -550])
-hold on
-plot(filter_freq, max(pow), 'vr')
-hold off
-%}
