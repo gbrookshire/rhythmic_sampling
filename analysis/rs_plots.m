@@ -306,6 +306,94 @@ for i_subject = 1:height(subject_info)
     print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'/','_')])
 end
 
+%% Plot RESS filters
+
+clear variables
+rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    data_preproc = rs_preproc(i_subject, 'trial');
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
+    behav = rs_behavior(i_subject);
+
+    close all
+    figure('position', [50, 50, 500, 900])
+
+    i_condition = 0;
+    % Plot the maps and spectra
+    for i_freq = 1:2
+        for side = {'left' 'right'}
+            filter_freq = exp_params.tagged_freqs(i_freq);
+
+            % Select trials with consistent freq/side mapping
+            fieldname = ['freq_' side{1}];
+            keep_trials = ismember(...
+                data_preproc.trialinfo(:,2), ...
+                find(behav.(fieldname) == filter_freq));
+            cfg = [];
+            cfg.trials = keep_trials;
+            data_sub = ft_selectdata(cfg, data_preproc);
+
+            % Compute RESS components
+            [data_ress, maps] = rs_ress(data_sub, filter_freq, 0.5);
+
+            % Make data structure to show maps
+            n_maps = size(maps, 2);
+            d_maps = [];
+            d_maps.label = data_sub.label;
+            d_maps.time = 1:n_maps; % Actually not time, but component number
+            d_maps.avg = real(maps);
+            d_maps.dimord = 'chan_time';
+            d_maps.grad = grad.grad;
+            % Combine planar gradiometers
+            cfg = [];
+            cfg.method = 'sum';
+            d_maps = ft_combineplanar(cfg, d_maps);
+
+            % Compute the spectra
+            cfg = [];
+            % cfg.channel = {'RESS'};
+            cfg.method = 'mtmfft';
+            cfg.output = 'pow';
+            cfg.taper = 'hanning';
+            cfg.pad = 'nextpow2';
+            cfg.padtype = 'zero';
+            cfg.polyremoval = 1; % Remove linear trends
+            spec = ft_freqanalysis(cfg, data_ress);
+
+            % Plot everything
+            subplot(4, 2, i_condition * 2 + 1)
+            title(sprintf('%s, %i Hz', side{1}, filter_freq))
+            cfg = [];
+            cfg.marker = 'off';
+            cfg.comment = 'no';
+            cfg.style = 'straight';
+            cfg.layout = chan.grad_cmb.layout;
+            cfg.xlim = 1 + [-0.1 0.1];
+            ft_topoplotER(cfg, d_maps)
+
+            subplot(4, 2, i_condition * 2 + 2)
+            pow = 20 * log10(spec.powspctrm);
+            plot(spec.freq, pow)
+            xlabel('Frequency (Hz)')
+            ylabel('Power (dB)')
+            xlim([0 100])
+            hold on
+            plot(filter_freq, max(pow), 'vr')
+            hold off
+
+            i_condition = i_condition + 1;
+        end
+    end
+    
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/ress_maps/' strrep(fname,'/','_')])
+end
+
 
 %% Plot power at the tagged freqs time-locked to stimulus onset
 
