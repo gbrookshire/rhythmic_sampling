@@ -3,24 +3,20 @@
         - After previous rounds (and after ICA)
     - Eye movements
 -ROI
-    - Start with 3 combined gradiometers (6 gradiometers) from SNR topos
-    - Look at the SNR separately for L & R stimuli
+    - Use RESS/GEDb based on 63Hz
+      - RESS/GEDb - implemented. Works well for 63 Hz, very poorly for 78 Hz due to weak signal.
+      - Use spatial filters from 63 Hz for both frequencies? For participants who have clean filters for both frequencies, the filters look almost identical.
     - Check whether freq tagging shows up in ICA. Start with Tjerk.
-    - Look into Gulbainate and Cohen SSVEP method
+        - Cohen (2017) makes it look like ICA should do a bad job of selecting oscillations.
     - Comparison of spatial filter methods:
         - http://mikexcohen.com/data/cohen2017_linearspatfilters.pdf
         - GEDb seems to be the best, especially for shorter recordings (fig 4D)
         - http://iopscience.iop.org/article/10.1088/1741-2560/12/6/066020/pdf
         - https://github.com/svendaehne/matlab_SPoC/blob/master/SSD/ssd.m
 - Analyses
-    - Trials with NaN-tagged artifacts get turned into *all* NaNs after TFR calc.
-        - This means very little data remains for analysis
-        - Is this true for both LF and HF analyses?
-        - How can we fix this?
-            - Reject using 'partial' instead of 'nan'?
     - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
     - Establish rhythmic sampling
-        - Look into reproducing the analyses from Landau et al (2015)
+        - Look into reproducing the analyses from Landau et al (2015)?
         - power spectrum of RFT power (FFT on power in every trial, then average)
         - Find a way to avoid the stimulus-driven response
             - Start at 0.5 s after stim onset
@@ -33,6 +29,7 @@
     - Does low-freq phase correlate with accuracy?
         - Replicate Fiebelkorn et al (2018)
         - Phase-bifurcation index (VanRullen)
+        - Consider using Phase-consistency metric from Landau et al (2015)
     - Does low-freq phase predict power at tagged frequencies?
     - Does power at each tagged frequency vary rhythmically?
         - FFT or autocorrelation of each power time-course
