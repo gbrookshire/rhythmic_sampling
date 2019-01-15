@@ -316,7 +316,8 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    data_preproc = rs_preproc(i_subject, 'trial');
+    data = load([exp_dir 'preproc/trial/' fname '/preproc']);
+    data_preproc = data.data; clear data;
     grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
     behav = rs_behavior(i_subject);
 
@@ -324,7 +325,8 @@ for i_subject = 1:height(subject_info)
     figure('position', [50, 50, 500, 900])
 
     i_condition = 0;
-    % Plot the maps and spectra
+    % Compute and plot the maps and spectra
+    ress_maps = [];
     for i_freq = 1:2
         for side = {'left' 'right'}
             filter_freq = exp_params.tagged_freqs(i_freq);
@@ -339,7 +341,11 @@ for i_subject = 1:height(subject_info)
             data_sub = ft_selectdata(cfg, data_preproc);
 
             % Compute RESS components
-            [data_ress, maps] = rs_ress(data_sub, filter_freq, 0.5);
+            [data_ress, maps, ress] = rs_ress(data_sub, filter_freq, 0.5);
+            o = [];
+            o.maps = maps;
+            o.ress = ress;
+            ress_maps.(side{1}).(['f' num2str(filter_freq)]) = o;
 
             % Make data structure to show maps
             n_maps = size(maps, 2);
@@ -356,7 +362,6 @@ for i_subject = 1:height(subject_info)
 
             % Compute the spectra
             cfg = [];
-            % cfg.channel = {'RESS'};
             cfg.method = 'mtmfft';
             cfg.output = 'pow';
             cfg.taper = 'hanning';
@@ -392,7 +397,70 @@ for i_subject = 1:height(subject_info)
     
     print('-dpng', '-r300', ...
         [exp_dir 'plots/ress_maps/' strrep(fname,'/','_')])
+    % Save the data
+    save_dir = [exp_dir 'ress/'];
+    [~,~,~] = mkdir(save_dir, fname);
+    save([save_dir '/' fname '/ress'], 'ress_maps')
 end
+
+
+%% Plot the spectra after RESS spatial filters using 63 Hz
+clear variables
+rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    data = load([exp_dir 'preproc/trial/' fname '/preproc']);
+    data_preproc = data.data; clear data;
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
+    behav = rs_behavior(i_subject);
+    ress = load([exp_dir 'ress/' fname '/ress']);
+    ress = ress.ress_maps;
+
+    close all
+
+    i_condition = 0;
+    % Compute and plot the maps and spectra
+    for i_freq = 1:2
+        filter_freq = exp_params.tagged_freqs(i_freq);
+        for side = {'left' 'right'}
+            % Select trials with consistent freq/side mapping
+            fieldname = ['freq_' side{1}];
+            keep_trials = ismember(...
+                data_preproc.trialinfo(:,2), ...
+                find(behav.(fieldname) == filter_freq));
+            cfg = [];
+            cfg.trials = keep_trials;
+            data_sub = ft_selectdata(cfg, data_preproc);
+            % Apply spatial filter
+            data_ress = rs_applyressfilt(data_sub,ress.(side{1}).f63.ress);
+            % Compute the spectrum
+            cfg = [];
+            cfg.method = 'mtmfft';
+            cfg.output = 'pow';
+            cfg.taper = 'hanning';
+            cfg.pad = 'nextpow2';
+            cfg.padtype = 'zero';
+            cfg.polyremoval = 1; % Remove linear trends
+            spec = ft_freqanalysis(cfg, data_ress);
+            % Plot it
+            i_condition = i_condition + 1;
+            subplot(2, 2, i_condition)
+            pow = 20 * log10(spec.powspctrm);
+            plot(spec.freq, pow)
+            xlabel('Frequency (Hz)')
+            ylabel('Power (dB)')
+            xlim([0 100])
+            clear data_sub data_ress spec
+        end
+    end
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/ress_maps/63hz_map_' strrep(fname,'/','_')])
+end
+
 
 
 %% Plot power at the tagged freqs time-locked to stimulus onset
