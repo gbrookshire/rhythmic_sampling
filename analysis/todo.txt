@@ -12,17 +12,18 @@
         - http://mikexcohen.com/data/cohen2017_linearspatfilters.pdf
         - GEDb seems to be the best, especially for shorter recordings (fig 4D)
         - http://iopscience.iop.org/article/10.1088/1741-2560/12/6/066020/pdf
-        - https://github.com/svendaehne/matlab_SPoC/blob/master/SSD/ssd.m
 - Analyses
     - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
+    - TFR computation
+        - Apply RESS filters separately for left/right stimuli & label them as {'left' 'right'}. Make sure it's clear that the label pertains to _stimuli_ and not _channels_.
     - Establish rhythmic sampling
-        - Look into reproducing the analyses from Landau et al (2015)?
         - power spectrum of RFT power (FFT on power in every trial, then average)
         - Find a way to avoid the stimulus-driven response
             - Start at 0.5 s after stim onset
             - subtract the average response
             - subtract the power at adjacent frequencies (Use SNR?)
         - Before averaging over subjects, divide out the area under the curve from 1-40 Hz
+        - Look into reproducing the analyses from Landau et al (2015)?
     - Does power at tagged frequencies correlate with accuracy?
         - Double-check rs_accuracy_hfpower
             - Simulate known data and make sure you can reconstruct it
