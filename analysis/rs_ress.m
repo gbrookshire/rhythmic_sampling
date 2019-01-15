@@ -1,4 +1,4 @@
-function [data_out, maps] = rs_ress(data_in, f, fwhm)
+function [data_out, maps, ress_filt] = rs_ress(data_in, f, fwhm)
 
 % RESS (Gulbinaite & Cohen, 2017 NeuroImage)
 % Spatial filter for extracting periodic activity
@@ -12,6 +12,7 @@ function [data_out, maps] = rs_ress(data_in, f, fwhm)
 % OUTPUTS
 %   data_out: A fieldtrip data structure of activity at the RESS filter
 %   maps: Scalp topography of the filters
+%   ress_filt: The spatial filter to apply to MEEG data
 
 % Append all trials into one big matrix (Channel * Time)
 x = cat(2, data_in.trial{:});
@@ -62,17 +63,22 @@ for i_map = 1:length(peak_ind)
 end
 maps = maps * diag(peak_sign);
 
-% Make Fieldtrip-style object to return out
-data_out = [];
-data_out.fsample = fsample;
-data_out.label = {'RESS'};
-data_out.trialinfo = data_in.trialinfo;
-data_out.time = data_in.time;
-data_out.trial = cell(size(data_in.trial));
-for i_trial = 1:length(data_in.trial)
-    trial_data = data_in.trial{i_trial};
-    % Keep only the top component
-    data_out.trial{i_trial} = evecs(:,1)' * squeeze(trial_data);
-end
+% Matrix to apply the spatial filter to MEEG data
+ress_filt = evecs(:,1)';
+
+% % Make Fieldtrip-style object to return out
+% data_out = [];
+% data_out.fsample = fsample;
+% data_out.label = {'RESS'};
+% data_out.trialinfo = data_in.trialinfo;
+% data_out.time = data_in.time;
+% data_out.trial = cell(size(data_in.trial));
+% for i_trial = 1:length(data_in.trial)
+%     trial_data = data_in.trial{i_trial};
+%     % Keep only the top component
+%     data_out.trial{i_trial} = ress_filt * squeeze(trial_data);
+% end
+
+data_out = rs_applyressfilt(data_in, ress_filt);
 
 end
