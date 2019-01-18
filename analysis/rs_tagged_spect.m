@@ -16,43 +16,55 @@ function rs_tagged_spect(i_subject, segment_type)
 % segment_type = 'trial';
 
 rs_setup
-approx_eq = @(x,y) abs(x - y) < 0.1;
 fname = subject_info.meg{i_subject};
 
 % Load the TFR
 d = load([exp_dir 'tfr/' segment_type '/' fname '/high']);
 d = d.high_freq_data;
 
-% Average over channels in the ROI
-cfg = [];
-cfg.channel = snr_roi;
-cfg.avgoverchan = 'yes';
-cfg.latency = [0.5 4];
-d = ft_selectdata(cfg, d);
+% Analyze temporal structure separately for each RESS filter
+data_ress = [];
+for side = {'left' 'right'}
+    % Select RESS filter for one side
+    chan_inx = strcmp(side{1}, d.label);
+    % New data structure
+    d_side = [];
+    d_side.fsample = 1 / mean(diff(d.time));
+    d_side.trialinfo = d.trialinfo;
+    % Set channel names as the frequencies
+    d_side.label = cellfun(@(x) num2str(x), num2cell(d.freq)', ...
+        'UniformOutput', false);
+    d_side.trial = cell([1 size(d.powspctrm, 1)]);
+    d_side.time = cell([1 size(d.powspctrm, 1)]);
+    for i_rpt = 1:size(d.powspctrm, 1)
+        curr_rpt = squeeze(d.powspctrm(i_rpt,chan_inx,:,:)); % Current rpt
+        active_samples = all(~isnan(curr_rpt), 1); % CHECK: Right dimension?
+        d_side.time{i_rpt} = d.time(active_samples);;
+        d_side.trial{i_rpt} = curr_rpt(:, active_samples);
+    end
+    
+    % Toss trials with no samples
+    % (How did this happen?)
+    cfg = [];
+    cfg.trials = cellfun('length', d_side.time) > 1;
+    d_side = ft_selectdata(cfg, d_side);
+    
+    % Split into short segments
+    cfg = [];
+    cfg.minlength = 1; % Toss segments smaller than 1 s
+    cfg.length = 1; % Split into n-second segments
+    cfg.overlap = 0.8; % Segments overlap by this prop
+    d_side = ft_redefinetrial(cfg, d_side);
+    
+    
+    
+    %%%%%%%%%%%%% STOPPED HERE %%%%%%%%%%%%
+    
+    
+    data_ress.(side{1}) = d_side;
+    clear d_new;
+end    
 
-% Make into a data structure for getting FFTs
-d_new = [];
-d_new.fsample = 1 / mean(diff(d.time));
-d_new.trialinfo = d.trialinfo;
-d_new.grad = d.grad;
-d_new.label = cellfun(@(x) num2str(x), num2cell(d.freq)'); % 'chan' = freq
-d_new.trial = cell([1 size(d.powspctrm, 1)]);
-d_new.time = cell([1 size(d.powspctrm, 1)]);
-for i_rpt = 1:size(d.powspctrm, 1)
-    curr_rpt = squeeze(d.powspctrm(i_rpt,1,:,:)); % Data from current rpt
-    active_samples = all(~isnan(curr_rpt), 1); % CHECK: Right dimension?
-    d_new.time{i_rpt} = d.time(active_samples);;
-    d_new.trial{i_rpt} = curr_rpt(:, active_samples);
-end
-d = d_new;
-clear d_new
-
-% Split into separate segments
-cfg = [];
-cfg.minlength = 1; % Toss segments smaller than 1 s
-cfg.length = 1; % Split into n-second segments
-cfg.overlap = 0.8; % Segments overlap by this prop
-d = ft_redefinetrial(cfg, d);
 
 % Find trials that overlap with the response, or occur after the response
 behav = rs_behavior(i_subject);
@@ -71,6 +83,7 @@ cfg.method = 'mtmfft';
 cfg.output = 'pow';
 cfg.taper = 'hanning';
 cfg.polyremoval = 1; % Remove linear trends
+cfg.keeptrials = 'yes';
 spectra = ft_freqanalysis(cfg, d);
 
 save([exp_dir 'tfr/' segment_type '/' '/' fname '/spect'], 'spectra')
