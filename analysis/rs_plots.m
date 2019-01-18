@@ -413,52 +413,43 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    data = load([exp_dir 'preproc/trial/' fname '/preproc']);
-    data_preproc = data.data; clear data;
-    grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
-    behav = rs_behavior(i_subject);
-    ress = load([exp_dir 'ress/' fname '/ress']);
-    ress = ress.ress_maps;
+    data_ress = rs_preproc_ress(i_subject, 'trial');
+
+    % Compute the spectrum
+    cfg = [];
+    cfg.method = 'mtmfft';
+    cfg.output = 'pow';
+    cfg.taper = 'hanning';
+    cfg.pad = 'nextpow2';
+    cfg.padtype = 'zero';
+    cfg.polyremoval = 1; % Remove linear trends
+    cfg.keeptrials = 'yes';
+    spec = ft_freqanalysis(cfg, data_ress);
 
     close all
-
-    i_condition = 0;
-    % Compute and plot the maps and spectra
-    for i_freq = 1:2
-        filter_freq = exp_params.tagged_freqs(i_freq);
-        for side = {'left' 'right'}
-            % Select trials with consistent freq/side mapping
-            fieldname = ['freq_' side{1}];
-            keep_trials = ismember(...
-                data_preproc.trialinfo(:,2), ...
-                find(behav.(fieldname) == filter_freq));
+    i_plot = 1;
+    for freq = exp_params.tagged_freqs
+        for side = {'left' 'right'} % Which stim side
+            % Average over trials
             cfg = [];
-            cfg.trials = keep_trials;
-            data_sub = ft_selectdata(cfg, data_preproc);
-            % Apply spatial filter
-            data_ress = rs_applyressfilt(data_sub,ress.(side{1}).f63.ress);
-            % Compute the spectrum
-            cfg = [];
-            cfg.method = 'mtmfft';
-            cfg.output = 'pow';
-            cfg.taper = 'hanning';
-            cfg.pad = 'nextpow2';
-            cfg.padtype = 'zero';
-            cfg.polyremoval = 1; % Remove linear trends
-            spec = ft_freqanalysis(cfg, data_ress);
+            if strcmp(side{1}, 'left')
+                cfg.trials = data_ress.trialinfo(:,3) == freq;
+            else
+                cfg.trials = data_ress.trialinfo(:,3) ~= freq;
+            end
+            cfg.avgoverrpt = 'yes';
+            cfg.channel = side;
+            data_sub = ft_selectdata(cfg, spec);
             % Plot it
-            i_condition = i_condition + 1;
-            subplot(2, 2, i_condition)
-            pow = 20 * log10(spec.powspctrm);
-            plot(spec.freq, pow)
-            xlabel('Frequency (Hz)')
-            ylabel('Power (dB)')
+            subplot(2,2,i_plot)
+            plot(data_sub.freq, db(data_sub.powspctrm))
             xlim([0 100])
-            clear data_sub data_ress spec
+            title(sprintf('%i Hz, %s', freq, side{1}))
+            i_plot = i_plot + 1;
         end
     end
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/ress_maps/63hz_map_' strrep(fname,'/','_')])
+        [exp_dir 'plots/ress_maps/spec_63hzMap_' strrep(fname,'/','_')])
 end
 
 
