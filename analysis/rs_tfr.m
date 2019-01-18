@@ -17,9 +17,11 @@ end
 
 % Load preprocessed data
 fname = subject_info.meg{i_subject};
-d = load([exp_dir 'preproc/' segment_type '/' fname '/preproc']);
-d = d.data;
+% d = load([exp_dir 'preproc/' segment_type '/' fname '/preproc']);
+% d = d.data;
+d = rs_preproc_ress(i_subject, 'trial');
 
+% Set up dir for saving data
 save_dir = [exp_dir 'tfr/' segment_type '/'];
 [~,~,~] = mkdir(save_dir, fname);
 

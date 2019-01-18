@@ -42,7 +42,7 @@ end
 % High- and low-frequency
 for segment_event = {'trial' 'target'}
     tfr_fun = @(i_subj) rs_tfr(i_subj, segment_event{1});
-    rs_apply_over_subjects(tfr_fun, true);
+    rs_apply_over_subjects(tfr_fun, false);
 end
 
 
