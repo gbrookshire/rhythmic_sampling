@@ -456,9 +456,6 @@ end
 
 %% Plot power at the tagged freqs time-locked to stimulus onset
 
-% Instead of plotting power at tagged freq, plot instantaneous SNR at the
-%  tagged frequency? Not at first.
-
 clear variables
 rs_setup
 
@@ -466,7 +463,7 @@ approx_eq = @(x,y) abs(x - y) < 0.1;
 
 % Hold onto the data for all subject
 % Subject * Freq * Time
-overall_data = nan(height(subject_info), 46, 51);
+overall_data = nan(height(subject_info), 46, 126);
 
 close all
 for i_subject = 1:height(subject_info)
@@ -482,8 +479,8 @@ for i_subject = 1:height(subject_info)
     freq_data = hf.high_freq_data;
     clear hf;
 
-    % Select channels in this roi
-    chan_sel = ismember(freq_data.label, snr_roi);
+%     % Select channels in this roi
+%     chan_sel = ismember(freq_data.label, snr_roi);
     
     % Exclude the trials that are all NaNs
     % Those appeared while computing TFRs of trials with NaNs
@@ -496,14 +493,14 @@ for i_subject = 1:height(subject_info)
     cfg.avgoverrpt = 'yes';
     cfg.nanmean = 'yes';
     freq_data = ft_selectdata(cfg, freq_data);
-    x = mean(freq_data.powspctrm(chan_sel,:,:), 1);
+    x = mean(freq_data.powspctrm, 1);
     overall_data(i_subject,:,:) = x;
     clear x
     
     % Plot of frequency tagging response from trial onset
     subplot(2,1,1)
     cfg = [];
-    cfg.channel = freq_data.label(chan_sel);
+%     cfg.channel = freq_data.label(chan_sel);
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
     cfg.title = ' ';
@@ -528,7 +525,7 @@ for i_subject = 1:height(subject_info)
     for i_freq = 1:2
         freq_inx = approx_eq(freq_data.freq, ...
             exp_params.tagged_freqs(i_freq));
-        x = freq_data.powspctrm(chan_sel, freq_inx, :);
+        x = freq_data.powspctrm(:, freq_inx, :);
         x = squeeze(nanmean(x, 1)); % Average over channels
         plot(freq_data.time, x, 'LineWidth', 2, 'color', clr(i_freq,:));
         ypos = max(x);
@@ -539,7 +536,9 @@ for i_subject = 1:height(subject_info)
     end
     xlabel('Time (s)')
     ylabel('Power (relative change)')
-    plot([-0.5 1.5], [1 1], '--k')
+    plot([-0.5 4.5], [1 1], '--k')
+    xlim([-0.5 4.5])
+    xticks(0:4)
     hold off
 
     print('-dpng', '-r300', ...
@@ -585,7 +584,9 @@ for i_freq = 1:2
 end
 xlabel('Time (s)')
 ylabel('Power (relative change)')
-plot([-0.5 1.5], [1 1], '--k')
+plot([-0.5 4.5], [1 1], '--k')
+xlim([-0.5 4.5])
+xticks(0:4)
 hold off
 
 print('-dpng', '-r300', ...
