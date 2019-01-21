@@ -11,8 +11,6 @@ function rs_tagged_spect(i_subject)
 % To avoid the stimulus-driven response
 %   Subtract out the average response across trials?
 
-% i_subject = 1;
-
 rs_setup
 fname = subject_info.meg{i_subject};
 
@@ -84,17 +82,3 @@ for side = {'left' 'right'}
 end    
 
 save([exp_dir 'tfr/trial/' fname '/spect'], 'data_ress')
-
-% % Plotting example
-% car_freq = str2double(data_ress.left.label);
-% mod_freq = data_ress.left.freq;
-% spectra = data_ress.left.powspctrm;
-% spectra = squeeze(mean(spectra, 1));
-% spectra = bsxfun(@minus, spectra, mean(spectra, 2)); % Subtrct the mean
-% % for i_row = 1:size(spectra, 1) % Divide by area under the curve
-% %     spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
-% % end
-% imagesc(mod_freq, car_freq, spectra)
-% set(gca,'YDir','normal')
-% ylabel('Carrier Frequency (Hz)')
-% xlabel('Modulation Frequency (Hz)')
