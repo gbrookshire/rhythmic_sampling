@@ -9,11 +9,9 @@ function rs_tagged_spect(i_subject)
 %   Normalize by dividing the area under the curve
 %   Then average trial-wise FFTs
 % To avoid the stimulus-driven response
-%   Start at 0.5 s?
 %   Subtract out the average response across trials?
 
 % i_subject = 1;
-% segment_type = 'trial';
 
 rs_setup
 fname = subject_info.meg{i_subject};
@@ -43,7 +41,6 @@ for side = {'left' 'right'}
         d_side.time{i_rpt} = d.time(active_samples);;
         d_side.trial{i_rpt} = curr_rpt(:, active_samples);
     end
-    
     
     % Toss trials with no samples
     % This happens when calculating TFR on short trials
@@ -86,14 +83,18 @@ for side = {'left' 'right'}
     clear d_side spectra;
 end    
 
-save([exp_dir 'tfr/' segment_type '/' '/' fname '/spect'], 'spectra')
+save([exp_dir 'tfr/trial/' fname '/spect'], 'data_ress')
 
 % % Plotting example
 % car_freq = str2double(data_ress.left.label);
 % mod_freq = data_ress.left.freq;
 % spectra = data_ress.left.powspctrm;
 % spectra = squeeze(mean(spectra, 1));
-% imagesc(car_freq, mod_freq, spectra')
+% spectra = bsxfun(@minus, spectra, mean(spectra, 2)); % Subtrct the mean
+% % for i_row = 1:size(spectra, 1) % Divide by area under the curve
+% %     spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
+% % end
+% imagesc(mod_freq, car_freq, spectra)
 % set(gca,'YDir','normal')
-% xlabel('Carrier Frequency (Hz)')
-% ylabel('Modulation Frequency (Hz)')
+% ylabel('Carrier Frequency (Hz)')
+% xlabel('Modulation Frequency (Hz)')
