@@ -306,6 +306,7 @@ for i_subject = 1:height(subject_info)
     print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'/','_')])
 end
 
+
 %% Plot RESS filters
 
 clear variables
@@ -453,7 +454,6 @@ for i_subject = 1:height(subject_info)
 end
 
 
-
 %% Plot power at the tagged freqs time-locked to stimulus onset
 
 clear variables
@@ -592,6 +592,56 @@ hold off
 print('-dpng', '-r300', ...
     [exp_dir 'plots/stim_onset/overall'])
 
+
+%% Plot power at the envelope of tagged frequencies
+
+clear variables
+rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    data_ress = load([exp_dir 'tfr/trial/' fname '/spect']);
+    data_ress = data_ress.data_ress;
+
+    close all
+    i_cond = 1;
+    for freq = exp_params.tagged_freqs
+        for side = {'left' 'right'}
+            
+            % Get subset of the data
+            if strcmp(side, 'left')
+                trial_inx = data_ress.left.trialinfo(:,3) == freq;
+            else
+                trial_inx = data_ress.left.trialinfo(:,3) ~= freq;
+            end
+            cfg = [];
+            cfg.trials = trial_inx;
+            d = ft_selectdata(cfg, data_ress.(side{1}));
+            
+            % Plot
+            subplot(2, 2, i_cond)
+            car_freq = str2double(d.label);
+            mod_freq = d.freq;
+            spectra = d.powspctrm;
+            spectra = squeeze(mean(spectra, 1));
+%             spectra = bsxfun(@minus, spectra, mean(spectra, 2)); % Subtrct the mean
+%             for i_row = 1:size(spectra, 1) % Divide by area under the curve
+%                 spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
+%             end
+            imagesc(mod_freq, car_freq, spectra)
+            set(gca,'YDir','normal')
+            ylabel('Carrier Frequency (Hz)')
+            xlabel('Modulation Frequency (Hz)')
+            title(sprintf('%s, %i Hz', side{1}, freq))
+            i_cond = i_cond + 1;
+        end
+    end
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/stim_onset/' strrep(fname, '/', '_')])
+end
 
 %% Plot difference in HF power between hits and misses
 
