@@ -1,4 +1,4 @@
-function rs_tagged_spect(i_subject, segment_type)
+function rs_tagged_spect(i_subject)
 
 % Does power at the RFT frequency vary rhythmically?
 
@@ -20,7 +20,7 @@ fname = subject_info.meg{i_subject};
 
 % Load the data
 behav = rs_behavior(i_subject);
-d = load([exp_dir 'tfr/' segment_type '/' fname '/high']);
+d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
 % To facilitate FFT calculation, make a FT struct with a separate 'channel'
@@ -88,6 +88,12 @@ end
 
 save([exp_dir 'tfr/' segment_type '/' '/' fname '/spect'], 'spectra')
 
-% plot(f, squeeze(mean(spectra, 1)))
-% xlabel('Frequency (Hz)')
-% ylabel('Power')
+% % Plotting example
+% car_freq = str2double(data_ress.left.label);
+% mod_freq = data_ress.left.freq;
+% spectra = data_ress.left.powspctrm;
+% spectra = squeeze(mean(spectra, 1));
+% imagesc(car_freq, mod_freq, spectra')
+% set(gca,'YDir','normal')
+% xlabel('Carrier Frequency (Hz)')
+% ylabel('Modulation Frequency (Hz)')
