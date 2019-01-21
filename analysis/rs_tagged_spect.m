@@ -19,6 +19,13 @@ behav = rs_behavior(i_subject);
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
+%{
+%%% TESTING WITH WHITE NOISE
+nan_inx = isnan(d.powspctrm);
+d.powspctrm = rand(size(d.powspctrm));
+d.powspctrm(nan_inx) = nan;
+%}
+
 % To facilitate FFT calculation, make a FT struct with a separate 'channel'
 % for each frequency at each RESS filter
 data_ress = [];
@@ -39,12 +46,14 @@ for side = {'left' 'right'}
         d_side.time{i_rpt} = d.time(active_samples);;
         d_side.trial{i_rpt} = curr_rpt(:, active_samples);
     end
+    fprintf('\nTRIALS: %i\n', length(d_side.trial))
     
     % Toss trials with no samples
     % This happens when calculating TFR on short trials
     cfg = [];
     cfg.trials = cellfun('length', d_side.time) > 1;
     d_side = ft_selectdata(cfg, d_side);
+    fprintf('\nTRIALS: %i\n', length(d_side.trial))
 
     % Split into short segments
     cfg = [];
@@ -52,6 +61,7 @@ for side = {'left' 'right'}
     cfg.length = 1; % Split into n-second segments
     cfg.overlap = 0.8; % Segments overlap by this prop
     d_side = ft_redefinetrial(cfg, d_side);
+    fprintf('\nTRIALS: %i\n', length(d_side.trial))
 
     % Toss segments that overlap with or occur after the response
     % Or that include the transient response at the beginning of the trial
@@ -67,6 +77,7 @@ for side = {'left' 'right'}
     cfg = [];
     cfg.trials = ~includes_resp & ~beginning_of_trial;
     d_side = ft_selectdata(cfg, d_side);
+    fprintf('\nTRIALS: %i\n', length(d_side.trial))
 
     % Compute the spectra
     cfg = [];

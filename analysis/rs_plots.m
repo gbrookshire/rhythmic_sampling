@@ -627,8 +627,10 @@ for i_subject = 1:height(subject_info)
             mod_freq = d.freq;
             spectra = d.powspctrm;
             spectra = squeeze(mean(spectra, 1));
-%             spectra = bsxfun(@minus, spectra, mean(spectra, 2)); % Subtrct the mean
-%             for i_row = 1:size(spectra, 1) % Divide by area under the curve
+%             % Normalize by subtracting out the mean for each carrier freq
+%             spectra = bsxfun(@minus, spectra, mean(spectra, 2));
+%             % Normalize by dividing by the total area under the FFT curve
+%             for i_row = 1:size(spectra, 1)
 %                 spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
 %             end
             imagesc(mod_freq, car_freq, spectra)
@@ -639,8 +641,9 @@ for i_subject = 1:height(subject_info)
             i_cond = i_cond + 1;
         end
     end
+    
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/stim_onset/' strrep(fname, '/', '_')])
+        [exp_dir 'plots/tagged_spect/' strrep(fname, '/', '_')])
 end
 
 %% Plot difference in HF power between hits and misses

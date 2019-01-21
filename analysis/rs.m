@@ -47,8 +47,13 @@ end
 
 
 %% Does power at the tagged frequencies vary rhythmically?
-rs_apply_over_subjects(@rs_tagged_spect, true)
-
+% rs_apply_over_subjects(@rs_tagged_spect, false)
+for i=5:height(subject_info)
+    if subject_info.exclude(i)
+        continue
+    end
+    rs_tagged_spect(i)
+end
 
 %% Did power at the tagged frequencies differ b/w hits and misses?
 rs_apply_over_subjects(@rs_acc_hfpower_regression, true);
