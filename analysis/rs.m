@@ -48,7 +48,8 @@ end
 
 %% Does power at the tagged frequencies vary rhythmically?
 % rs_apply_over_subjects(@rs_tagged_spect, false)
-for i=5:height(subject_info)
+rs_setup
+for i=1:height(subject_info)
     if subject_info.exclude(i)
         continue
     end

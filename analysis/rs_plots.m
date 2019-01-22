@@ -627,6 +627,7 @@ for i_subject = 1:height(subject_info)
             mod_freq = d.freq;
             spectra = d.powspctrm;
             spectra = squeeze(mean(spectra, 1));
+%             spectra = db(spectra, 'power');
 %             % Normalize by subtracting out the mean for each carrier freq
 %             spectra = bsxfun(@minus, spectra, mean(spectra, 2));
 %             % Normalize by dividing by the total area under the FFT curve
@@ -634,6 +635,7 @@ for i_subject = 1:height(subject_info)
 %                 spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
 %             end
             imagesc(mod_freq, car_freq, spectra)
+%             pcolor(mod_freq, car_freq, spectra); shading('interp')
             set(gca,'YDir','normal')
             ylabel('Carrier Frequency (Hz)')
             xlabel('Modulation Frequency (Hz)')

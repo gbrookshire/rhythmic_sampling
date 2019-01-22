@@ -20,11 +20,22 @@ d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
 %{
-%%% TESTING WITH WHITE NOISE
+%%% TESTING WITH NOISE
 nan_inx = isnan(d.powspctrm);
 d.powspctrm = rand(size(d.powspctrm));
 d.powspctrm(nan_inx) = nan;
+%%% Add a rhythmic signal - this does show up where we'd expect
+t = d.time;
+car_freq = 63;
+mod_freq = 7;
+mod_amp = 1;
+sig = (1/2) + (1/2) * mod_amp * sin(t * 2 * pi * mod_freq);
+freq_inx = round(d.freq) == car_freq;
+for i_trial = 1:size(d.powspctrm, 1)
+    d.powspctrm(i_trial,1,freq_inx,:) = sig;
+end
 %}
+
 
 % To facilitate FFT calculation, make a FT struct with a separate 'channel'
 % for each frequency at each RESS filter
@@ -34,34 +45,32 @@ for side = {'left' 'right'}
     chan_inx = strcmp(side{1}, d.label);
     d_side = [];
     d_side.trialinfo = d.trialinfo;
+    % Initialize cells to hold time and trial
+    d_side.trial = cell([1 size(d.powspctrm, 1)]);
+    d_side.time = cell([1 size(d.powspctrm, 1)]);
     % Set channel names as the frequencies
     d_side.label = cellfun(@(x) sprintf('%.6f', x), ...
         num2cell(d.freq)', ...
         'UniformOutput', false);
-    d_side.trial = cell([1 size(d.powspctrm, 1)]);
-    d_side.time = cell([1 size(d.powspctrm, 1)]);
     for i_rpt = 1:size(d.powspctrm, 1)
         curr_rpt = squeeze(d.powspctrm(i_rpt,chan_inx,:,:)); % Current rpt
-        active_samples = all(~isnan(curr_rpt), 1); % CHECK: Right dimension?
-        d_side.time{i_rpt} = d.time(active_samples);;
+        active_samples = all(~isnan(curr_rpt), 1); % Is this time all NaN?
+        d_side.time{i_rpt} = d.time(active_samples);
         d_side.trial{i_rpt} = curr_rpt(:, active_samples);
     end
-    fprintf('\nTRIALS: %i\n', length(d_side.trial))
     
     % Toss trials with no samples
     % This happens when calculating TFR on short trials
     cfg = [];
     cfg.trials = cellfun('length', d_side.time) > 1;
     d_side = ft_selectdata(cfg, d_side);
-    fprintf('\nTRIALS: %i\n', length(d_side.trial))
 
     % Split into short segments
     cfg = [];
     cfg.minlength = 1; % Toss segments smaller than 1 s
     cfg.length = 1; % Split into n-second segments
-    cfg.overlap = 0.8; % Segments overlap by this prop
+    cfg.overlap = 0.5; % Segments overlap by this prop
     d_side = ft_redefinetrial(cfg, d_side);
-    fprintf('\nTRIALS: %i\n', length(d_side.trial))
 
     % Toss segments that overlap with or occur after the response
     % Or that include the transient response at the beginning of the trial
@@ -77,7 +86,6 @@ for side = {'left' 'right'}
     cfg = [];
     cfg.trials = ~includes_resp & ~beginning_of_trial;
     d_side = ft_selectdata(cfg, d_side);
-    fprintf('\nTRIALS: %i\n', length(d_side.trial))
 
     % Compute the spectra
     cfg = [];
@@ -86,6 +94,7 @@ for side = {'left' 'right'}
     cfg.taper = 'hanning';
     cfg.polyremoval = 1; % Remove linear trends
     cfg.keeptrials = 'yes';
+    %cfg.pad = 'nextpow2';
     spectra = ft_freqanalysis(cfg, d_side);
     
     data_ress.(side{1}) = spectra;

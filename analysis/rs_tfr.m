@@ -8,7 +8,7 @@ function rs_tfr(i_subject, segment_type)
 
 rs_setup
 
-step_size = 0.04; % Should be divisible by 1/Fs to preserve time-bins
+step_size = 0.02; % Should be divisible by 1/Fs to preserve time-bins
 if strcmp(segment_type, 'trial')
     toi = -0.5:step_size:(exp_params.max_trial_dur + 0.5);
 else
