@@ -5,23 +5,16 @@
 -ROI
     - Use RESS/GEDb based on 63Hz
       - RESS/GEDb - implemented. Works well for 63 Hz, very poorly for 78 Hz due to weak signal.
-      - Use spatial filters from 63 Hz for both frequencies? For participants who have clean filters for both frequencies, the filters look almost identical.
-    - Check whether freq tagging shows up in ICA. Start with Tjerk.
-        - Cohen (2017) makes it look like ICA should do a bad job of selecting oscillations.
+      - Use spatial filters from 63 Hz for both frequencies. For participants who have clean filters for both frequencies, the filters look almost identical.
     - Comparison of spatial filter methods:
         - http://mikexcohen.com/data/cohen2017_linearspatfilters.pdf
         - GEDb seems to be the best, especially for shorter recordings (fig 4D)
         - http://iopscience.iop.org/article/10.1088/1741-2560/12/6/066020/pdf
 - Analyses
     - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
-    - TFR computation
-        - Apply RESS filters separately for left/right stimuli & label them as {'left' 'right'}. Make sure it's clear that the label pertains to _stimuli_ and not _channels_.
     - Establish rhythmic sampling
         - power spectrum of RFT power (FFT on power in every trial, then average)
-        - Find a way to avoid the stimulus-driven response
-            - Start at 0.5 s after stim onset
-            - subtract the average response
-            - subtract the power at adjacent frequencies (Use SNR?)
+            - ** Result: Blob of low-freq power at the RFT frequency is modulated at 2 Hz. Is that just 1/f noise, and we only have enough carrier-signal power to see 1/f noise at the RFT frequencies?
         - Before averaging over subjects, divide out the area under the curve from 1-40 Hz
         - Look into reproducing the analyses from Landau et al (2015)?
     - Does power at tagged frequencies correlate with accuracy?
@@ -35,7 +28,6 @@
     - Does power at each tagged frequency vary rhythmically?
         - FFT or autocorrelation of each power time-course
     - How does power at the two tagged frequencies covary?
-        - Rerun this analysis
         - Factor out broadband power?
             - Use the SNR (instantaneous) of both time courses?
         - Could test for alternation by adapting Gulbanaite & Cohen to maximize activity that discriminates the two RFT frequencies...?
