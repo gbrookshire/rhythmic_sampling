@@ -680,13 +680,37 @@ xlabel('Lag (s)')
 ylabel('Correlation')
 
 % Plot avg over subjects
+x_overall = squeeze(mean(xc, 2));
 figure
-plot(x.t, squeeze(mean(nanmean(xc, 1), 2)), '-r')
+subplot(2,1,1)
+plot(x.t, x_overall, '-', 'color', [0.7 0.7 1])
 hold on
+plot(x.t, nanmean(x_overall, 1), '-b', 'LineWidth', 2.5)
 plot([-1 1], [0 0], '-k')
 plot([0 0], [-1 1], '-k')
 hold off
-ylim([-1 1] * 0.07)
+ylim([-0.05 0.2])
+xlabel('Lag (s)')
+ylabel('Correlation')
+
+% % Compute and plot the FFT of the cross-correlation
+% % uk.mathworks.com/help/matlab/examples/fft-for-spectral-analysis.html
+subplot(2,1,2)
+nfft = 2^7;
+sample_per = mean(diff(x.t));
+Fs = 1 / sample_per;
+f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+y = fft(x_overall, nfft, 2);
+Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
+
+plot(f, db(Pyy, 'power'), '-', 'color', [0.7 0.7 1]);
+hold on
+plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 2.5)
+hold off
+xlabel('Frequency (Hz)')
+ylabel('Power (dB/Hz)')
+xlim([0 12])
+
 
 
 %% Plot difference in HF power between hits and misses
@@ -904,69 +928,6 @@ for i_subject = 1:height(subject_info)
     print('-dpng', '-r300', ...
         [exp_dir 'plots/hit_miss/lf_' strrep(fname, '/', '_')])
 end
-
-
-%% Cross-correlation of power at the tagged frequencies
-
-% Load the data
-clear variables
-rs_setup
-x_overall = nan(height(subject_info), 51); % Subject * Time
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fname = subject_info.meg{i_subject};
-    disp(fname)
-    x = load([exp_dir 'xcorr/' fname '/x']);
-    keepchans = ismember(x.label, occip_roi);
-    x_subj = squeeze(mean(nanmean(x.x(:,keepchans,:), 1), 2));
-    x_overall(i_subject,:) = x_subj;
-end
-
-close all
-figure('position', [500, 500, 500, 200])
-
-% Plot the cross-correlations
-subplot(1,2,1)
-plot(x.time, x_overall, '-'); %, 'color', [0.7 0.7 1]);
-hold on
-plot(x.time, nanmean(x_overall, 1), '-b', 'LineWidth', 2.5)
-plot([-1 1], [0 0], '--k')
-hold off
-xlabel('Lag (s)')
-ylabel('Correlation')
-
-% Compute and plot the FFT of the cross-correlation
-% uk.mathworks.com/help/matlab/examples/fft-for-spectral-analysis.html
-subplot(1,2,2)
-nfft = 2^6;
-sample_per = mean(diff(x.time));
-Fs = 1 / sample_per;
-f = (1/sample_per) * (0:(nfft / 2)) / nfft;
-y = fft(x_overall, nfft, 2);
-Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
-
-plot(f, db(Pyy, 'power'), '-'); %, 'color', [0.7 0.7 1]);
-hold on
-plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 2.5)
-hold off
-xlabel('Frequency (Hz)')
-ylabel('Power (dB/Hz)')
-xlim([0 12])
-
-print('-dpng', '-r300', ...
-    [exp_dir 'plots/xcorr'])
-
-
-%% Plot the autocorrelation of RTF power and its spectrum
-
-
-
-
-
-
-
 
 
 
