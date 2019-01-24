@@ -593,7 +593,7 @@ print('-dpng', '-r300', ...
     [exp_dir 'plots/stim_onset/overall'])
 
 
-%% Plot power at the envelope of tagged frequencies
+%% Plot spectra the envelope of tagged frequencies
 
 clear variables
 rs_setup
@@ -647,6 +647,47 @@ for i_subject = 1:height(subject_info)
     print('-dpng', '-r300', ...
         [exp_dir 'plots/tagged_spect/' strrep(fname, '/', '_')])
 end
+
+
+%% Plot cross-correlation of power at the two tagged frequencies
+
+clear variables
+rs_setup
+
+close all
+
+figure
+xc = nan([height(subject_info), 2, 101]); % Subj x Side x Lag
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    x = load([exp_dir 'tfr/trial/' fname '/xcorr']);
+    xc(i_subject,:,:) = x.xc;
+
+    subplot(4,4,i_subject)
+    plot(x.t, mean(x.xc, 1))
+    hold on
+    plot([-1 1], [0 0], '-k')
+    plot([0 0], [-1 1], '-k')
+    hold off
+    ylim([-1 1] * max(max(x.xc)))
+end
+
+subplot(4,4,13)
+xlabel('Lag (s)')
+ylabel('Correlation')
+
+% Plot avg over subjects
+figure
+plot(x.t, squeeze(mean(nanmean(xc, 1), 2)), '-r')
+hold on
+plot([-1 1], [0 0], '-k')
+plot([0 0], [-1 1], '-k')
+hold off
+ylim([-1 1] * 0.07)
+
 
 %% Plot difference in HF power between hits and misses
 

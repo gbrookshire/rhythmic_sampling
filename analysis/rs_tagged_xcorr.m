@@ -6,109 +6,45 @@ rs_setup
 fname = subject_info.meg{i_subject};
 
 % Load the data
-behav = rs_behavior(i_subject);
+% behav = rs_behavior(i_subject);
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
-% % Append all the trials in time: Chan x Freq x Time
-% [n_trials, n_chans, n_freqs, n_time] = size(d.powspctrm);
-% pwr = nan(n_chans, n_freqs, n_trials * n_time);
-% start_inx = 1; % Where to place this trial
-% for i_trial = 1:n_trials
-%     x = squeeze(d.powspctrm(i_trial,:,:,:)); 
-%     pwr(:, :, start_inx:(start_inx + n_time - 1)) = x;
-%     start_inx = start_inx + n_time;
-% end
-% clear x
-% 
-% % Compute the cross-correlations
-% %%% THIS DOESN'T ACTUALLY MAKE SENSE
-% % We want xcorr between channel NOT WITHIN FREQ, but between RFT freqs
-% fsample = mean(diff(d.time));
-% max_lag = round(1 * (1 / fsample)); % Maximum XCorr lag in samples
-% xc = nan(n_freqs, 2 * max_lag + 1);
-% for i_freq = 1:n_freqs
-%     a = squeeze(pwr(1, i_freq, :));
-%     b = squeeze(pwr(2, i_freq, :));
-%     x = nanxcorr(a, b, max_lag);
-%     xc(i_freq, :) = x;
-% end
-% keyboard
+fsample = 1 / mean(diff(d.time));
+max_lag_sec = 1; 
+max_lag = round(max_lag_sec * fsample); % XCorr lag in samples
+t = -max_lag_sec:(1/fsample):max_lag_sec;
 
-% Do this for trials with 63 Hz on the left
-a = squeeze(pwr(1, round(d.freq) == 63, :)); % L-RESS, 63 Hz
-b = squeeze(pwr(2, round(d.freq) == 78, :)); % R-RESS, 78 Hz
-x = nanxcorr(a, b, max_lag);
+xc = nan([2, length(t)]);
+for i_freq = 1:2
+    left_freq = exp_params.tagged_freqs(i_freq);
+    if i_freq == 1
+        right_freq = exp_params.tagged_freqs(2);
+    elseif i_freq == 2
+        right_freq = exp_params.tagged_freqs(1);
+    end
+    % Select trials with this freq mapping
+    cfg = [];
+    cfg.trials = d.trialinfo(:,3) == left_freq;
+    d_sub = ft_selectdata(cfg, d);
+    % Append all the trials in time: Chan x Freq x Time
+    [n_trials, n_chans, n_freqs, n_time] = size(d_sub.powspctrm);
+    pwr = nan(n_chans, n_freqs, n_trials * n_time);
+    start_inx = 1; % Where to place this trial in the new matrix
+    for i_trial = 1:n_trials
+        x = squeeze(d_sub.powspctrm(i_trial,:,:,:)); 
+        pwr(:, :, start_inx:(start_inx + n_time - 1)) = x;
+        start_inx = start_inx + n_time;
+    end
+    clear x start_inx
+    % Run the cross-correlation
+    a = squeeze(pwr(1, round(d_sub.freq) == left_freq, :));
+    b = squeeze(pwr(1, round(d_sub.freq) == right_freq, :));
+    xc(i_freq,:) = nanxcorr(a, b, max_lag);
+end
 
-% And this for trials with 63 Hz on the right
-a = squeeze(pwr(2, round(d.freq) == 63, :)); % L-RESS, 63 Hz
-b = squeeze(pwr(1, round(d.freq) == 78, :)); % R-RESS, 78 Hz
-x = nanxcorr(a, b, max_lag);
-
-
-
-
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% rs_setup
-% 
-% step_size = 0.04; % Should be divisible by 1/Fs to preserve time-bins
-% toi = 0.5:step_size:(exp_params.max_trial_dur-0.5);
-% 
-% fname = subject_info.meg{i_subject};
-% d = rs_preproc(fname, 'trial');
-% 
-% save_dir = [exp_dir 'xcorr/'];
-% [~,~,~] = mkdir(save_dir, fname);
-% 
-% % TFR around the tagged frequencies
-% % time_window = 0.1; % 10 Hz smoothing
-% time_window = 0.2; % 5 Hz smoothing
-% % time_window = 0.5; % 2 Hz smoothing
-% cfg = [];
-% cfg.method = 'mtmconvol';
-% cfg.taper = 'hanning';
-% cfg.toi = toi;
-% cfg.keeptrials = 'yes'; 
-% cfg.pad = 'nextpow2';
-% cfg.padtype = 'zero';
-% cfg.output = 'pow';
-% cfg.foi = exp_params.tagged_freqs;
-% cfg.t_ftimwin = ones(length(cfg.foi), 1) .* time_window;
-% d = ft_freqanalysis(cfg, d);
-% 
-% % Compute the cross-correlation
-% maxlag_sec = 1;
-% maxlag_samp = round(maxlag_sec / step_size);
-% xcorr_length = (maxlag_samp * 2) + 1;
-% x = nan(... % xcorr: Trial * Channel * Lag
-%     size(d.powspctrm, 1), ...
-%     length(d.label), ...
-%     xcorr_length);
-% nsamps = nan([1 size(d.powspctrm, 1)]); % Number of samples in each trial
-% for i_trial = 1:size(d.powspctrm, 1)
-%     for i_channel = 1:length(d.label)
-%         % Extract the data
-%         a = squeeze(d.powspctrm(i_trial,i_channel,1,:))';
-%         b = squeeze(d.powspctrm(i_trial,i_channel,2,:))';
-%         % Compute xcorr
-%         c = nanxcorr(a, b, maxlag_samp);
-%         x(i_trial, i_channel, :) = c;
-%     end
-%     nsamps(i_trial) = sum(~isnan(d.powspctrm(i_trial,1,1,:)));
-% end
-% 
-% % Save the data
-% label = d.label;
-% time = -maxlag_sec:step_size:maxlag_sec;
-% save([save_dir '/' fname '/x'], 'x', 'label', 'time', 'nsamps')
+% Save the data
+save([exp_dir 'tfr/trial/' fname '/xcorr'], 'xc', 't')
 end
 
 
