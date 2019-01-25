@@ -38,6 +38,10 @@ for segment_event = {'trial' 'target'}
 end
 
 
+%% Compute RESS/GEDb spatial filters
+rs_apply_over_subjects(@rs_derive_ress, true)
+
+
 %% Compute TFRs
 % High- and low-frequency
 for segment_event = {'trial' 'target'}
@@ -56,6 +60,10 @@ for i=1:height(subject_info)
     rs_tagged_spect(i)
 end
 
+%% Compute cross-correlations between power at tagged freqs
+rs_apply_over_subjects(@rs_tagged_xcorr, false)
+
+
 %% Did power at the tagged frequencies differ b/w hits and misses?
 rs_apply_over_subjects(@rs_acc_hfpower_regression, true);
 
@@ -63,10 +71,6 @@ rs_apply_over_subjects(@rs_acc_hfpower_regression, true);
 %% Does accuracy vary with the phase of LF oscillations?
 rs_apply_over_subjects(@rs_acc_lfphase_fiebelkorn, false)
 rs_apply_over_subjects(@rs_acc_lfphase_pbi, false)
-
-
-%% Compute cross-correlations between power at tagged freqs
-rs_apply_over_subjects(@rs_tagged_xcorr, true)
 
 
 %% Does power at the tagged freq depend on the phase of LF oscillations?

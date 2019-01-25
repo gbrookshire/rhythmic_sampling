@@ -307,104 +307,7 @@ for i_subject = 1:height(subject_info)
 end
 
 
-%% Plot RESS filters
-
-clear variables
-rs_setup
-
-spectra = cell([1 height(subject_info)]); % Spectra for each subject
-
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fname = subject_info.meg{i_subject};
-    data = load([exp_dir 'preproc/trial/' fname '/preproc']);
-    data_preproc = data.data; clear data;
-    grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
-    behav = rs_behavior(i_subject);
-    ress_maps = load([exp_dir 'ress/' fname '/ress']);
-    ress_maps = ress_maps.ress_maps;
-
-    close all
-    figure('position', [50, 50, 500, 900])
-
-    i_condition = 0;
-    % Compute and plot the maps and spectra
-    ress_maps = [];
-    for i_freq = 1:2
-        for side = {'left' 'right'}
-            filter_freq = exp_params.tagged_freqs(i_freq);
-
-            % Select trials with consistent freq/side mapping
-            fieldname = ['freq_' side{1}];
-            keep_trials = ismember(...
-                data_preproc.trialinfo(:,2), ...
-                find(behav.(fieldname) == filter_freq));
-            cfg = [];
-            cfg.trials = keep_trials;
-            data_sub = ft_selectdata(cfg, data_preproc);
-
-%             % Compute RESS components
-%             [data_ress, maps, ress] = rs_ress(data_sub, filter_freq, 0.5);
-%             o = [];
-%             o.maps = maps;
-%             o.ress = ress;
-%             ress_maps.(side{1}).(['f' num2str(filter_freq)]) = o;
-
-            % Make data structure to show maps
-            n_maps = size(maps, 2);
-            d_maps = [];
-            d_maps.label = data_sub.label;
-            d_maps.time = 1:n_maps; % Actually not time, but component number
-            d_maps.avg = real(maps);
-            d_maps.dimord = 'chan_time';
-            d_maps.grad = grad.grad;
-            % Combine planar gradiometers
-            cfg = [];
-            cfg.method = 'sum';
-            d_maps = ft_combineplanar(cfg, d_maps);
-            ress_maps(i_subject) = d_maps;
-
-            % Compute the spectra
-            cfg = [];
-            cfg.method = 'mtmfft';
-            cfg.output = 'pow';
-            cfg.taper = 'hanning';
-            cfg.pad = 'nextpow2';
-            cfg.padtype = 'zero';
-            cfg.polyremoval = 1; % Remove linear trends
-            spec = ft_freqanalysis(cfg, data_ress);
-            spectra{i_subject}.(side{1}).(['f' num2str(filter_freq)]])= spec;
-
-            % Plot everything
-            subplot(4, 2, i_condition * 2 + 1)
-            title(sprintf('%s, %i Hz', side{1}, filter_freq))
-            cfg = [];
-            cfg.marker = 'off';
-            cfg.comment = 'no';
-            cfg.style = 'straight';
-            cfg.layout = chan.grad_cmb.layout;
-            cfg.xlim = 1 + [-0.1 0.1];
-            ft_topoplotER(cfg, d_maps)
-
-            subplot(4, 2, i_condition * 2 + 2)
-            pow = 20 * log10(spec.powspctrm);
-            plot(spec.freq, pow)
-            xlabel('Frequency (Hz)')
-            ylabel('Power (dB)')
-            xlim([0 100])
-            hold on
-            plot(filter_freq, max(pow), 'vr')
-            hold off
-
-            i_condition = i_condition + 1;
-        end
-    end
-    
-    print('-dpng', '-r300', ...
-        [exp_dir 'plots/ress_maps/' strrep(fname,'/','_')])
-end
+%% Plot RESS spatial filters
 
 
 %%%% OLD VERSION
@@ -568,13 +471,17 @@ print('-dpng', '-r300', [exp_dir 'plots/ress_maps/avg'])
 
 
 %% Plot the spectra after RESS spatial filters using 63 Hz
+% Requires a lot of space & moving data around - do on the cluster
 clear variables
 rs_setup
+
+spectra = cell([1 height(subject_info)]); % spectra for all subjects
 
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
+    close all
     fname = subject_info.meg{i_subject};
     data_ress = rs_preproc_ress(i_subject, 'trial');
 
@@ -588,17 +495,17 @@ for i_subject = 1:height(subject_info)
     cfg.polyremoval = 1; % Remove linear trends
     cfg.keeptrials = 'yes';
     spec = ft_freqanalysis(cfg, data_ress);
+    spectra{i_subject} = spec;
 
-    close all
     i_plot = 1;
     for freq = exp_params.tagged_freqs
         for side = {'left' 'right'} % Which stim side
             % Average over trials
             cfg = [];
             if strcmp(side{1}, 'left')
-                cfg.trials = data_ress.trialinfo(:,3) == freq;
+                cfg.trials = spec.trialinfo(:,3) == freq;
             else
-                cfg.trials = data_ress.trialinfo(:,3) ~= freq;
+                cfg.trials = spec.trialinfo(:,3) ~= freq;
             end
             cfg.avgoverrpt = 'yes';
             cfg.channel = side;
@@ -608,12 +515,67 @@ for i_subject = 1:height(subject_info)
             plot(data_sub.freq, db(data_sub.powspctrm))
             xlim([0 100])
             title(sprintf('%i Hz, %s', freq, side{1}))
+            xlabel('Frequency (Hz)')
+            ylabel('Power (dB)')
+
             i_plot = i_plot + 1;
         end
     end
     print('-dpng', '-r300', ...
         [exp_dir 'plots/ress_maps/spec_63hzMap_' strrep(fname,'/','_')])
 end
+
+% Avg over subjects
+
+close all
+i_plot = 1;
+for freq = exp_params.tagged_freqs
+    for side = {'left' 'right'} % Which stim side
+        % Combine data for all subjects
+        spec_cond = nan([height(subject_info) length(spec.freq)]);
+        for i_subject = 1:height(subject_info)
+            if subject_info.exclude(i_subject) 
+                continue
+            end
+            % Average over trials
+            cfg = [];
+            if strcmp(side{1}, 'left')
+                cfg.trials = spectra{i_subject}.trialinfo(:,3) == freq;
+            else
+                cfg.trials = spectra{i_subject}.trialinfo(:,3) ~= freq;
+            end
+            cfg.avgoverrpt = 'yes';
+            cfg.channel = side;
+            data_sub = ft_selectdata(cfg, spectra{i_subject});
+            % Normalize by area under the curve
+            pwr = data_sub.powspctrm;
+            pwr = pwr ./ sum(pwr);
+            spec_cond(i_subject,:) = pwr;
+        end
+        spec_mean = nanmean(spec_cond, 1);
+    
+        [~, ~, spec_ci] = ttest(spec_cond);
+        % Plot it
+        subplot(2,2,i_plot)
+        fill([spec.freq fliplr(spec.freq)], ...
+            db([spec_ci(1,:), fliplr(spec_ci(2,:))]), ...
+            'b', 'FaceALpha', 0.4, 'EdgeColor', 'none')
+        hold on
+        plot(spec.freq, db(spec_mean), '-b')
+        hold off
+        xlim([0 100])
+        title(sprintf('%i Hz, %s', freq, side{1}))
+        xlabel('Frequency (Hz)')
+        ylabel('Power (dB)')
+        
+        i_plot = i_plot + 1;
+        
+    end
+end
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/ress_maps/spec_63hzMap_overall'])
+
 
 
 %% Plot power at the tagged freqs time-locked to stimulus onset

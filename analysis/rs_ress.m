@@ -1,7 +1,7 @@
 function [data_out, maps, ress_filt] = rs_ress(data_in, f, fwhm)
 
-% RESS (Gulbinaite & Cohen, 2017 NeuroImage)
 % Spatial filter for extracting periodic activity
+% RESS (Gulbinaite & Cohen, 2017 NeuroImage)
 %
 % INPUTS
 %   data_in: A fieldtrip data structure (from preprocessing)
