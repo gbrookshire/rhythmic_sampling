@@ -35,3 +35,16 @@
 - Micro-saccades?
     - Check EyeLink traces
     - Check EOG
+
+Analyses & plots
+    - Behavior
+        - Target threshold changing over the experiment
+        - Hits in each condition
+    - Frequency tagging checks
+        - Raw spectra - plot average over subjects?
+        - RESS spatial filter topographies
+            - Averaged over subjects
+            - Plot spectra of RESS components by individual subjects
+        - SNR topographies
+            - Not split by side of frequency (yet)
+    - 
