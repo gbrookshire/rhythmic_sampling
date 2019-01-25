@@ -312,6 +312,108 @@ end
 clear variables
 rs_setup
 
+spectra = cell([1 height(subject_info)]); % Spectra for each subject
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    data = load([exp_dir 'preproc/trial/' fname '/preproc']);
+    data_preproc = data.data; clear data;
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
+    behav = rs_behavior(i_subject);
+    ress_maps = load([exp_dir 'ress/' fname '/ress']);
+    ress_maps = ress_maps.ress_maps;
+
+    close all
+    figure('position', [50, 50, 500, 900])
+
+    i_condition = 0;
+    % Compute and plot the maps and spectra
+    ress_maps = [];
+    for i_freq = 1:2
+        for side = {'left' 'right'}
+            filter_freq = exp_params.tagged_freqs(i_freq);
+
+            % Select trials with consistent freq/side mapping
+            fieldname = ['freq_' side{1}];
+            keep_trials = ismember(...
+                data_preproc.trialinfo(:,2), ...
+                find(behav.(fieldname) == filter_freq));
+            cfg = [];
+            cfg.trials = keep_trials;
+            data_sub = ft_selectdata(cfg, data_preproc);
+
+%             % Compute RESS components
+%             [data_ress, maps, ress] = rs_ress(data_sub, filter_freq, 0.5);
+%             o = [];
+%             o.maps = maps;
+%             o.ress = ress;
+%             ress_maps.(side{1}).(['f' num2str(filter_freq)]) = o;
+
+            % Make data structure to show maps
+            n_maps = size(maps, 2);
+            d_maps = [];
+            d_maps.label = data_sub.label;
+            d_maps.time = 1:n_maps; % Actually not time, but component number
+            d_maps.avg = real(maps);
+            d_maps.dimord = 'chan_time';
+            d_maps.grad = grad.grad;
+            % Combine planar gradiometers
+            cfg = [];
+            cfg.method = 'sum';
+            d_maps = ft_combineplanar(cfg, d_maps);
+            ress_maps(i_subject) = d_maps;
+
+            % Compute the spectra
+            cfg = [];
+            cfg.method = 'mtmfft';
+            cfg.output = 'pow';
+            cfg.taper = 'hanning';
+            cfg.pad = 'nextpow2';
+            cfg.padtype = 'zero';
+            cfg.polyremoval = 1; % Remove linear trends
+            spec = ft_freqanalysis(cfg, data_ress);
+            spectra{i_subject}.(side{1}).(['f' num2str(filter_freq)]])= spec;
+
+            % Plot everything
+            subplot(4, 2, i_condition * 2 + 1)
+            title(sprintf('%s, %i Hz', side{1}, filter_freq))
+            cfg = [];
+            cfg.marker = 'off';
+            cfg.comment = 'no';
+            cfg.style = 'straight';
+            cfg.layout = chan.grad_cmb.layout;
+            cfg.xlim = 1 + [-0.1 0.1];
+            ft_topoplotER(cfg, d_maps)
+
+            subplot(4, 2, i_condition * 2 + 2)
+            pow = 20 * log10(spec.powspctrm);
+            plot(spec.freq, pow)
+            xlabel('Frequency (Hz)')
+            ylabel('Power (dB)')
+            xlim([0 100])
+            hold on
+            plot(filter_freq, max(pow), 'vr')
+            hold off
+
+            i_condition = i_condition + 1;
+        end
+    end
+    
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/ress_maps/' strrep(fname,'/','_')])
+end
+
+
+%%%% OLD VERSION
+%{
+clear variables
+rs_setup
+
+spectra_all = cell([1 height(subject_info)]); % Spectra for each subject
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -360,6 +462,7 @@ for i_subject = 1:height(subject_info)
             cfg = [];
             cfg.method = 'sum';
             d_maps = ft_combineplanar(cfg, d_maps);
+            ress_maps(i_subject) = d_maps;
 
             % Compute the spectra
             cfg = [];
@@ -370,6 +473,7 @@ for i_subject = 1:height(subject_info)
             cfg.padtype = 'zero';
             cfg.polyremoval = 1; % Remove linear trends
             spec = ft_freqanalysis(cfg, data_ress);
+            spectra_all{i_subject} = spec;
 
             % Plot everything
             subplot(4, 2, i_condition * 2 + 1)
@@ -403,6 +507,64 @@ for i_subject = 1:height(subject_info)
     [~,~,~] = mkdir(save_dir, fname);
     save([save_dir '/' fname '/ress'], 'ress_maps')
 end
+%}
+
+
+%% Plot the RESS spatial filters averaged over subjects
+
+clear variables
+rs_setup
+
+ress_maps = cell([1 height(subject_info)]);
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad');
+    data_ress = load([exp_dir 'ress/' fname '/ress']);
+    ress_maps{i_subject} = data_ress.ress_maps;
+end
+ress_maps(cellfun(@isempty, ress_maps)) = []; % Delete empty cells
+
+% Load list of channel labels
+labels = load([exp_dir 'spectra/' subject_info.meg{1} '/spectra']);
+labels = labels.freq_data.label;
+
+i_plot = 1;
+for side = {'left' 'right'}
+    
+    m = cellfun(@(c) c.(side{1}).f63.maps(:,1), ...
+        ress_maps, 'UniformOutput', false);
+    m = [m{:}]; % Concatenate into a matrix
+
+    % Make data structure to show maps
+    d_maps = [];
+    d_maps.label = labels;
+    d_maps.time = 1:size(m,2); % Actually not time, but subject
+    d_maps.avg = real(m);
+    d_maps.dimord = 'chan_time';
+    d_maps.grad = grad.grad;
+    % Combine planar gradiometers
+    cfg = [];
+    cfg.method = 'sum';
+    d_maps = ft_combineplanar(cfg, d_maps);
+
+    % Plot it
+    subplot(1,2,i_plot)
+    cfg = [];
+    cfg.marker = 'on';
+    cfg.markersymbol = 'o';
+    cfg.markersize = 1;
+    cfg.comment = 'no';
+    cfg.style = 'straight';
+    cfg.layout = chan.grad_cmb.layout;
+    cfg.gridscale = 200;
+    ft_topoplotER(cfg, d_maps)
+    i_plot = i_plot + 1;
+    title([side{1} ' stim'])
+end
+print('-dpng', '-r300', [exp_dir 'plots/ress_maps/avg'])
 
 
 %% Plot the spectra after RESS spatial filters using 63 Hz
