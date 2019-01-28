@@ -233,6 +233,45 @@ for segment_type = {'target' 'trial'}
     print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' segment_type])
 end
 
+%% Plot the spectra of the raw signals
+
+clear variables
+rs_setup
+close all
+
+figure('position', [50, 50, 300, 200])
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject}; 
+    spec = load([exp_dir 'spectra/' fname '/spectra']);
+    spec = spec.freq_data;
+
+    % Average over occipital channels
+    chans = [2042 2032 2112];
+    chans = [chans (chans + 1)];
+    chans = cellfun(@(n) ['MEG' num2str(n)],...
+        num2cell(chans),...
+        'UniformOutput', false);
+    cfg = [];
+    cfg.channel = chans;
+    cfg.avgoverchan = 'yes';
+    spec = ft_selectdata(cfg, spec);
+
+    p = spec.powspctrm;
+    p = p / sum(p); % Normalize
+    hold on
+    plot(spec.freq, db(p, 'power'))
+
+end
+xlabel('Frequency (Hz)')
+ylabel('Power')
+xlim([0 100])
+plot(exp_params.tagged_freqs, [-38 -38], '^r')
+hold off
+print('-dpng', [exp_dir 'plots/spectra'])
+
 
 %% Scalp topo of the SNR for the tagged frequencys
 % SNR: Compare power in a narrow frequency to power at nearby frequencies
