@@ -233,6 +233,7 @@ for segment_type = {'target' 'trial'}
     print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' segment_type])
 end
 
+
 %% Plot the spectra of the raw signals
 
 clear variables
@@ -614,7 +615,6 @@ end
 
 print('-dpng', '-r300', ...
     [exp_dir 'plots/ress_maps/spec_63hzMap_overall'])
-
 
 
 %% Plot power at the tagged freqs time-locked to stimulus onset

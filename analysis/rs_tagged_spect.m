@@ -14,8 +14,18 @@ function rs_tagged_spect(i_subject)
 rs_setup
 fname = subject_info.meg{i_subject};
 
-% Load the data
-behav = rs_behavior(i_subject);
+% Load behavioral data
+behav = rs_behavior(i_subject); % For RT
+
+%{
+% SIMULATED
+fname = 'SIMULATED';
+behav = rs_behavior(1);
+d = load([exp_dir 'tfr/trial/SIMULATED/high']);
+d = d.high_freq_data;
+%}
+
+% Load the MEG data
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
@@ -69,7 +79,7 @@ for side = {'left' 'right'}
     cfg = [];
     cfg.minlength = 1; % Toss segments smaller than 1 s
     cfg.length = 1; % Split into n-second segments
-    cfg.overlap = 0.5; % Segments overlap by this prop
+    cfg.overlap = 0.9; % Segments overlap by this prop
     d_side = ft_redefinetrial(cfg, d_side);
 
     % Toss segments that overlap with or occur after the response
@@ -94,7 +104,7 @@ for side = {'left' 'right'}
     cfg.taper = 'hanning';
     cfg.polyremoval = 1; % Remove linear trends
     cfg.keeptrials = 'yes';
-    %cfg.pad = 'nextpow2';
+    cfg.pad = 'nextpow2';
     spectra = ft_freqanalysis(cfg, d_side);
     
     data_ress.(side{1}) = spectra;
