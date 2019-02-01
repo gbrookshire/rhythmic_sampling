@@ -11,9 +11,18 @@ function [cfc_data, mod_freq] = cfc(data, freq, nfft, width)
 % OUTPUTS
 % cfc_data: Coherence values
 % mod_freq: The frequencies of modulation for the coherence
+%
+% This will only work if there are no NaNs in the data.
+% Use ft_rejectartifacts with 'partial' before this point to avoid NaNs.
+
+% Author: Geoff Brookshire
+% Adapted from a script provided by Ole Jensen
+
+% TODO
+% This is pretty slow - find a way to speed it up or parallelize it
 
 if length(width) == 1
-    width = ones([1 size(freq)]) * width;
+    width = ones(size(freq)) * width;
 elseif length(width) ~= length(freq)
     error('<width> must have one element per frequency')
 end
@@ -21,31 +30,24 @@ end
 if isfield(data, 'fsample')
     fsample = data.fsample;
 else
-    fsample = mean(diff(data.time{1}));
-end
-
-% This will only work if there are no NaNs in the data
-% Use ft_rejectartifacts with 'partial' before this point to avoid NaNs
-
-% nfft = 2^10;
-% width = 6;
-% freqVecY = 1:100;
+    fsample = 1 / mean(diff(data.time{1}));
+end 
 
 % Initialize data structure for holding coherence
 % CarrierFreq x ModFreq x Channel x Trial
 cfc_data = nan(length(freq), ...
-    nfft / 2, ...
+    nfft / 2 + 1, ...
     length(data.label), ...
     length(data.trial));
 
-for i_freq = 1:length(freq)
-    
+for i_freq = 1:length(freq) 
+    % Set up the wavelet to get power over time
     f = freq(i_freq);
-    N = floor(width * fsample / f);
+    N = floor(width(i_freq) * fsample / f);
     taper = hanning(N)';
     wavelet = taper .* exp(1i * 2 * pi * f .* (1:N) / fsample);
-    
-    for i_trial = 1:n_trials
+    % Compute coherence
+    for i_trial = 1:length(data.trial) 
         for i_channel = 1:length(data.label)
             s = data.trial{i_trial}(i_channel, :);
             sP = abs(conv(s, wavelet)) .^ 2;
@@ -53,12 +55,12 @@ for i_freq = 1:length(freq)
             [coh, mod_freq] = mscohere(s ,sP, ...
                 hanning(nfft), nfft / 2, nfft, fsample);
             cfc_data(i_freq, :, i_channel, i_trial) = coh;
-        end
-    end
+        end 
+    end 
 end
 
 % Only keep the real mod freqs
-cfc_data = cfc_data(:, 1:floor(end/2), :); 
+cfc_data = cfc_data(:, 1:floor(end/2), :, :); 
 mod_freq = mod_freq(1:floor(end/2));
 
 % Weighted average over trials
@@ -68,6 +70,3 @@ for i_trial = 1:length(data.trial)
 end
 total_length = sum(cellfun(@length, data.time));
 cfc_data = sum(cfc_data, 4) ./ total_length;
-
-% imagesc(freqVecX,freqVecY,CFCm); axis xy; colorbar
-% xlim([0 50]); 
