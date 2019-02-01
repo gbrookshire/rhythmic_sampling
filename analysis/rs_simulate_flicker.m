@@ -24,17 +24,17 @@ n_trials = 336;
 stim_on = zeros(size(t)); % When the stimulus is flickering
 stim_on(t >= 0 & t <= 4) = 1;
 mod_freq = 5;
-amp = 1;
 sig = nan([2 length(t)]); % Channel x Time x Trial
 for i_trial = 1:n_trials
     mod_phase = rand(1) * 2 * pi; % Random phase of modulation
     for i_freq = 1:length(exp_params.tagged_freqs)
         % Carrier - flicker freq
         car_freq = exp_params.tagged_freqs(i_freq);
-        car_sig = amp * sin(2 * pi * car_freq * t);
+        car_sig = sin(2 * pi * car_freq * t);
+        car_sig = 1 + car_sig; % 'lift up' from 0 to N
         % Modulation - Theta osc
         mod_phi = mod_phase + (pi * i_freq);
-        mod_sig = amp * (1/2 + 1/2 * sin(2 * pi * mod_freq * t + mod_phi)); 
+        mod_sig = (1/2 + 1/2 * sin(2 * pi * mod_freq * t + mod_phi)); 
         sig(i_freq,:,i_trial) = car_sig .* mod_sig .* stim_on;
     end
 end
@@ -76,4 +76,3 @@ for i_trial = 1:n_trials
     end
     data.trial{i_trial} = s;
 end
-
