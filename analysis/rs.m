@@ -52,13 +52,18 @@ end
 
 %% Does power at the tagged frequencies vary rhythmically?
 % rs_apply_over_subjects(@rs_tagged_spect, false)
-rs_setup
-for i=1:height(subject_info)
-    if subject_info.exclude(i)
-        continue
-    end
-    rs_tagged_spect(i)
-end
+% rs_setup
+% for i=1:height(subject_info)
+%     if subject_info.exclude(i)
+%         continue
+%     end
+%     rs_tagged_spect(i)
+% end
+rs_apply_over_subjects(@rs_tagged_spect, true)
+
+
+%% Compute CFC - coherence between raw signal and power @ tagged freqs
+rs_apply_over_subjects(@rs_cfc, true)
 
 %% Compute cross-correlations between power at tagged freqs
 rs_apply_over_subjects(@rs_tagged_xcorr, false)
