@@ -46,8 +46,8 @@ end
 short_trials = cellfun(@(t) length(t) < nfft, data.time);
 if any(short_trials)
     warning(...
-        'Excluding %i trials that are too short to calc coherence',...
-        sum(short_trials))
+        'Excluding %i of %i trials that are too short to calc coherence', ...
+        sum(short_trials), length(short_trials))
     cfg = [];
     cfg.trials = ~short_trials;
     data = ft_selectdata(cfg, data);
