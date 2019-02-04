@@ -761,6 +761,10 @@ print('-dpng', '-r300', ...
 clear variables
 rs_setup
 
+% % Matrix to hold spectra for all subjects. Subj x CarrierFreq x ModFreq
+% all_spectra = [];
+% all_spec nan([height(subject_info), 46, 33]);
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -789,14 +793,14 @@ for i_subject = 1:height(subject_info)
             car_freq = str2double(d.label);
             mod_freq = d.freq;
             spectra = d.powspctrm;
-            spectra = squeeze(mean(spectra, 1));
-%             spectra = db(spectra, 'power');
-%             % Normalize by subtracting out the mean for each carrier freq
-%             spectra = bsxfun(@minus, spectra, mean(spectra, 2));
-%             % Normalize by dividing by the total area under the FFT curve
-%             for i_row = 1:size(spectra, 1)
-%                 spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
-%             end
+            spectra = squeeze(mean(spectra, 1)); % Avg over trials
+            % Normalize across frequencies
+            for i_row = 1:size(spectra, 1)
+                % Dividing by the total area under the FFT curve
+                spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
+            end
+%             all_spectra(i_subject,:,:) = spectra;
+            %spectra = db(spectra, 'power'); % Convert to dB
             imagesc(mod_freq, car_freq, spectra)
 %             pcolor(mod_freq, car_freq, spectra); shading('interp')
             set(gca,'YDir','normal')
@@ -810,6 +814,13 @@ for i_subject = 1:height(subject_info)
     print('-dpng', '-r300', ...
         [exp_dir 'plots/tagged_spect/' strrep(fname, '/', '_')])
 end
+
+%% Plot the average over subjects
+imagesc(mod_freq, car_freq, squeeze(nanmean(all_spectra, 1)))
+set(gca,'YDir','normal')
+ylabel('Carrier Frequency (Hz)')
+xlabel('Modulation Frequency (Hz)')
+title(sprintf('%s, %i Hz', side{1}, freq))
 
 
 %% Plot cross-correlation of power at the two tagged frequencies

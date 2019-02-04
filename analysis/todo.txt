@@ -28,6 +28,7 @@
     - Does power at each tagged frequency vary rhythmically?
         - FFT or autocorrelation of each power time-course
     - How does power at the two tagged frequencies covary?
+        - Factor out overall changes in excitability, maybe by looking at the difference between the two hemispheres?
         - Factor out broadband power?
             - Use the SNR (instantaneous) of both time courses?
         - Could test for alternation by adapting Gulbanaite & Cohen to maximize activity that discriminates the two RFT frequencies...?
@@ -47,4 +48,4 @@ Analyses & plots
             - Plot spectra of RESS components by individual subjects
         - SNR topographies
             - Not split by side of frequency (yet)
-    - 
+    -
