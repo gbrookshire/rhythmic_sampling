@@ -86,15 +86,17 @@ for side = {'left' 'right'}
     % Or that include the transient response at the beginning of the trial
     includes_resp = nan(size(d_side.time));
     beginning_of_trial = nan(size(d_side.time));
+    end_of_trial = nan(size(d_side.time));
     for i_rpt = 1:length(d_side.time)
         n_trial = d_side.trialinfo(i_rpt, 2);
         resp_time = behav.rt(behav.TrialNumber == n_trial);
         t = d_side.time{i_rpt};
         includes_resp(i_rpt) = resp_time < max(t);
         beginning_of_trial(i_rpt) = min(t) < 0.5;
+        end_of_trial(i_rpt) = max(t) > exp_params.max_trial_dur;
     end
     cfg = [];
-    cfg.trials = ~includes_resp & ~beginning_of_trial;
+    cfg.trials = ~includes_resp & ~beginning_of_trial & ~end_of_trial;
     d_side = ft_selectdata(cfg, d_side);
 
     % Compute the spectra
@@ -102,7 +104,7 @@ for side = {'left' 'right'}
     cfg.method = 'mtmfft';
     cfg.output = 'pow';
     cfg.taper = 'hanning';
-    cfg.polyremoval = 1; % Remove linear trends
+    %cfg.polyremoval = 1; % Remove linear trends (acts like a HP filter!)
     cfg.keeptrials = 'yes';
     cfg.pad = 'nextpow2';
     spectra = ft_freqanalysis(cfg, d_side);
