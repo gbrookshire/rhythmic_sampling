@@ -24,8 +24,8 @@ for i_trial = 1:length(data.time)
 end
 
 % Parameters for the CFC analysis
-freq = 55:70;
-nfft = 2 ^ 6;
+freq = 55:90;
+nfft = 2 ^ 8;
 width = 6;
 
 [cfc_data, mod_freq] = cfc(data, freq, nfft, width);
