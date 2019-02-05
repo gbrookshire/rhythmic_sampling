@@ -10,9 +10,6 @@ function data = rs_simulate_flicker()
 
 rs_setup
 
-% Load a gradiometer structure
-grad = load([exp_dir 'grad/181009_b46d/181009/grad']);
-
 % Set the random seed
 rng(1)
 
@@ -46,6 +43,8 @@ sig = sig + noise_amp * rand(size(sig));
 
 %{
 % Simulate a dipole
+% Load a gradiometer structure
+grad = load([exp_dir 'grad/181009_b46d/181009/grad']);
 cfg = [];
 %cfg.vol = vol; %%% Is this necessary?
 cfg.grad = grad.grad;
