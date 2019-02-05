@@ -40,7 +40,7 @@ for i_trial = 1:n_trials
 end
 
 % Add some noise
-noise_amp = 0.1
+noise_amp = 0.1;
 sig = sig + noise_amp * rand(size(sig));
 % plot(t, sig(:,:,1))
 
