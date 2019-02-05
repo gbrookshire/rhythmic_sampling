@@ -756,6 +756,24 @@ print('-dpng', '-r300', ...
     [exp_dir 'plots/stim_onset/overall'])
 
 
+%% Simulated data - example trial
+
+d = rs_simulate_flicker();
+
+subplot(2, 1, 1)
+plot(d.time{1}, d.trial{1})
+xlabel('Time (s)')
+ylabel('Amplitude')
+
+subplot(2, 1, 2)
+plot(d.time{1}, d.trial{1})
+xlabel('Time (s)')
+ylabel('Amplitude')
+xlim([2 3])
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/simulated/example'])
+
 %% Plot spectra the envelope of tagged frequencies
 
 clear variables
