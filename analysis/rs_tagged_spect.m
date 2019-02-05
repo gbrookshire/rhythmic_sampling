@@ -29,24 +29,6 @@ d = d.high_freq_data;
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
-%{
-%%% TESTING WITH NOISE
-nan_inx = isnan(d.powspctrm);
-d.powspctrm = rand(size(d.powspctrm));
-d.powspctrm(nan_inx) = nan;
-%%% Add a rhythmic signal - this does show up where we'd expect
-t = d.time;
-car_freq = 63;
-mod_freq = 7;
-mod_amp = 1;
-sig = (1/2) + (1/2) * mod_amp * sin(t * 2 * pi * mod_freq);
-freq_inx = round(d.freq) == car_freq;
-for i_trial = 1:size(d.powspctrm, 1)
-    d.powspctrm(i_trial,1,freq_inx,:) = sig;
-end
-%}
-
-
 % To facilitate FFT calculation, make a FT struct with a separate 'channel'
 % for each frequency at each RESS filter
 data_ress = [];
