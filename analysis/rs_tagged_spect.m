@@ -6,10 +6,9 @@ function rs_tagged_spect(i_subject)
 % Extract power at the tagged frequencies
 % Power spectrum of RFT power
 %   FFT on each trial
+% In subsequent steps of the analysis, we should:
 %   Normalize by dividing the area under the curve
 %   Then average trial-wise FFTs
-% To avoid the stimulus-driven response
-%   Subtract out the average response across trials?
 
 rs_setup
 fname = subject_info.meg{i_subject};
@@ -86,7 +85,6 @@ for side = {'left' 'right'}
     cfg.method = 'mtmfft';
     cfg.output = 'pow';
     cfg.taper = 'hanning';
-    %cfg.polyremoval = 1; % Remove linear trends (acts like a HP filter!)
     cfg.keeptrials = 'yes';
     cfg.pad = 'nextpow2';
     spectra = ft_freqanalysis(cfg, d_side);
