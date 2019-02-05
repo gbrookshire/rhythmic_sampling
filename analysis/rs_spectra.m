@@ -27,10 +27,11 @@ for i_block = block_info.main
     cfg.polyorder = 1;
     d = ft_preprocessing(cfg);
 
-    % Downsample
-    cfg = [];
-    cfg.resamplefs = 250;
-    d = ft_resampledata(cfg, d);
+%     % Downsample
+%     % This can lead to aliasing in the rapid frequency-tagging
+%     cfg = [];
+%     cfg.resamplefs = 250;
+%     d = ft_resampledata(cfg, d);
 
     % Reject artifact ICs
     cfg = [];
@@ -67,7 +68,7 @@ cfg.method = 'mtmfft';
 cfg.output = 'pow';
 cfg.channel = 'MEG';
 cfg.taper = 'hanning';
-cfg.pad = 'nextpow2'; % (2 ^ 11) / (250 Hz) = 8.192 s
+cfg.pad = 'nextpow2';
 cfg.padtype = 'zero';
 cfg.polyremoval = 1; % Remove linear trends
 freq_data = ft_freqanalysis(cfg, data);

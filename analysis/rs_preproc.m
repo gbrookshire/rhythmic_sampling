@@ -72,10 +72,11 @@ for i_block = block_info.main
     %}
     d = ft_rejectartifact(cfg, d);
     
-    % Downsample
-    cfg = [];
-    cfg.resamplefs = 250;
-    d = ft_resampledata(cfg, d);
+%     % Downsample
+%     %%% This causes aliasing of rapid frequency-tagging signals!
+%     cfg = [];
+%     cfg.resamplefs = 250;
+%     d = ft_resampledata(cfg, d);
 
     % Reject artifact ICs
     cfg = [];
