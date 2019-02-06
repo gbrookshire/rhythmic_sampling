@@ -1,4 +1,4 @@
-function [data_out, maps, ress_filt] = rs_ress(data_in, f, fwhm)
+function [maps, ress_filt] = rs_ress(data_in, f, fwhm)
 
 % Spatial filter for extracting periodic activity
 % RESS (Gulbinaite & Cohen, 2017 NeuroImage)
@@ -10,7 +10,6 @@ function [data_out, maps, ress_filt] = rs_ress(data_in, f, fwhm)
 %         defined as full-width at half-maximum in Hz
 %
 % OUTPUTS
-%   data_out: A fieldtrip data structure of activity at the RESS filter
 %   maps: Scalp topography of the filters
 %   ress_filt: The spatial filter to apply to MEEG data
 %
@@ -69,8 +68,6 @@ maps = maps * diag(peak_sign);
 
 % Matrix to apply the spatial filter to MEEG data
 ress_filt = evecs(:,1)';
-
-data_out = rs_applyressfilt(data_in, ress_filt);
 
 end
 

@@ -25,7 +25,7 @@ for i_freq = 1:2
         data_sub = ft_selectdata(cfg, data_preproc);
 
         % Compute RESS components
-        [data_ress, maps, ress] = rs_ress(data_sub, filter_freq, 0.5);
+        [maps, ress] = rs_ress(data_sub, filter_freq, 0.5);
         o = [];
         o.maps = maps;
         o.ress = ress;
