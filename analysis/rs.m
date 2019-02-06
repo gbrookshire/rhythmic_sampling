@@ -37,9 +37,14 @@ for segment_event = {'trial' 'target'}
     rs_apply_over_subjects(preproc_fun, true)
 end
 
+% Submit this to slurm using sbatch_submit.py like so:
+% "for segment_event = {'trial' 'target'}, preproc_fun = @(i_subj) rs_preproc(i_subj, segment_event{1}); rs_apply_over_subjects(preproc_fun, true), end"
+
 
 %% Compute RESS/GEDb spatial filters
 rs_apply_over_subjects(@rs_derive_ress, true)
+
+%%%%%%% CURRENTLY HERE IN THE ANALYSES
 
 
 %% Compute TFRs
@@ -48,6 +53,9 @@ for segment_event = {'trial' 'target'}
     tfr_fun = @(i_subj) rs_tfr(i_subj, segment_event{1});
     rs_apply_over_subjects(tfr_fun, false);
 end
+
+% To submit to slurm:
+% "for segment_event = {'trial' 'target'}, tfr_fun = @(i_subj) rs_tfr(i_subj, segment_event{1}); rs_apply_over_subjects(tfr_fun, false); end"
 
 
 %% Does power at the tagged frequencies vary rhythmically?
