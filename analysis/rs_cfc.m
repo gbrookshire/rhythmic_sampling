@@ -7,6 +7,13 @@ function rs_cfc(i_subject)
 rs_setup
 fname = subject_info.meg{i_subject};
 
+%{
+% SIMULATED DATA
+data = rs_simulate_flicker();
+behav = rs_behavior(1); % For RT
+fname = 'SIMULATED';
+%}
+
 % Set up dir for saving data
 save_dir = [exp_dir 'cfc/'];
 [~,~,~] = mkdir(save_dir, fname);
@@ -14,6 +21,7 @@ save_dir = [exp_dir 'cfc/'];
 % Load the data
 data = rs_preproc_ress(i_subject, 'trial');
 behav = rs_behavior(i_subject); % For RT
+
 
 % Toss segments that overlap with or occur after the response
 % Or that include the transient response at the beginning of the trial

@@ -39,7 +39,7 @@ cfg_base.keeptrials = 'yes';
 % cfg_base.padtype = 'zero';
 
 % TFR around the tagged frequencies
-time_window = 0.2; % Smaller window -> more temporal smoothing
+time_window = 0.2; % Smaller window -> more freq smoothing
 cfg = cfg_base;
 cfg.output = 'pow';
 cfg.foi = 55:100;

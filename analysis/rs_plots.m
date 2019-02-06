@@ -756,14 +756,32 @@ print('-dpng', '-r300', ...
     [exp_dir 'plots/stim_onset/overall'])
 
 
+%% Simulated data - example trial
+
+d = rs_simulate_flicker();
+
+subplot(2, 1, 1)
+plot(d.time{1}, d.trial{1})
+xlabel('Time (s)')
+ylabel('Amplitude')
+
+subplot(2, 1, 2)
+plot(d.time{1}, d.trial{1})
+xlabel('Time (s)')
+ylabel('Amplitude')
+xlim([2 3])
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/simulated/example'])
+
+
 %% Plot spectra the envelope of tagged frequencies
 
 clear variables
 rs_setup
 
-% % Matrix to hold spectra for all subjects. Subj x CarrierFreq x ModFreq
-% all_spectra = [];
-% all_spec nan([height(subject_info), 46, 33]);
+% Spectra for all subjects for each cond. Subj x CarrierFreq x ModFreq
+all_spectra = [];
 
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
@@ -799,28 +817,39 @@ for i_subject = 1:height(subject_info)
                 % Dividing by the total area under the FFT curve
                 spectra(i_row,:) = spectra(i_row,:) / sum(spectra(i_row,:));
             end
-%             all_spectra(i_subject,:,:) = spectra;
+            all_spectra.(side{1}).(['f' num2str(freq)])(i_subject,:,:) = spectra;
             %spectra = db(spectra, 'power'); % Convert to dB
             imagesc(mod_freq, car_freq, spectra)
-%             pcolor(mod_freq, car_freq, spectra); shading('interp')
             set(gca,'YDir','normal')
-            ylabel('Carrier Frequency (Hz)')
-            xlabel('Modulation Frequency (Hz)')
             title(sprintf('%s, %i Hz', side{1}, freq))
             i_cond = i_cond + 1;
         end
     end
+    subplot(2, 2, 3)
+    ylabel('Carrier Frequency (Hz)')
+    xlabel('Modulation Frequency (Hz)')
     
     print('-dpng', '-r300', ...
         [exp_dir 'plots/tagged_spect/' strrep(fname, '/', '_')])
 end
 
-% Plot the average over subjects
-imagesc(mod_freq, car_freq, squeeze(nanmean(all_spectra, 1)))
-set(gca,'YDir','normal')
+%% Plot the average over subjects
+i_cond = 1;
+for freq = exp_params.tagged_freqs
+    for side = {'left' 'right'}
+        subplot(2, 2, i_cond);
+        imagesc(mod_freq, car_freq, ...
+            squeeze(nanmean(all_spectra.(side{1}).(['f' num2str(freq)]), 1)))
+        set(gca,'YDir','normal')
+        title(sprintf('%s, %i Hz', side{1}, freq))
+        i_cond = i_cond + 1;
+    end
+end
+subplot(2, 2, 3)
 ylabel('Carrier Frequency (Hz)')
 xlabel('Modulation Frequency (Hz)')
-title(sprintf('%s, %i Hz', side{1}, freq))
+
+    print('-dpng', '-r300', [exp_dir 'plots/tagged_spect/avg'])
 
 
 %% Plot CFC

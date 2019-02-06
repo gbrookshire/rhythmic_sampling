@@ -6,10 +6,9 @@ function rs_tagged_spect(i_subject)
 % Extract power at the tagged frequencies
 % Power spectrum of RFT power
 %   FFT on each trial
+% In subsequent steps of the analysis, we should:
 %   Normalize by dividing the area under the curve
 %   Then average trial-wise FFTs
-% To avoid the stimulus-driven response
-%   Subtract out the average response across trials?
 
 rs_setup
 fname = subject_info.meg{i_subject};
@@ -28,24 +27,6 @@ d = d.high_freq_data;
 % Load the MEG data
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
-
-%{
-%%% TESTING WITH NOISE
-nan_inx = isnan(d.powspctrm);
-d.powspctrm = rand(size(d.powspctrm));
-d.powspctrm(nan_inx) = nan;
-%%% Add a rhythmic signal - this does show up where we'd expect
-t = d.time;
-car_freq = 63;
-mod_freq = 7;
-mod_amp = 1;
-sig = (1/2) + (1/2) * mod_amp * sin(t * 2 * pi * mod_freq);
-freq_inx = round(d.freq) == car_freq;
-for i_trial = 1:size(d.powspctrm, 1)
-    d.powspctrm(i_trial,1,freq_inx,:) = sig;
-end
-%}
-
 
 % To facilitate FFT calculation, make a FT struct with a separate 'channel'
 % for each frequency at each RESS filter
@@ -104,7 +85,6 @@ for side = {'left' 'right'}
     cfg.method = 'mtmfft';
     cfg.output = 'pow';
     cfg.taper = 'hanning';
-    %cfg.polyremoval = 1; % Remove linear trends (acts like a HP filter!)
     cfg.keeptrials = 'yes';
     cfg.pad = 'nextpow2';
     spectra = ft_freqanalysis(cfg, d_side);
