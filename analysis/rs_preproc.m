@@ -71,13 +71,15 @@ for i_block = block_info.main
     ft_databrowser(cfg, d);
     %}
     d = ft_rejectartifact(cfg, d);
-    
-%     % Downsample
-%     %%% This causes aliasing of rapid frequency-tagging signals!
-%     cfg = [];
-%     cfg.resamplefs = 250;
-%     d = ft_resampledata(cfg, d);
 
+    %{
+    % Downsample
+    %%% This causes aliasing of rapid frequency-tagging signals!
+    cfg = [];
+    cfg.resamplefs = 250;
+    d = ft_resampledata(cfg, d);
+    %}
+    
     % Reject artifact ICs
     cfg = [];
     cfg.component = art.ica.reject_comp;
@@ -94,6 +96,8 @@ data = ft_appenddata([], data_by_block{block_info.main});
 % Save the data
 save_dir = [exp_dir 'preproc/' segment_type '/'];
 [~,~,~] = mkdir(save_dir, fname);
-save([save_dir '/' fname '/preproc'], 'data')
-
+save([save_dir '/' fname '/preproc'], ...
+    '-v7.3', ... % For files over 2GB
+    '-nocompression', ... % Takes >2x as long to load without this
+    'data')
 end
