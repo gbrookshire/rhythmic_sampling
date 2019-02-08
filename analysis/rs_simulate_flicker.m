@@ -13,7 +13,8 @@ rs_setup
 % Set the random seed
 rng(1)
 
-fsample = 250; % Downsampled data
+% fsample = 250; % Downsampled data
+fsample = 1000;
 t = -0.5:(1/fsample):4.5;
 n_trials = 336;
 

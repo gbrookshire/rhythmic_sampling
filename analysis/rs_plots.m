@@ -833,7 +833,7 @@ for i_subject = 1:height(subject_info)
         [exp_dir 'plots/tagged_spect/' strrep(fname, '/', '_')])
 end
 
-%% Plot the average over subjects
+% Plot the average over subjects
 i_cond = 1;
 for freq = exp_params.tagged_freqs
     for side = {'left' 'right'}
@@ -851,6 +851,12 @@ xlabel('Modulation Frequency (Hz)')
 
     print('-dpng', '-r300', [exp_dir 'plots/tagged_spect/avg'])
 
+%% Plot CFC (cross-frequency coupling)
+rs_setup
+d = load([exp_dir 'cfc/' 'SIMULATED' '/cfc']);
+
+freq = 55:90;
+imagesc(d.mod_freq, freq, d.cfc_data.left.
 
 %% Plot cross-correlation of power at the two tagged frequencies
 

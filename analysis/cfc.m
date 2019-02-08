@@ -31,6 +31,22 @@ width = 6;
 %}
 
 
+% Simpler testing
+%{
+fsample = 1000;
+t = 0:(1/fsample):10;
+f_c = 63;
+f_m = 5;
+s_c = 1/2 * (1 + sin(2 * pi * f_c * t));
+s_m = 1/2 * (1 + sin(2 * pi * f_m * t));
+s = s_c .* s_m;
+plot(t, s_c)
+hold on
+plot(t, s_m)
+plot(t, s)
+hold off
+%}
+
 if length(width) == 1
     width = ones(size(freq)) * width;
 elseif length(width) ~= length(freq)
@@ -74,9 +90,8 @@ for i_freq = 1:length(freq)
     for i_trial = 1:length(data.trial) 
         for i_channel = 1:length(data.label)
             s = data.trial{i_trial}(i_channel, :);
-            c = conv(s, wavelet);
+            c = conv(s, wavelet, 'same');
             sP = abs(c) .^ 2;
-            sP = sP(ceil(N/2):length(sP)-floor(N/2));
             [coh, mod_freq] = mscohere(s ,sP, ...
                 hanning(nfft), nfft / 2, nfft, fsample);
             cfc_data(i_freq, :, i_channel, i_trial) = coh;

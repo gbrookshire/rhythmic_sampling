@@ -72,5 +72,7 @@ for side_63 = {'left' 'right'}
     trial_lens.(side_63{1}) = cellfun(@length, data_sub.time);
 end
 
+% Before saving, need to split into 63 & 78 Hz
+
 
 save([save_dir fname '/cfc'], 'cfc_data', 'mod_freq', 'trial_lens')
