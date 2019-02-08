@@ -858,6 +858,38 @@ d = load([exp_dir 'cfc/' 'SIMULATED' '/cfc']);
 freq = 55:90;
 imagesc(d.mod_freq, freq, d.cfc_data.left.
 
+%% Plot CFC
+
+clear variables
+rs_setup
+
+freqs = 55:90;
+sides = {'left' 'right'};
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    d = load([exp_dir 'cfc/' fname '/cfc']);
+    
+    for i_freq = 1:2
+        for i_side = 1:2
+            subplot(2, 2, i_side + (2 * (i_freq - 1)))
+            x = d.cfc_data.(sides{i_side})(:,:,i_freq);
+            imagesc(d.mod_freq, freqs, x)
+            set(gca, 'YDir', 'normal')
+            xlim([0 20])
+            colorbar;
+            title(sprintf('%i Hz, %s', ...
+                exp_params.tagged_freqs(i_freq), ...
+                sides{i_side}))
+        end
+    end    
+    ylabel('Carrier frequency (Hz)')
+    xlabel('Modulation frequency (Hz)')
+end
+
 %% Plot cross-correlation of power at the two tagged frequencies
 
 clear variables
