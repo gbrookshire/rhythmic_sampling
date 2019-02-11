@@ -42,10 +42,9 @@ end
 %% Compute RESS/GEDb spatial filters
 rs_apply_over_subjects(@rs_derive_ress, true)
 
-%%%%%%% CURRENTLY HERE IN THE ANALYSES %%%%%%%%%
-
 
 %% Compute TFRs
+
 % High- and low-frequency
 for segment_event = {'trial' 'target'}
     tfr_fun = @(i_subj) rs_tfr(i_subj, segment_event{1});
@@ -59,6 +58,9 @@ rs_apply_over_subjects(@rs_tagged_spect, true)
 
 %% Compute CFC - coherence between raw signal and power @ tagged freqs
 rs_apply_over_subjects(@rs_cfc, true)
+
+
+%%%%%%%%%% STOPPED HERE
 
 %% Compute cross-correlations between power at tagged freqs
 rs_apply_over_subjects(@rs_tagged_xcorr, false)
