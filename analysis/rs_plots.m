@@ -783,14 +783,8 @@ subplot(2, 2, 3)
 ylabel('Carrier Frequency (Hz)')
 xlabel('Modulation Frequency (Hz)')
 
-    print('-dpng', '-r300', [exp_dir 'plots/tagged_spect/avg'])
+print('-dpng', '-r300', [exp_dir 'plots/tagged_spect/avg'])
 
-%% Plot CFC (cross-frequency coupling)
-rs_setup
-d = load([exp_dir 'cfc/' 'SIMULATED' '/cfc']);
-
-freq = 55:90;
-imagesc(d.mod_freq, freq, d.cfc_data.left.
 
 %% Plot CFC
 
@@ -811,10 +805,11 @@ for i_subject = 1:height(subject_info)
         for i_side = 1:2
             subplot(2, 2, i_side + (2 * (i_freq - 1)))
             x = d.cfc_data.(sides{i_side})(:,:,i_freq);
+            overall_cfc(i_subject,i_freq,i_side,:,:) = x;
             imagesc(d.mod_freq, freqs, x)
             set(gca, 'YDir', 'normal')
-            xlim([0 20])
-            colorbar;
+            xlim([0 50])
+            %colorbar;
             title(sprintf('%i Hz, %s', ...
                 exp_params.tagged_freqs(i_freq), ...
                 sides{i_side}))
@@ -822,7 +817,30 @@ for i_subject = 1:height(subject_info)
     end    
     ylabel('Carrier frequency (Hz)')
     xlabel('Modulation frequency (Hz)')
+
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/cfc/' strrep(fname, '/', '_')])
 end
+
+% Avg over subjects
+for i_freq = 1:2
+    for i_side = 1:2
+        subplot(2, 2, i_side + (2 * (i_freq - 1)))
+        x = squeeze(mean(overall_cfc(:,i_freq,i_side,:,:), 1));
+        imagesc(d.mod_freq, freqs, x)
+        set(gca, 'YDir', 'normal')
+        xlim([0 50])
+        %colorbar;
+        title(sprintf('%i Hz, %s', ...
+            exp_params.tagged_freqs(i_freq), ...
+            sides{i_side}))
+    end
+end    
+ylabel('Carrier frequency (Hz)')
+xlabel('Modulation frequency (Hz)')
+print('-dpng', '-r300', [exp_dir 'plots/cfc/avg'])
+
+
 
 %% Plot cross-correlation of power at the two tagged frequencies
 
@@ -841,13 +859,13 @@ for i_subject = 1:height(subject_info)
     x = load([exp_dir 'tfr/trial/' fname '/xcorr']);
     xc(i_subject,:,:) = x.xc;
 
-    subplot(4,4,i_subject)
-    plot(x.t, mean(x.xc, 1))
-    hold on
-    plot([-1 1], [0 0], '-k')
-    plot([0 0], [-1 1], '-k')
-    hold off
-    ylim([-1 1] * max(max(x.xc)))
+    % subplot(4,4,i_subject)
+    % plot(x.t, mean(x.xc, 1))
+    % hold on
+    % plot([-1 1], [0 0], '-k')
+    % plot([0 0], [-1 1], '-k')
+    % hold off
+    % ylim([-1 1] * max(max(x.xc)))
 end
 
 subplot(4,4,13)
@@ -887,6 +905,7 @@ ylabel('Power (dB/Hz)')
 xlim([0 12])
 
 
+print('-dpng', '-r300', [exp_dir 'plots/xcorr'])
 
 %% Plot difference in HF power between hits and misses
 

@@ -60,11 +60,10 @@ rs_apply_over_subjects(@rs_tagged_spect, true)
 rs_apply_over_subjects(@rs_cfc, true)
 
 
-%%%%%%%%%% STOPPED HERE
-
 %% Compute cross-correlations between power at tagged freqs
 rs_apply_over_subjects(@rs_tagged_xcorr, false)
 
+%%%%%%%%%% STOPPED HERE
 
 %% Did power at the tagged frequencies differ b/w hits and misses?
 rs_apply_over_subjects(@rs_acc_hfpower_regression, true);

@@ -50,8 +50,8 @@ data = ft_selectdata(cfg, data);
 
 % Parameters for the CFC analysis
 freq = 55:90;
-nfft = 2 ^ 8;
-width = 6;
+nfft = 2 ^ 10;
+width = 7;
 
 % Compute CFC separately on each freq at its correct side
 cfc_data = [];
@@ -71,8 +71,5 @@ for side_63 = {'left' 'right'}
     cfc_data.(side_63{1}) = cfc_sub; 
     trial_lens.(side_63{1}) = cellfun(@length, data_sub.time);
 end
-
-% Before saving, need to split into 63 & 78 Hz
-
 
 save([save_dir fname '/cfc'], 'cfc_data', 'mod_freq', 'trial_lens')
