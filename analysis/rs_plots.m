@@ -579,9 +579,6 @@ for i_subject = 1:height(subject_info)
     hf = load(hf_fname);
     freq_data = hf.high_freq_data;
     clear hf;
-
-%     % Select channels in this roi
-%     chan_sel = ismember(freq_data.label, snr_roi);
     
     % Exclude the trials that are all NaNs
     % Those appeared while computing TFRs of trials with NaNs
