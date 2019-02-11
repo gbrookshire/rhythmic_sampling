@@ -468,13 +468,16 @@ for i_subject = 1:height(subject_info)
     data_ress = load([exp_dir 'ress/' fname '/ress']);
     ress_maps{i_subject} = data_ress.ress_maps;
 end
-ress_maps(cellfun(@isempty, ress_maps)) = []; % Delete empty cells
 
 % Load list of channel labels
 labels = load([exp_dir 'spectra/' subject_info.meg{1} '/spectra']);
 labels = labels.freq_data.label;
 
 for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
     subj_map = ress_maps{i_subject};
     i_plot = 1;
     for freq = exp_params.tagged_freqs
@@ -509,11 +512,12 @@ for i_subject = 1:height(subject_info)
     end
     print('-dpng', '-r300', ...
         [exp_dir 'plots/ress_maps/' ...
-        strrep(subject_info.meg{i_subject}, '/', '_')])
+        strrep(fname, '/', '_')])
     
 end
 
 % Plot filters averaged over subjects
+ress_maps(cellfun(@isempty, ress_maps)) = []; % Delete empty cells
 i_plot = 1;
 for side = {'left' 'right'}
     
