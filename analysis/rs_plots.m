@@ -564,7 +564,7 @@ approx_eq = @(x,y) abs(x - y) < 0.1;
 
 % Hold onto the data for all subject
 % Subject * Freq * Time
-overall_data = nan(height(subject_info), 46, 126);
+overall_data = nan(height(subject_info), 46, 251);
 
 close all
 for i_subject = 1:height(subject_info)
@@ -589,19 +589,18 @@ for i_subject = 1:height(subject_info)
     fprintf('%i NaN; %i numeric \n', ...
         sum(nan_trial), sum(~nan_trial))
 
+    % Average over subjects and channels
     cfg = [];
     cfg.trials = find(~nan_trial);
     cfg.avgoverrpt = 'yes';
     cfg.nanmean = 'yes';
+    cfg.avgoverchan = 'yes';
     freq_data = ft_selectdata(cfg, freq_data);
-    x = mean(freq_data.powspctrm, 1);
-    overall_data(i_subject,:,:) = x;
-    clear x
+    overall_data(i_subject,:,:) = freq_data.powspctrm;
     
     % Plot of frequency tagging response from trial onset
     subplot(2,1,1)
     cfg = [];
-%     cfg.channel = freq_data.label(chan_sel);
     cfg.baseline = [-0.5 -0.1];
     cfg.baselinetype = 'relative';
     cfg.title = ' ';
