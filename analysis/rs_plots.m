@@ -453,7 +453,7 @@ end
 %}
 
 
-%% Plot the RESS spatial filters averaged over subjects
+%% Plot the RESS spatial filters 
 
 clear variables
 rs_setup
@@ -474,6 +474,46 @@ ress_maps(cellfun(@isempty, ress_maps)) = []; % Delete empty cells
 labels = load([exp_dir 'spectra/' subject_info.meg{1} '/spectra']);
 labels = labels.freq_data.label;
 
+for i_subject = 1:height(subject_info)
+    subj_map = ress_maps{i_subject};
+    i_plot = 1;
+    for freq = exp_params.tagged_freqs
+        for side = {'left' 'right'}
+            maps = subj_map.(side{1}).(['f' num2str(freq)]).maps(:,1);
+            % Make data structure to show maps
+            d_maps = [];
+            d_maps.label = labels;
+            d_maps.time = 1;
+            d_maps.avg = real(maps);
+            d_maps.dimord = 'chan_time';
+            d_maps.grad = grad.grad;
+            % Combine planar gradiometers
+            cfg = [];
+            cfg.method = 'sum';
+            d_maps = ft_combineplanar(cfg, d_maps);
+
+            % Plot it
+            subplot(2,2,i_plot)
+            cfg = [];
+            cfg.marker = 'on';
+            cfg.markersymbol = 'o';
+            cfg.markersize = 1;
+            cfg.comment = 'no';
+            cfg.style = 'straight';
+            cfg.layout = chan.grad_cmb.layout;
+            cfg.gridscale = 200;
+            ft_topoplotER(cfg, d_maps)
+            title(sprintf('%s, %i Hz', side{1}, freq))
+            i_plot = i_plot + 1;
+        end
+    end
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/ress_maps/' ...
+        strrep(subject_info.meg{i_subject}, '/', '_')])
+    
+end
+
+% Plot filters averaged over subjects
 i_plot = 1;
 for side = {'left' 'right'}
     
