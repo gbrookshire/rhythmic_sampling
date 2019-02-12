@@ -4,9 +4,9 @@ function rs_tagged_xcorr(i_subject)
 
 rs_setup
 fname = subject_info.meg{i_subject};
+%fname = 'SIMULATED';
 
 % Load the data
-% behav = rs_behavior(i_subject);
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data;
 
