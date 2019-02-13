@@ -21,8 +21,8 @@ event = event(keep_trigs_inx);
 
 trials_per_block = 112;
 trl_trial = nan([trials_per_block, 4]);
-trl_target = nan([trials_per_block, 3]);
-trl_response = nan([trials_per_block, 3]);
+trl_target = nan([trials_per_block, 4]);
+trl_response = nan([trials_per_block, 4]);
 
 % Time window within which responses are considered hits (seconds)
 hit_window = 1;
@@ -97,6 +97,7 @@ for i_trial = 1:length(trial_onset_inx)
         end_t = begin_t + 1; % Make the trial 1 sample long
     end
 
+    keyboard
     % Make the lines for the trl arrays
     % Trial
     trl_trial(i_trial,:) = [begin_t-pretrig end_t+posttrig offset hit];
