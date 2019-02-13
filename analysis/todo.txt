@@ -1,9 +1,3 @@
-*** List
-1. Test CFC with simulated data
-	- Test each step of the analysis. Something is going wrong somewhere.
-2. Wrap up analysis of frequency at the tagged spectra
-
-
 - Artifacts
     - Go over manual artifact rejection again
         - After previous rounds (and after ICA)
