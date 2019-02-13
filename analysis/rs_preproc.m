@@ -26,7 +26,11 @@ for i_block = block_info.main
     end
     trialdef = load(fn);
     trl = trialdef.trl.(segment_type);
-    
+
+    % Append the trial number to the trialinfo field
+    trialnum = ((i_block - 1) * 112) + (1:112);
+    trl(:,end+1) = trialnum;
+
     % When segmenting by targets, exclude trials in which there was no targ
     if strcmp(segment_type, 'target')
         trl = trl(~isnan(trl(:,1)),:);
@@ -49,9 +53,9 @@ for i_block = block_info.main
     cfg.padtype = 'data';
     d = ft_preprocessing(cfg);
     
-    % Append the trial number to the trialinfo field
-    trialnum = ((i_block - 1) * 112) + (1:112);
-    d.trialinfo(:,2) = trialnum;
+%     % Append the trial number to the trialinfo field
+%     trialnum = ((i_block - 1) * 112) + (1:112);
+%     d.trialinfo(:,2) = trialnum;
     
     % Reject artifacts visually-identified and photodiode artifacts
     a = []; % Make the artfctdef object
