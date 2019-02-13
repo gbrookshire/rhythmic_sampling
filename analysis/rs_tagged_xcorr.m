@@ -6,6 +6,7 @@ rs_setup
 
 %{
 % SIMULATED DATA
+warning('Running analysis with simulated data')
 fname = 'SIMULATED';
 behav = rs_behavior(1);
 %}
@@ -13,6 +14,7 @@ behav = rs_behavior(1);
 % Load the data
 fname = subject_info.meg{i_subject};
 behav = rs_behavior(i_subject); % For RT
+
 d = load([exp_dir 'tfr/trial/' fname '/high']);
 d = d.high_freq_data; 
 
