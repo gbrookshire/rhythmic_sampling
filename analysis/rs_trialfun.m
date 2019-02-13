@@ -97,7 +97,6 @@ for i_trial = 1:length(trial_onset_inx)
         end_t = begin_t + 1; % Make the trial 1 sample long
     end
 
-    keyboard
     % Make the lines for the trl arrays
     % Trial
     trl_trial(i_trial,:) = [begin_t-pretrig end_t+posttrig offset hit];
