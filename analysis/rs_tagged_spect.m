@@ -20,8 +20,6 @@ behav = rs_behavior(i_subject); % For RT
 % SIMULATED
 fname = 'SIMULATED';
 behav = rs_behavior(1);
-d = load([exp_dir 'tfr/trial/SIMULATED/high']);
-d = d.high_freq_data;
 %}
 
 % Load the MEG data
