@@ -17,7 +17,7 @@ end
 
 % Load preprocessed data
 fname = subject_info.meg{i_subject};
-d = rs_preproc_ress(i_subject, 'trial');
+d = rs_preproc_ress(i_subject, segment_type);
 
 %{
 % SIMULATED DATA
