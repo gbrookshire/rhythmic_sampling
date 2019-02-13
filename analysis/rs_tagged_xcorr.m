@@ -24,10 +24,11 @@ t_lags = -max_lag_sec:(1/fsample):max_lag_sec;
 % Toss segments that overlap with or occur after the response
 % Or that include the transient response at the beginning of the trial
 t = d.time;
-padding = 0.2; % Give this much leeway around excluded segments
+padding = 0.0; % Give this much leeway around excluded segments
 n_trials = size(d.powspctrm, 1);
 xc = nan(n_trials, length(t_lags));
 trial_length = nan(n_trials, 1);
+% Get index of tagged freqs in list of frequencies
 inx_63Hz = find(round(d.freq) == 63);
 inx_78Hz = find(round(d.freq) == 78);
 for i_trial = 1:n_trials
@@ -38,7 +39,11 @@ for i_trial = 1:n_trials
     before_end = t < (4.0 - padding);
     % Exclude times after the response
     resp_time = behav.rt(behav.TrialNumber == n_trial);
-    before_resp = t < (resp_time - padding);
+    if isnan(resp_time) % No resp - keep the whole trial
+        before_resp = logical(ones(size(t)));
+    else
+        before_resp = t < (resp_time - padding);
+    end
     % Which samples to keep
     keep_samps = after_beginning & before_end & before_resp;
     trial_length(i_trial) = sum(keep_samps);
