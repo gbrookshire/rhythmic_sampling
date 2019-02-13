@@ -804,8 +804,13 @@ for i_subject = 1:height(subject_info)
     for i_freq = 1:2
         for i_side = 1:2
             subplot(2, 2, i_side + (2 * (i_freq - 1)))
-            x = d.cfc_data.(sides{i_side})(:,:,i_freq);
-            overall_cfc(i_subject,i_freq,i_side,:,:) = x;
+            if i_side == 2 % Convert from side of space to RESS
+                freq_inx = 1 + mod(i_freq, 2);
+            elseif i_side == 1
+                freq_inx = i_freq;
+            end
+            x = d.cfc_data.(sides{i_side})(:,:,freq_inx);
+            overall_cfc(i_subject,freq_inx,i_side,:,:) = x;
             imagesc(d.mod_freq, freqs, x)
             set(gca, 'YDir', 'normal')
             xlim([0 50])
@@ -826,7 +831,12 @@ end
 for i_freq = 1:2
     for i_side = 1:2
         subplot(2, 2, i_side + (2 * (i_freq - 1)))
-        x = squeeze(mean(overall_cfc(:,i_freq,i_side,:,:), 1));
+        if i_side == 2 % Convert from side of space to RESS
+            freq_inx = 1 + mod(i_freq, 2);
+        elseif i_side == 1
+            freq_inx = i_freq;
+        end
+        x = squeeze(mean(overall_cfc(:,freq_inx,i_side,:,:), 1));
         imagesc(d.mod_freq, freqs, x)
         set(gca, 'YDir', 'normal')
         xlim([0 50])
