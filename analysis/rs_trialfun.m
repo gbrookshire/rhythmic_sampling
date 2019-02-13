@@ -4,7 +4,7 @@ rs_setup
 
 % for testing
 %{
-i_subject = 16;
+i_subject = 1;
 i_block = 3;
 fname = subject_info.meg{i_subject};
 dataset = [exp_dir 'raw/' fname '/' num2str(i_block) '.fif'];
@@ -101,9 +101,9 @@ for i_trial = 1:length(trial_onset_inx)
     % Trial
     trl_trial(i_trial,:) = [begin_t-pretrig end_t+posttrig offset hit];
     % Target
-    trl_target(i_trial,:) = [target_t-pretrig target_t+posttrig offset];
+    trl_target(i_trial,:) = [target_t-pretrig target_t+posttrig offset hit];
     % Response
-    trl_response(i_trial,:) = [resp_t-pretrig resp_t+posttrig offset];
+    trl_response(i_trial,:) = [resp_t-pretrig resp_t+posttrig offset hit];
     
     clear inx onset_t offset_t target_t resp_t hit
 end
