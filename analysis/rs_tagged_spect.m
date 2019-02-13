@@ -18,6 +18,7 @@ behav = rs_behavior(i_subject); % For RT
 
 %{
 % SIMULATED
+warning('Running analysis with simulated data')
 fname = 'SIMULATED';
 behav = rs_behavior(1);
 %}
@@ -69,13 +70,18 @@ for side = {'left' 'right'}
     for i_rpt = 1:length(d_side.time)
         n_trial = d_side.trialinfo(i_rpt, 2);
         resp_time = behav.rt(behav.TrialNumber == n_trial);
+        if isnan(resp_time)
+            resp_time = Inf;
+        end
         t = d_side.time{i_rpt};
         includes_resp(i_rpt) = resp_time < max(t);
         beginning_of_trial(i_rpt) = min(t) < 0.5;
         after_trial_end(i_rpt) = max(t) > exp_params.max_trial_dur;
     end
     cfg = [];
-    cfg.trials = ~includes_resp & ~beginning_of_trial & ~after_trial_end;
+    keep_trials = ~includes_resp & ~beginning_of_trial & ~after_trial_end;
+    fprintf('Keeping %i/%i segs', sum(keep_trials), length(keep_trials));
+    cfg.trials = keep_trials;
     d_side = ft_selectdata(cfg, d_side);
 
     % Compute the spectra
