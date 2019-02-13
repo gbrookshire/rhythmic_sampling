@@ -859,40 +859,26 @@ rs_setup
 
 close all
 
-figure
-xc = nan([height(subject_info), 2, 101]); % Subj x Side x Lag
+xc = nan([height(subject_info), 51]); % Subj x Lag
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
     fname = subject_info.meg{i_subject};
     x = load([exp_dir 'tfr/trial/' fname '/xcorr']);
-    xc(i_subject,:,:) = x.xc;
-
-    % subplot(4,4,i_subject)
-    % plot(x.t, mean(x.xc, 1))
-    % hold on
-    % plot([-1 1], [0 0], '-k')
-    % plot([0 0], [-1 1], '-k')
-    % hold off
-    % ylim([-1 1] * max(max(x.xc)))
+    xc(i_subject,:) = nanmean(x.xc, 1);
 end
 
-subplot(4,4,13)
-xlabel('Lag (s)')
-ylabel('Correlation')
-
 % Plot avg over subjects
-x_overall = squeeze(mean(xc, 2));
-figure
 subplot(2,1,1)
-plot(x.t, x_overall, '-', 'color', [0.7 0.7 1])
+plot(x.t_lags, xc, '-', 'color', [0.7 0.7 1])
 hold on
-plot(x.t, nanmean(x_overall, 1), '-b', 'LineWidth', 2.5)
+plot(x.t_lags, nanmean(xc, 1), '-b', 'LineWidth', 2.5)
 plot([-1 1], [0 0], '-k')
 plot([0 0], [-1 1], '-k')
 hold off
-ylim([-0.05 0.2])
+ylim([-0.05 0.3])
+xlim([-0.5 0.5])
 xlabel('Lag (s)')
 ylabel('Correlation')
 
@@ -900,18 +886,18 @@ ylabel('Correlation')
 % % uk.mathworks.com/help/matlab/examples/fft-for-spectral-analysis.html
 subplot(2,1,2)
 nfft = 2^7;
-sample_per = mean(diff(x.t));
+sample_per = mean(diff(x.t_lags));
 Fs = 1 / sample_per;
 f = (1/sample_per) * (0:(nfft / 2)) / nfft;
-y = fft(x_overall, nfft, 2);
+y = fft(xc, nfft, 2);
 Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
 
-plot(f, db(Pyy, 'power'), '-', 'color', [0.7 0.7 1]);
+plot(f, Pyy, '-', 'color', [0.7 0.7 1]);
 hold on
-plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 2.5)
+plot(f, nanmean(Pyy, 1), '-b', 'LineWidth', 2.5)
 hold off
 xlabel('Frequency (Hz)')
-ylabel('Power (dB/Hz)')
+ylabel('Power')
 xlim([0 12])
 
 
