@@ -1,68 +1,51 @@
+% For looking at effects of LF phase, should this be done on RESS virtual
+% channels or on the full data? Probably on the full data.
+%
+% TODO
+% - run on the raw channels, not RESS virtual channels
+% - separate by hemisphere
+%   - Or just compute separately for targets on each side of space?
+%   - Maybe first, check correlation of LF phase across hemispheres?
+% - Replace 'mean' with phase consistency (or something)
+
+
+clear variables
+close all
 rs_setup
 
-i_subject = 1;
+% Array for all data: Subj x Chan x Freq x Time x TargetSide x Hit
+agg_data = nan([height(subject_info), 2, 11, 51, 2, 2]);
 
-% Read in the data segmented around targets
-behav = rs_behavior(i_subject);
-fname = subject_info.meg{i_subject};
-fn = [exp_dir 'tfr/target/' fname '/high'];
-d = load(fn);
-d = d.high_freq_data;
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
 
-% Only look at hits and misses (no FAs or late responses)
-cfg = [];
-cfg.trials = d.trialinfo(:,1) == 1;
-hits = ft_selectdata(cfg, d);
-cfg.trials = d.trialinfo(:,1) == 0;
-misses = ft_selectdata(cfg, d);
+    % Read in the data segmented around targets
+    behav = rs_behavior(i_subject);
+    fname = subject_info.meg{i_subject};
+    fn = [exp_dir 'tfr/target/' fname '/low'];
+    d = load(fn);
+    d = d.low_freq_data;
 
-% Information about each trial
-trial_numbers = d.trialinfo(:,2);
-targ_side_per_trial = behav.target_side(trial_numbers);
-targ_freq_per_trial = behav.target_side_freq(trial_numbers);
+    % Information about each trial
+    trial_numbers = d.trialinfo(:,2);
+    targ_side_per_trial = behav.target_side(trial_numbers);
+    targ_freq_per_trial = behav.target_side_freq(trial_numbers);
 
-
-%% Plot it
-
-i_plot = 1;
-for targ_side = {'left' 'right'}
-    sel_targ_side = strcmp(targ_side_per_trial, targ_side);
-    for targ_freq = exp_params.tagged_freqs
-        sel_targ_freq = targ_freq_per_trial == targ_freq;
-        
+    % Put the data together
+    targ_side_labels = {'left' 'right'};
+    for i_side = 1:2 % Which side did the target appear on?
+        targ_side = targ_side_labels{i_side};
+        sel_targ_side = strcmp(targ_side_per_trial, targ_side);
         for hit = [0 1]
             sel_hit = d.trialinfo(:,1) == hit;
-            trial_sel = sel_targ_side & sel_targ_freq & sel_hit;
+            trial_sel = sel_hit & sel_targ_side;
             cfg = [];
             cfg.trials = trial_sel;
-            cfg.channel = targ_side; %%% keep same or other side RESS channel?
             d_sub = ft_selectdata(cfg, d);
-            
-            subplot(4, 2, i_plot)
-            imagesc(d_sub.time, d_sub.freq, ...
-                squeeze(nanmean(d_sub.powspctrm, 1)))
-            set(gca, 'YDir', 'normal')
-            title(sprintf('%s, %i Hz, Hit:%i', ...
-                targ_side{1}, targ_freq, hit))
-            
-            i_plot = i_plot + 1;
+            x = PHASECONSISTENCY(d_sub.fourierspctrm);
+            agg_data(i_subject,:,:,:,i_side,hit+1) = x;
         end
     end
 end
-
-%% Plot them each
-i_plot = 1;
-for data = {hits misses}
-    subplot(3, 1, i_plot)
-    imagesc(data{1}.time, data{1}.freq, ...
-        squeeze(mean(nanmean(data{1}.powspctrm, 1), 2)))
-    set(gca, 'YDir', 'normal')
-    i_plot = i_plot + 1;
-end
-
-diff = hits;
-diff.powspctrm = nanmean(hits.powspctrm,1) - nanmean(misses.powspctrm,1);
-subplot(3, 1, 3)
-imagesc(diff.time, diff.freq, ...
-    squeeze(mean(nanmean(diff.powspctrm, 1), 2)))
-set(gca, 'YDir', 'normal')
