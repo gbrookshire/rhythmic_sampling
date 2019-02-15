@@ -923,12 +923,12 @@ for i_subject = 1:height(subject_info)
     d = load(fn);
     d = d.high_freq_data;
 
-    % Only look at hits and misses (no FAs or late responses)
-    cfg = [];
-    cfg.trials = d.trialinfo(:,1) == 1;
-    hits = ft_selectdata(cfg, d);
-    cfg.trials = d.trialinfo(:,1) == 0;
-    misses = ft_selectdata(cfg, d);
+%     % Only look at hits and misses (no FAs or late responses)
+%     cfg = [];
+%     cfg.trials = d.trialinfo(:,1) == 1;
+%     hits = ft_selectdata(cfg, d);
+%     cfg.trials = d.trialinfo(:,1) == 0;
+%     misses = ft_selectdata(cfg, d);
 
     % Information about each trial
     trial_numbers = d.trialinfo(:,2);
