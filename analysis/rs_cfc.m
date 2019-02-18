@@ -5,7 +5,11 @@ function rs_cfc(i_subject)
 %   this can't deal with short segments. Maybe don't downsample first?
 
 rs_setup
+
+% Load the data
 fname = subject_info.meg{i_subject};
+data = rs_preproc_ress(i_subject, 'trial');
+behav = rs_behavior(i_subject); % For RT
 
 %{
 % SIMULATED DATA
@@ -17,11 +21,6 @@ fname = 'SIMULATED';
 % Set up dir for saving data
 save_dir = [exp_dir 'cfc/'];
 [~,~,~] = mkdir(save_dir, fname);
-
-% Load the data
-data = rs_preproc_ress(i_subject, 'trial');
-behav = rs_behavior(i_subject); % For RT
-
 
 % Toss segments that overlap with or occur after the response
 % Or that include the transient response at the beginning of the trial
@@ -67,7 +66,7 @@ for side_63 = {'left' 'right'}
     cfg = [];
     cfg.trials = keep_trials;
     data_sub = ft_selectdata(cfg, data);
-    [cfc_sub, mod_freq] = cfc(data_sub, freq, nfft, width);
+    [cfc_sub, mod_freq] = cfc2(data_sub, freq, nfft, width);
     cfc_data.(side_63{1}) = cfc_sub; 
     trial_lens.(side_63{1}) = cellfun(@length, data_sub.time);
 end
