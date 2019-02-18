@@ -800,6 +800,8 @@ for i_subject = 1:height(subject_info)
     end
     fname = subject_info.meg{i_subject};
     d = load([exp_dir 'cfc/' fname '/cfc']);
+    mod_freq_sel = d.mod_freq < 30;
+    mf = d.mod_freq(mod_freq_sel);
     
     for i_freq = 1:2
         for i_side = 1:2
@@ -809,11 +811,11 @@ for i_subject = 1:height(subject_info)
             elseif i_side == 1
                 freq_inx = i_freq;
             end
-            x = d.cfc_data.(sides{i_side})(:,:,freq_inx);
+            x = d.cfc_data.(sides{i_side})(:,mod_freq_sel,freq_inx);
             overall_cfc(i_subject,freq_inx,i_side,:,:) = x;
-            imagesc(d.mod_freq, freqs, x)
+            imagesc(mf, freqs, x)
             set(gca, 'YDir', 'normal')
-            xlim([0 50])
+%             xlim([0 50])
             %colorbar;
             title(sprintf('%i Hz, %s', ...
                 exp_params.tagged_freqs(i_freq), ...
@@ -837,9 +839,8 @@ for i_freq = 1:2
             freq_inx = i_freq;
         end
         x = squeeze(mean(overall_cfc(:,freq_inx,i_side,:,:), 1));
-        imagesc(d.mod_freq, freqs, x)
+        imagesc(mf, freqs, x)
         set(gca, 'YDir', 'normal')
-        xlim([0 50])
         %colorbar;
         title(sprintf('%i Hz, %s', ...
             exp_params.tagged_freqs(i_freq), ...
