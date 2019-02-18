@@ -1,23 +1,18 @@
 function [cfc_data, mod_freq] = cfc2(data, freq, nfft, width)
 
-% % Load data
-% data = rs_simulate_flicker();
-% % d.fsample = mean(diff(d.time{1}));
-% cfg = [];
-% cfg.channel = {'left' 'right'};
-% data = ft_selectdata(cfg, data);
-% % For testing, make each trial a random length from 1.5 - 4.5
-% for i_trial = 1:length(data.trial)
-%     len = (4.5 - 1.5) .* rand(1) + 1.5;
-%     keep_samps = data.time{i_trial} < len;
-%     data.trial{i_trial} = data.trial{i_trial}(:,keep_samps);
-%     data.time{i_trial} = data.time{i_trial}(:,keep_samps);
-% end
-% 
-% % Parameters
-% freq = [63 78];
-% width = 6;
-% nfft = 2^10;
+% Perform phase-to-power coupling using coherence
+%
+% Append all data first to improve robustness of CFC calculation.
+%
+% ARGS
+% data: Fieldtrip data structure
+% freq: Vector of frequencies at which to look for modulation
+% nfft: size of the FFT window
+% width: How many cycles to include in the wavelet analysis (vec or scalar)
+%
+% OUTPUTS
+% cfc_data: Coherence values
+% mod_freq: The frequencies of modulation for the coherence
 
 fsample = data.fsample;
 width = width * ones(size(freq));
@@ -25,8 +20,6 @@ width = width * ones(size(freq));
 % Compute the power time-course
 pwr = cell([1 length(data.trial)]);
 for i_trial = 1:length(data.trial)
-%     % Within that cell: Chan x Time x Freq matrices
-%     p = nan(length(d.label), length(d.time{i_trial}), length(freq));
     p = nan(1, length(data.time{i_trial})); % Only 1 chan/freq at a time
     for i_freq = 1:length(freq)
         f = freq(i_freq);
@@ -62,9 +55,6 @@ y = cat(2, y_padded{:}); % Power time-course
 clear x_padded y_padded
 
 % Compute CFC on each channel & frequency
-% cfc_data = nan(length(data.label), ... % Chan x CarFreq x ModFreq
-%     length(freq), ...
-%     nfft);
 cfc_data = nan(length(freq), ... % CarFreq x ModFreq x Chan
     nfft, ...
     length(data.label));
