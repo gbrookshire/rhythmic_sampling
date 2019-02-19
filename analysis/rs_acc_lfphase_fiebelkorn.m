@@ -1,6 +1,15 @@
 function rs_acc_lfphase_fiebelkorn(i_subject)
 
 % Replicate analysis from Fiebelkorn et al (2018, Neuron)
+%
+% Output:
+%   hit_rate: Array of hit rate (Phase Bin * Channel * Freq)
+%   n_trials: Number of trials in each cell (same dims as hit_rate)
+%   z: Amplitude of oscillations at each freq (Channel * Freq)
+%   n_bins: How many phase bins were used
+%   label: Channel labels
+%   freq: Frequencies at which accuracy was calculated
+%   dimord: string describing dimensions
 
 % Load LF TFR for one subject
 %   - Complex Morlet wavelets
@@ -25,18 +34,9 @@ d = load(fn);
 d = d.low_freq_data;
 
 % Select only hits and misses
-[hits, nans] = rs_resptype(i_subject);
-
-% Exclude the trials with NaNs in the target trialdef
-hits = hits(~nans);
-hits_and_misses_inx = ismember(hits, [0 1]);
-
-% Keep only the hits and misses (no FAs or late responses)
 cfg = [];
-cfg.trials = hits_and_misses_inx;
+cfg.trials = ismember(d.trialinfo(:,1), [0 1]);
 d = ft_selectdata(cfg, d);
-hit = hits(hits_and_misses_inx);
-clear hits nan
 
 % Compute the phase angle
 phase = angle(d.fourierspctrm);
@@ -55,8 +55,8 @@ end
 
 %{
 % TEST - add hits only when 0 < phase < pi/2
-x_freq = 5;
-x_chan = 224;
+x_freq = 5; % Add hits as a function of phase at this freq
+x_chan = 224; % ... calculated at this MEG channel
 for i_trial = 1:size(d.fourierspctrm, 1)
     phi = phase(i_trial, x_chan, x_freq, t_choice(x_freq));
     if 0 < phi && phi < pi/2
@@ -106,7 +106,3 @@ freq = d.freq;
 dimord = 'phasebin_chan_freq';
 save([exp_dir 'tfr/target/' fname '/lfphase_acc_fieb'], ...
     'hit_rate', 'n_trials', 'z', 'n_bins', 'label', 'freq', 'dimord')
-
-% % Plot it
-% roi = ismember(d.label, occip_roi);
-% plot(d.freq, z(roi,:))
