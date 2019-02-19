@@ -53,10 +53,13 @@ for i_freq = 1:length(d.freq)
     t_choice(i_freq) = length(window_end);
 end
 
+hit = d.trialinfo(:,1); % Was each trial a hit or miss
+
 %{
 % TEST - add hits only when 0 < phase < pi/2
+fname = 'SIMULATED';
 x_freq = 5; % Add hits as a function of phase at this freq
-x_chan = 224; % ... calculated at this MEG channel
+x_chan = 200; % ... calculated at this MEG channel
 for i_trial = 1:size(d.fourierspctrm, 1)
     phi = phase(i_trial, x_chan, x_freq, t_choice(x_freq));
     if 0 < phi && phi < pi/2
@@ -74,7 +77,6 @@ phase_bin_step_size = 5;
 phase_bin_width = deg2rad(phase_bin_width);
 phase_bin_step_size = deg2rad(phase_bin_step_size); 
 n_bins =  2 * pi / phase_bin_step_size;
-hit = d.trialinfo(:,1); % Was each trial a hit or miss
 hit_rate = nan([... % Phase Bin * Channel * Freq
     n_bins, ...
     length(d.label), ...
