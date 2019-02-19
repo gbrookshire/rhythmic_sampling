@@ -48,9 +48,9 @@ cfg.trials = cellfun(@length, data.time) > 0;
 data = ft_selectdata(cfg, data);
 
 % Parameters for the CFC analysis
-freq = 55:90;
-nfft = 2 ^ 10;
-width = 7;
+freq = 30:90;
+nfft = 2 ^ 9;
+width = 6; 
 
 % Compute CFC separately on each freq at its correct side
 cfc_data = [];
