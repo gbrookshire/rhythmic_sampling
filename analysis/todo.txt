@@ -11,17 +11,11 @@
         - GEDb seems to be the best, especially for shorter recordings (fig 4D)
         - http://iopscience.iop.org/article/10.1088/1741-2560/12/6/066020/pdf
 - Analyses
-    - In TFR calculation, there's a warning: (one of the) axis is/are not evenly spaced, but plots are made as if axis are linear
     - Establish rhythmic sampling
-        - power spectrum of RFT power (FFT on power in every trial, then average)
-            - ** Result: Blob of low-freq power at the RFT frequency is modulated at 2 Hz. Is that just 1/f noise, and we only have enough carrier-signal power to see 1/f noise at the RFT frequencies?
-        - Before averaging over subjects, divide out the area under the curve from 1-40 Hz
         - Look into reproducing the analyses from Landau et al (2015)?
-    - Does power at tagged frequencies correlate with accuracy?
-        - Double-check rs_accuracy_hfpower
-            - Simulate known data and make sure you can reconstruct it
     - Does low-freq phase correlate with accuracy?
         - Replicate Fiebelkorn et al (2018)
+            - Working on this now...
         - Phase-bifurcation index (VanRullen)
         - Consider using Phase-consistency metric from Landau et al (2015)
     - Does low-freq phase predict power at tagged frequencies?
