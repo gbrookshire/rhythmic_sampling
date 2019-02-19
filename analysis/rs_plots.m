@@ -791,7 +791,7 @@ print('-dpng', '-r300', [exp_dir 'plots/tagged_spect/avg'])
 clear variables
 rs_setup
 
-freqs = 55:90;
+freqs = 30:90;
 sides = {'left' 'right'};
 
 for i_subject = 1:height(subject_info)
@@ -815,7 +815,6 @@ for i_subject = 1:height(subject_info)
             overall_cfc(i_subject,freq_inx,i_side,:,:) = x;
             imagesc(mf, freqs, x)
             set(gca, 'YDir', 'normal')
-%             xlim([0 50])
             %colorbar;
             title(sprintf('%i Hz, %s', ...
                 exp_params.tagged_freqs(i_freq), ...
@@ -924,13 +923,6 @@ for i_subject = 1:height(subject_info)
     d = load(fn);
     d = d.high_freq_data;
 
-%     % Only look at hits and misses (no FAs or late responses)
-%     cfg = [];
-%     cfg.trials = d.trialinfo(:,1) == 1;
-%     hits = ft_selectdata(cfg, d);
-%     cfg.trials = d.trialinfo(:,1) == 0;
-%     misses = ft_selectdata(cfg, d);
-
     % Information about each trial
     trial_numbers = d.trialinfo(:,2);
     targ_side_per_trial = behav.target_side(trial_numbers);
@@ -1034,6 +1026,170 @@ ylabel('Frequency (Hz)')
 xlabel('Time (s)')
 
 print('-dpng', '-r300', [exp_dir 'plots/hf_acc'])
+
+
+%% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
+
+clear variables
+close all
+rs_setup
+
+% Read in the data
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    fn = [exp_dir 'tfr/target/' fname '/lfphase_acc_fieb'];
+    d = load(fn);
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad'); % To combine grads
+    d.grad = grad.grad;
+    d_all(i_subject) = d;
+end
+
+% Plot it
+
+z_planar = nan([height(subject_info) 204 size(d.z, 2)]);
+
+for i_subject = 1:length(d_all)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    
+    d = d_all(i_subject);
+
+    % dependence of hit-rate on phase across channels
+    close all
+    imagesc(d.freq, 1:length(d.label), d.z)
+    set(gca, 'YDir', 'normal')
+    xlabel('Frequency (Hz)')
+    ylabel('Channel')
+    colorbar;
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/accuracy/low_freq/hr_amp_' strrep(fname, '/', '_')])
+    
+    % topo of rhythmicity at each frequency
+    d_topo = []; % Make the data structure
+    d_topo.label = d.label;
+    d_topo.freq = d.freq;
+    d_topo.grad = d.grad;
+    d_topo.time = 0;
+    d_topo.powspctrm = d.z;
+    d_topo.dimord = 'chan_freq_time';
+    cfg = [];
+    cfg.method = 'sum';
+    d_topo = ft_combineplanar(cfg, d_topo);
+    z_planar(i_subject,:,:) = d_topo.powspctrm;
+    close all
+    figure('position', [200, 200, 2000, 400])
+    for i_freq = 1:length(d.freq)
+        subplot(1, length(d.freq), i_freq)
+        cfg = [];
+        cfg.layout = chan.grad_cmb.layout;
+        cfg.ylim = d.freq(i_freq) + [-0.1 0.1];
+        cfg.zlim = [0 max(max(d_topo.powspctrm))];
+        cfg.colorbar = 'no';
+        cfg.style = 'straight';
+        cfg.comment = 'no';
+        cfg.shading = 'interp';
+        cfg.markersymbol = '.';
+        cfg.gridscale = 200;
+        ft_topoplotTFR(cfg, d_topo)
+        title(sprintf('%i Hz', d.freq(i_freq)))
+    end
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/accuracy/low_freq/hr_amp_topo_' strrep(fname, '/', '_')])
+end
+
+% Average over subjects
+
+close all
+imagesc(d.freq, 1:length(d.label), mean(cat(3, d_all(:).z), 3))
+set(gca, 'YDir', 'normal')
+xlabel('Frequency (Hz)')
+ylabel('Channel')
+colorbar;
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/low_freq/hr_amp_avg'])
+
+d_topo.powspctrm = squeeze(nanmean(z_planar, 1));
+close all
+figure('position', [200, 200, 2000, 400])
+for i_freq = 1:length(d.freq)
+    subplot(1, length(d.freq), i_freq)
+    % Plot it
+    cfg = [];
+    cfg.layout = chan.grad_cmb.layout;
+    cfg.ylim = d.freq(i_freq) + [-0.1 0.1];
+    cfg.zlim = [0 max(max(d_topo.powspctrm))];
+    cfg.colorbar = 'no';
+    cfg.style = 'straight';
+    cfg.comment = 'no';
+    cfg.shading = 'interp';
+    cfg.markersymbol = '.';
+    cfg.gridscale = 200;
+    ft_topoplotTFR(cfg, d_topo)
+    title(sprintf('%i Hz', d.freq(i_freq)))
+end
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/low_freq/hr_amp_topo_avg'])
+
+
+%% Example plot of hit rate by phase for one subject & freq
+
+i_subject = 1;
+i_freq = 3;
+
+fname = subject_info.meg{i_subject};
+fn = [exp_dir 'tfr/target/' fname '/lfphase_acc_fieb'];
+d = load(fn);
+
+% Plot the avg hit rate for one freq in each phase bin
+imagesc(1:d.n_bins, 1:length(d.label), d.hit_rate(:,:,i_freq)')
+ylabel('Channel')
+xlabel('Phase bin')
+c = colorbar;
+c.Label.String = 'Accuracy';
+title(sprintf('Subject %i, %i Hz', i_subject, d.freq(i_freq)))
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/low_freq/example_hr_by_phase'])
+
+
+%% PBI
+
+clear variables
+close all
+rs_setup
+
+% Read in the data
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    fn = [exp_dir 'tfr/target/' fname '/lfphase_acc_pbi'];
+    d = load(fn);
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad'); % To combine grads
+    d.grad = grad.grad;
+    d_all(i_subject) = d;
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
