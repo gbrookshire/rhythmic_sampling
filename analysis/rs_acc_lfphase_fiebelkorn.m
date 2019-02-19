@@ -74,6 +74,7 @@ phase_bin_step_size = 5;
 phase_bin_width = deg2rad(phase_bin_width);
 phase_bin_step_size = deg2rad(phase_bin_step_size); 
 n_bins =  2 * pi / phase_bin_step_size;
+hit = d.trialinfo(:,1); % Was each trial a hit or miss
 hit_rate = nan([... % Phase Bin * Channel * Freq
     n_bins, ...
     length(d.label), ...
