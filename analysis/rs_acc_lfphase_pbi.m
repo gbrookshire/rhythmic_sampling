@@ -46,9 +46,10 @@ pbi = (c_hit - c_all) .* (c_miss - c_all);
 
 label = d.label;
 freq = d.freq;
+time = d.time;
 dimord = 'chan_freq_time';
 save([exp_dir 'tfr/target/' fname '/lfphase_acc_pbi'], ...
-    'pbi', 'label', 'freq', 'dimord')
+    'pbi', 'label', 'freq', 'dimord', 'time')
 
 end
 
