@@ -1,4 +1,4 @@
-unction rs_acc_lfphase_pbi(i_subject)
+function rs_acc_lfphase_pbi(i_subject)
 
 % Compute PBI on low-frequency phase between hits and misses.
 % Phase bifurcation index as in Busch, Dubois, VanRullen (2009)
@@ -14,28 +14,26 @@ d = load(fn);
 d = d.low_freq_data;
 
 % Select only hits and misses
-[hits, nans] = rs_resptype(i_subject);
-
-% Exclude the trials with NaNs in the target trialdef
-hits = hits(~nans);
-hits_and_misses_inx = ismember(hits, [0 1]);
-
-% Keep only the hits and misses (no FAs or late responses)
 cfg = [];
-cfg.trials = hits_and_misses_inx;
+cfg.trials = ismember(d.trialinfo(:,1), [0 1]);
 d = ft_selectdata(cfg, d);
-hit = hits(hits_and_misses_inx);
-clear hits nan
+
+% Toss any trials with NaNs
+has_nan = any(squeeze(isnan(d.fourierspctrm(:,1,1,:))), 2);
+cfg = [];
+cfg.trials = ~has_nan;
+d = ft_selectdata(cfg, d);
 
 % Get ITPC for hits, misses, and everything together
+
 cfg = [];
-cfg.trials = hit == 1;
+cfg.trials = d.trialinfo(:,1) == 1;
 d_hit = ft_selectdata(cfg, d);
 c_hit = itpc(d_hit);
 c_hit = c_hit.itpc;
 
 cfg = [];
-cfg.trials = hit == 0;
+cfg.trials = d.trialinfo(:,1) == 0;
 d_miss = ft_selectdata(cfg, d);
 c_miss = itpc(d_miss);
 c_miss = c_miss.itpc;
@@ -48,9 +46,9 @@ pbi = (c_hit - c_all) .* (c_miss - c_all);
 
 label = d.label;
 freq = d.freq;
-dimord = d.dimord;
+dimord = 'chan_freq_time';
 save([exp_dir 'tfr/target/' fname '/lfphase_acc_pbi'], ...
-    'pbi', 'label', 'freq')
+    'pbi', 'label', 'freq', 'dimord')
 
 end
 
