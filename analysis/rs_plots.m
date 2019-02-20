@@ -977,8 +977,9 @@ for i_side = 1:2
         end
         
         subplot(4, 3, i_plot)
-        imagesc(d_sub.time, d_sub.freq, ...
-            hit_miss(:,:,2) - hit_miss(:,:,1))
+        xdiff = hit_miss(:,:,2) - hit_miss(:,:,1);
+        clims = [-1 1] * max(max(abs(xdiff)));
+        imagesc(d_sub.time, d_sub.freq, xdiff, clims)
         set(gca, 'YDir', 'normal')
         title(sprintf('%s, %i Hz, Diff', ...
             targ_side, targ_freq))
@@ -1012,8 +1013,9 @@ for i_freq = 1:2
     end
 
     subplot(2, 3, i_plot)
-    imagesc(d_sub.time, d_sub.freq, ...
-        hit_miss(:,:,2) - hit_miss(:,:,1))
+    xdiff = hit_miss(:,:,2) - hit_miss(:,:,1);
+    clims = [-1 1] * max(max(abs(xdiff)));
+    imagesc(d_sub.time, d_sub.freq, xdiff, clims)
     set(gca, 'YDir', 'normal')
     title(sprintf('%i Hz, Diff', ...
         targ_freq))
