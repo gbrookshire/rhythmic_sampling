@@ -1177,51 +1177,66 @@ for i_subject = 1:height(subject_info)
     d.grad = grad.grad;
     d_all(i_subject) = d;
     
+    close all
     for i_freq = 1:length(d.freq)
         subplot(3, 4, i_freq)
         x = squeeze(d.pbi(:,i_freq,:));
         clims = [-1 1] * max(max(abs(x)));
-        imagesc(d.time, d.freq, x, clims)
+        imagesc(d.time, 1:length(d.label), x, clims)
         xlabel('Time (s)')
         ylabel('Channel')
         title(sprintf('%i Hz', d.freq(i_freq)))
     end
     print('-dpng', '-r300', ...
         [exp_dir 'plots/accuracy/low_freq/pbi_' strrep(fname, '/', '_')])
-
-    
-    % topo of rhythmicity at each frequency
-    d_topo = []; % Make the data structure
-    d_topo.label = d.label;
-    d_topo.freq = d.freq;
-    d_topo.grad = d.grad;
-    d_topo.dimord = d.dimord;
-    d_topo.time = 0;
-    d_topo.powspctrm = d.pbi;
-    cfg = [];
-    cfg.method = 'sum';
-    d_topo = ft_combineplanar(cfg, d_topo);
-    pbi_planar(i_subject,:,:) = d_topo.powspctrm;
-    close all
-    figure('position', [200, 200, 2000, 400])
-    for i_freq = 1:length(d.freq)
-        subplot(1, length(d.freq), i_freq)
-        cfg = [];
-        cfg.layout = chan.grad_cmb.layout;
-        cfg.ylim = d.freq(i_freq) + [-0.1 0.1];
-        cfg.zlim = [0 max(max(d_topo.powspctrm))];
-        cfg.colorbar = 'no';
-        cfg.style = 'straight';
-        cfg.comment = 'no';
-        cfg.shading = 'interp';
-        cfg.markersymbol = '.';
-        cfg.gridscale = 200;
-        ft_topoplotTFR(cfg, d_topo)
-        title(sprintf('%i Hz', d.freq(i_freq)))
-    end
-    print('-dpng', '-r300', ...
-        [exp_dir 'plots/accuracy/low_freq/pbi_topo_' strrep(fname, '/', '_')])
 end
+
+% Average over subjects
+pbi_all = cat(4, d_all(:).pbi);
+close all
+for i_freq = 1:length(d.freq)
+    subplot(3, 4, i_freq)
+    x = squeeze(mean(pbi_all(:,i_freq,:,:), 4));
+    clims = [-1 1] * max(max(abs(x)));
+    imagesc(d.time, 1:length(d.label), x, clims)
+    xlabel('Time (s)')
+    ylabel('Channel')
+    title(sprintf('%i Hz', d.freq(i_freq)))
+end
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/low_freq/pbi_avg'])
+    
+%     % topo of rhythmicity at each frequency
+%     d_topo = []; % Make the data structure
+%     d_topo.label = d.label;
+%     d_topo.freq = d.freq;
+%     d_topo.grad = d.grad;
+%     d_topo.dimord = d.dimord;
+%     d_topo.time = 0;
+%     d_topo.powspctrm = d.pbi;
+%     cfg = [];
+%     cfg.method = 'sum';
+%     d_topo = ft_combineplanar(cfg, d_topo);
+%     pbi_planar(i_subject,:,:,:) = d_topo.powspctrm;
+%     close all
+%     figure('position', [200, 200, 2000, 400])
+%     for i_freq = 1:length(d.freq)
+%         subplot(1, length(d.freq), i_freq)
+%         cfg = [];
+%         cfg.layout = chan.grad_cmb.layout;
+%         cfg.ylim = d.freq(i_freq) + [-0.1 0.1];
+%         cfg.zlim = [0 max(max(d_topo.powspctrm))];
+%         cfg.colorbar = 'no';
+%         cfg.style = 'straight';
+%         cfg.comment = 'no';
+%         cfg.shading = 'interp';
+%         cfg.markersymbol = '.';
+%         cfg.gridscale = 200;
+%         ft_topoplotTFR(cfg, d_topo)
+%         title(sprintf('%i Hz', d.freq(i_freq)))
+%     end
+%     print('-dpng', '-r300', ...
+%         [exp_dir 'plots/accuracy/low_freq/pbi_topo_' strrep(fname, '/', '_')])
+% end
 
 
 
