@@ -10,7 +10,7 @@ rs_setup
 
 fname = subject_info.meg{i_subject};
 
-step_size = 0.02; % Should be divisible by 1/Fs to preserve time-bins
+step_size = 0.01; % Should be divisible by 1/Fs to preserve time-bins
 if strcmp(segment_type, 'trial')
     toi = -0.5:step_size:(exp_params.max_trial_dur + 0.5);
 else
@@ -39,7 +39,7 @@ cfg_base.keeptrials = 'yes';
 % TFR around the tagged frequencies
 For HF data, use virtual channels from RESS spatial filters
 d = rs_preproc_ress(i_subject, segment_type);
-time_window = 0.2; % Smaller window -> more freq smoothing
+time_window = 0.1; % Smaller window -> more freq smoothing
 cfg = cfg_base;
 cfg.output = 'pow';
 cfg.foi = 55:100;
