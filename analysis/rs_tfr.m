@@ -37,7 +37,7 @@ cfg_base.keeptrials = 'yes';
 % cfg_base.padtype = 'zero';
 
 % TFR around the tagged frequencies
-For HF data, use virtual channels from RESS spatial filters
+% For HF data, use virtual channels from RESS spatial filters
 d = rs_preproc_ress(i_subject, segment_type);
 time_window = 0.1; % Smaller window -> more freq smoothing
 cfg = cfg_base;
