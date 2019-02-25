@@ -49,7 +49,7 @@ data = ft_selectdata(cfg, data);
 
 % Parameters for the CFC analysis
 freq = 30:90;
-nfft = 2 ^ 9;
+nfft = 2 ^ 10;
 width = 6; 
 
 % Compute CFC separately on each freq at its correct side
