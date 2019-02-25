@@ -60,4 +60,4 @@ cfg.t_ftimwin = n_cycles ./ cfg.foi;
 cfg.pad = 7; % Pad trials out to 7 sec
 cfg.padtype = 'mirror'; % Is this OK for estimating phase?
 low_freq_data = ft_freqanalysis(cfg, d);
-save([save_dir '/' fname '/low'], 'low_freq_data')
+save([save_dir '/' fname '/low'], 'low_freq_data', '-v7.3')
