@@ -564,7 +564,7 @@ approx_eq = @(x,y) abs(x - y) < 0.1;
 
 % Hold onto the data for all subject
 % Subject * Freq * Time
-overall_data = nan(height(subject_info), 46, 251);
+overall_data = nan(height(subject_info), 46, 501);
 
 close all
 for i_subject = 1:height(subject_info)
@@ -859,7 +859,7 @@ rs_setup
 
 close all
 
-xc = nan([height(subject_info), 51]); % Subj x Lag
+xc = nan([height(subject_info), 101]); % Subj x Lag
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -892,12 +892,12 @@ f = (1/sample_per) * (0:(nfft / 2)) / nfft;
 y = fft(xc, nfft, 2);
 Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
 
-plot(f, Pyy, '-', 'color', [0.7 0.7 1]);
+plot(f, db((Pyy), 'power'), '-', 'color', [0.7 0.7 1]);
 hold on
-plot(f, nanmean(Pyy, 1), '-b', 'LineWidth', 2.5)
+plot(f, db(nanmean(Pyy, 1), 'power'), '-b', 'LineWidth', 2.5)
 hold off
 xlabel('Frequency (Hz)')
-ylabel('Power')
+ylabel('Power (dB)')
 xlim([0 12])
 
 print('-dpng', '-r300', [exp_dir 'plots/xcorr'])
@@ -909,7 +909,7 @@ close all
 rs_setup
 
 % Array for all data: Subj x Side x TaggedFreq x Hit X TFRfreq x Time
-agg_data = nan([height(subject_info), 2, 2, 2, 46, 51]);
+agg_data = nan([height(subject_info), 2, 2, 2, 46, 101]);
 
 for i_subject = 1:height(subject_info)
         if subject_info.exclude(i_subject)
