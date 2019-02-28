@@ -908,6 +908,11 @@ clear variables
 close all
 rs_setup
 
+% Which TFR window to use?
+win_size = 0.2;
+win_str = sprintf('win_%.1fs', win_size);
+tfr_dir = [exp_dir 'tfr/' win_str '/'];
+
 % Array for all data: Subj x Side x TaggedFreq x Hit X TFRfreq x Time
 agg_data = nan([height(subject_info), 2, 2, 2, 46, 101]);
 
@@ -919,7 +924,7 @@ for i_subject = 1:height(subject_info)
     % Read in the data segmented around targets
     behav = rs_behavior(i_subject);
     fname = subject_info.meg{i_subject};
-    fn = [exp_dir 'tfr/target/' fname '/high'];
+    fn = [tfr_dir 'target/' fname '/high'];
     d = load(fn);
     d = d.high_freq_data;
 
@@ -943,12 +948,25 @@ for i_subject = 1:height(subject_info)
                 cfg.trials = trial_sel;
                 cfg.channel = targ_side;
                 d_sub = ft_selectdata(cfg, d);
-                x = squeeze(nanmean(d_sub.powspctrm, 1));
+                x = squeeze(nanmean(d_sub.powspctrm, 1)); % Avg over trials
                 agg_data(i_subject,i_side,i_freq,hit+1,:,:) = x;
             end
         end
     end
 end
+
+% Normalize power within each participant, side, freq
+% Divide by the area under the curve
+for i_side = 1:2
+    for i_freq = 1:2
+        for i_subject = 1:size(agg_data, 1)
+            x = agg_data(i_subject,i_side,i_freq,:,:,:); % Select data
+            x_bar = mean(x, 4); % Avg over hits and misses
+            auc = sum(sum(x_bar, 5), 6); % Area under the curve 
+            agg_data(i_subject,i_side,i_freq,:,:,:) = x / auc;
+        end
+    end
+end 
 
 % plot it
 
@@ -961,6 +979,7 @@ for i_side = 1:2
     for i_freq = 1:2
         targ_freq = exp_params.tagged_freqs(i_freq);
         
+
         for hit = [0 1]
             x = agg_data(:,i_side,i_freq,hit+1,:,:);
             x = nanmean(x, 1); % Average over subjects
@@ -987,7 +1006,7 @@ for i_side = 1:2
         i_plot = i_plot + 1;
     end
 end
-print('-dpng', '-r300', [exp_dir 'plots/hf_acc_by_side'])
+print('-dpng', '-r300', [exp_dir 'plots/hf_acc_by_side-' win_str '.png'])
 
 
 % Plot it, collapsing over side
@@ -1027,7 +1046,7 @@ subplot(2,3,4)
 ylabel('Frequency (Hz)')
 xlabel('Time (s)')
 
-print('-dpng', '-r300', [exp_dir 'plots/hf_acc'])
+print('-dpng', '-r300', [exp_dir 'plots/hf_acc-' win_str '.png'])
 
 
 %% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
