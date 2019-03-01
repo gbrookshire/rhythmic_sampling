@@ -1049,6 +1049,55 @@ xlabel('Time (s)')
 print('-dpng', '-r300', [exp_dir 'plots/hf_acc-' win_str '.png'])
 
 
+%% Compare power at the target/non-target stimulus between hits and misses
+
+clear variables
+close all
+rs_setup
+
+% Read in the data
+powdiff = nan(height(subject_info), 2, 101); % Subject x Accuracy x Time
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    p = rs_powerdiff(i_subject);
+    for hit = 0:1
+        x = nanmean(p.powdiff(p.trialinfo(:, 1) == hit, :), 1);
+        powdiff(i_subject, hit+1, :) = x;
+    end
+end
+    
+% Plot it
+subplot(3, 1, 1)
+x = squeeze(powdiff(:,1,:));
+plot(p.time, x)
+hold on
+plot(p.time, nanmean(x, 1), '-k', 'LineWidth', 2)
+plot([min(p.time) max(p.time)], [0 0], '-k')
+hold off
+title('Miss')
+
+subplot(3, 1, 2)
+x = squeeze(powdiff(:,2,:));
+plot(p.time, x)
+hold on
+plot(p.time, nanmean(x, 1), '-k', 'LineWidth', 2)
+plot([min(p.time) max(p.time)], [0 0], '-k')
+hold off
+title('Hit')
+
+subplot(3, 1, 3)
+x = squeeze(diff(powdiff, 1, 2));
+plot(p.time, x)
+hold on
+plot(p.time, nanmean(x, 1), '-k', 'LineWidth', 2)
+plot([min(p.time) max(p.time)], [0 0], '-k')
+hold off
+title('Diff')
+
+
+    
 %% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
 
 clear variables
