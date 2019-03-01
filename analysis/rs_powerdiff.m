@@ -6,7 +6,10 @@ function d = rs_powerratio(i_subject)
 % HP filter
 % Cut out transients
 % Z-score
-% Ratio of Power(63) / Power(78) as a function of time, compare hits vs misses
+% Compare power in target-nontarget tagged frequencies as a func of time
+%   Calculate the difference (subtraction)
+%       Ratio leads to instability b/c power is 0-centered after HP filter
+%   compare hits vs misses
 
 rs_setup
 
@@ -26,6 +29,7 @@ behav = rs_behavior(i_subject);
 
 % Main analysis
 sides = {'left' 'right'};
+powdiff = nan(size(d.powspctrm, 1), length(d.time));
 for i_targ_side = 1:2
         
     % Select trials with the target on this side
@@ -60,48 +64,62 @@ for i_targ_side = 1:2
                     pwr_filt(i_trial,i_channel,i_freq,:) = filtfilt(b,a,x);
                 end
             end
-        end 
+        end
+        clear pwr
         
         % Cut out transients (don't have to worry about that for target-seg)
 
         % Z-score power in each frequency separately
-        z = nan(size(pwr));
+        z = nan(size(pwr_filt));
         for i_freq = 1:length(d.freq)
             for i_chan = 1:length(d.label)
-                x = pwr(:,i_chan,i_freq,:);
+                x = pwr_filt(:,i_chan,i_freq,:);
                 x_mean = nanmean(reshape(x, [1 numel(x)]));
                 x_std = nanstd(reshape(x, [1 numel(x)]));
-                z(:,i_chan,i_freq,:) = (x - x_mean) / x_std;
+                z(:,i_chan,i_freq,:) = (x - x_mean) ./ x_std;
             end
         end
+        clear pwr_filt
         
         % TESTING
         %{
         f = d_sub.freq;
         t = d_sub.time;
-        plt = @(x) imagesc(t, f, squeeze(nanmean(x(:,1,:,:), 1)));
+        plt = @(a) imagesc(t, f, squeeze(nanmean(a(:,1,:,:), 1)));
         subplot(3, 1, 1)
-        plt(pwr), set(gca, 'YDir', 'normal')
+        plt(pwr), set(gca, 'YDir', 'normal'), colorbar;
         subplot(3, 1, 2)
-        plt(pwr_filt), set(gca, 'YDir', 'normal')
+        plt(pwr_filt), set(gca, 'YDir', 'normal'), colorbar;
         subplot(3, 1, 3)
-        plt(z), set(gca, 'YDir', 'normal')
+        plt(z), set(gca, 'YDir', 'normal'), colorbar;
         %}
 
-        % Compute the ratio of Ipsi:Contra power
-        warning('Make sure these ipsi/contra labels are correct')
-        ipsi_timecourse = z(:,i_targ_side,i_targ_freq,:);
-        k_targ_side = mod(i_targ_side, 2) + 1; % Get the non-target side
+        % Compare power in the target and non-target stimuli
+        % Get the timecourse of power at the target stimulus
+        target_timecourse = z(:,i_targ_side,i_targ_freq,:);
+        % Get the timecourse of power at the non-target stimulus
+        k_targ_side = mod(i_targ_side, 2) + 1;
         k_targ_freq = mod(i_targ_freq, 2) + 1;
-        contra_timecourse = z(:,k_targ_side,k_targ_freq,:);
-        power_ratio = ipsi_timecourse ./ contra_timecourse;
+        nontarget_timecourse = z(:,k_targ_side,k_targ_freq,:);
+        % Compute difference in power
+        power_diff = target_timecourse - nontarget_timecourse;
+        power_diff = squeeze(power_diff);
+        %{
+        % Don't use ratio -- because of HP filt and z-score, power is
+        % centered around 0, so computing ratios leads to weird numbers
+        power_ratio = target_timecourse ./ nontarget_timecourse;
+        power_ratio = squeeze(power_ratio);
+        %}
+        
+        % TESTING
+        %{
+        subplot(2, 1, 1)
+        plot(t, power_ratio)
+        subplot(2, 1, 2)
+        plot(t, power_diff)
+        %}
 
         % Put this back into the main data object
-        d.powerratio(trial_sel,:) = squeeze(power_ratio);
-
+        powdiff(trial_sel,:) = power_diff;
     end
 end
-
-% Ratio of Power(63) / Power(78)???
-
-
