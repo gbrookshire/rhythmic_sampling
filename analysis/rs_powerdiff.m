@@ -1,4 +1,4 @@
-function d = rs_powerdiff(i_subject)
+function out = rs_powerdiff(i_subject)
 
 % Get the ratio of normalized power at each side
 %
@@ -61,7 +61,8 @@ for i_targ_side = 1:2
             for i_channel = 1:length(d.label)
                 for i_freq = 1:length(d.freq)
                     x = squeeze(pwr(i_trial,i_channel,i_freq,:));
-                    pwr_filt(i_trial,i_channel,i_freq,:) = filtfilt(b,a,x);
+                    x = filtfilt(b, a, x);
+                    pwr_filt(i_trial,i_channel,i_freq,:) = x;
                 end
             end
         end
@@ -123,3 +124,8 @@ for i_targ_side = 1:2
         powdiff(trial_sel,:) = power_diff;
     end
 end
+
+out = [];
+out.time = d.time;
+out.powdiff = powdiff;
+out.trialinfo = d.trialinfo;
