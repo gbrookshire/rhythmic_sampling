@@ -1068,34 +1068,63 @@ for i_subject = 1:height(subject_info)
     end
 end
     
-% Plot it
-subplot(3, 1, 1)
+%% Plot it
+
+sterr = @(x) nanstd(x, 1) / sqrt(size(x, 1));
+subplot(2, 1, 1)
+
+% Misses
 x = squeeze(powdiff(:,1,:));
-plot(p.time, x)
+x_mean = nanmean(x, 1);
+x_se = sterr(x);
+fill([p.time fliplr(p.time)], [x_mean + x_se, fliplr(x_mean - x_se)], ...
+    'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none')
 hold on
-plot(p.time, nanmean(x, 1), '-k', 'LineWidth', 2)
-plot([min(p.time) max(p.time)], [0 0], '-k')
-hold off
-title('Miss')
+plot(p.time, x_mean, '-b', 'LineWidth', 2)
 
-subplot(3, 1, 2)
+% Hits
 x = squeeze(powdiff(:,2,:));
-plot(p.time, x)
-hold on
-plot(p.time, nanmean(x, 1), '-k', 'LineWidth', 2)
+x_mean = nanmean(x, 1);
+x_se = sterr(x);
+fill([p.time fliplr(p.time)], [x_mean + x_se, fliplr(x_mean - x_se)], ...
+    'r', 'FaceAlpha', 0.3, 'EdgeColor', 'none')
+plot(p.time, x_mean, '-r', 'LineWidth', 2)
+
+% Labels
+xlabel('Time (s)')
+ylabel(sprintf('Targ - Non-targ power\n(Z)'))
+text(-0.4, 0.15, 'Hit', 'color', 'r')
+text(-0.4, 0.11, 'Miss', 'color', 'b')
+
 plot([min(p.time) max(p.time)], [0 0], '-k')
 hold off
-title('Hit')
 
-subplot(3, 1, 3)
-x = squeeze(diff(powdiff, 1, 2));
-plot(p.time, x)
+% Difference: Hit - Miss
+subplot(2, 1, 2)
+[h,pval,ci] = ttest2(squeeze(powdiff(:,2,:)), squeeze(powdiff(:,1,:)));
+x = squeeze(powdiff(:,2,:) - powdiff(:,1,:));
+x_mean = nanmean(x, 1);
+x_se = sterr(x) * 1.96; % 95% CI
+fill([p.time fliplr(p.time)], ... %[x_mean + x_se, fliplr(x_mean - x_se)], ...
+    [ci(2,:) fliplr(ci(1,:))], ...
+    [0.5 0 0.5], 'FaceAlpha', 0.3, 'EdgeColor', 'none')
 hold on
-plot(p.time, nanmean(x, 1), '-k', 'LineWidth', 2)
+plot(p.time, x_mean, '-', 'LineWidth', 2, 'color', [0.5 0 0.5])
+
+text(-0.4, 0.3, 'Difference (Hit - Miss)', 'color', [0.5 0 0.5])
+xlabel('Time (s)')
+ylabel(sprintf('Targ - Non-targ power\n(Z)'))
 plot([min(p.time) max(p.time)], [0 0], '-k')
 hold off
-title('Diff')
 
+% % Plot significance for each sample
+% hold on
+% plot(p.time(h == 1), ...
+%     ones([1 sum(h)]) * min(min(ci)), ...
+%     'ok', 'LineWidth', 2)
+% hold off
+
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/targ-non-diff'])
 
     
 %% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
