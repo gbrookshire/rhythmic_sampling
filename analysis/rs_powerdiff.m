@@ -1,4 +1,4 @@
-function d = rs_powerratio(i_subject)
+function d = rs_powerdiff(i_subject)
 
 % Get the ratio of normalized power at each side
 %
