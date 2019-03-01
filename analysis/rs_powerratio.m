@@ -52,11 +52,12 @@ for i_targ_side = 1:2
         nyq = fsample / 2;
         [b, a] = butter(filt_order, hp_freq / nyq, 'high');
         pwr = d_sub.powspctrm;
+        pwr_filt = nan(size(d_sub.powspctrm));
         for i_trial = 1:size(pwr, 1)
             for i_channel = 1:length(d.label)
                 for i_freq = 1:length(d.freq)
                     x = squeeze(pwr(i_trial,i_channel,i_freq,:));
-                    pwr(i_trial,i_channel,i_freq,:) = filtfilt(b, a, x);
+                    pwr_filt(i_trial,i_channel,i_freq,:) = filtfilt(b,a,x);
                 end
             end
         end 
@@ -73,6 +74,19 @@ for i_targ_side = 1:2
                 z(:,i_chan,i_freq,:) = (x - x_mean) / x_std;
             end
         end
+        
+        % TESTING
+        %{
+        f = d_sub.freq;
+        t = d_sub.time;
+        plt = @(x) imagesc(t, f, squeeze(nanmean(x(:,1,:,:), 1)));
+        subplot(3, 1, 1)
+        plt(pwr), set(gca, 'YDir', 'normal')
+        subplot(3, 1, 2)
+        plt(pwr_filt), set(gca, 'YDir', 'normal')
+        subplot(3, 1, 3)
+        plt(z), set(gca, 'YDir', 'normal')
+        %}
 
         % Compute the ratio of Ipsi:Contra power
         warning('Make sure these ipsi/contra labels are correct')
