@@ -5,6 +5,7 @@
 - Analyses
     - Look for coherence: alpha --> freq tagging
         - Replicate Spaak et al (2012) (as close as is possible)
+    - Run CFC analysis on channel space instead of RESS channels
     - Ratio of power in hits/misses
         - Power timecourse
         - HP filter, then cut out transient, then maybe Z-score
