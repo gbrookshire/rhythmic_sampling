@@ -13,7 +13,7 @@ function out = rs_powerdiff(i_subject)
 
 rs_setup
 
-win_size = 0.2;
+win_size = 0.1;
 win_str = sprintf('win_%.1fs', win_size);
 tfr_dir = [exp_dir 'tfr/' win_str '/target/'];
 
