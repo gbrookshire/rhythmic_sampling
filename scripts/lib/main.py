@@ -23,7 +23,7 @@ pix2deg = lambda x: np.rad2deg(np.arctan(pix2cm(x) / 147.5))
 from __future__ import division
 
 # Change to False for testing on office desktop
-IN_MEG_LAB = True
+IN_MEG_LAB = False
 
 import os
 import random
