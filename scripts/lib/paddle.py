@@ -4,7 +4,12 @@ For an example of usage, see the test function at the end of the file.
 """
 # Might be able to use psychopy.iohub.devices.daq
 
-from psychopy.hardware.labjacks import U3
+try:
+    from psychopy.hardware.labjacks import U3
+except ImportError:
+    print 'Labjack not found'
+    U3 = 'NOT FOUND'
+
 from psychopy import event
 
 # Registers of the buttons
