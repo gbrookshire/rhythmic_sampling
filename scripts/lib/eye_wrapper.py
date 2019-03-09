@@ -1,11 +1,21 @@
 """ Simple wrapper around pylink to set up the eye tracker.
 """
 
-# TODO: Send triggers as a message to EyeLink
-# TODO: Start recording and receiveDataFile. Unique filenames!
-
 import datetime
-import pylink as pl
+try:
+    import pylink as pl
+except ImportError:
+    print 'pylink not found'
+
+class DummyEyelink(object):
+    def __init__(self, *args, **kwargs):
+        pass
+    def startup(self):
+        pass
+    def trigger(self, trig):
+        pass
+    def shutdown(self):
+        pass
 
 class SimpleEyelink(object):
 
