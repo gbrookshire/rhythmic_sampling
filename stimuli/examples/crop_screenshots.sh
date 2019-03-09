@@ -1,0 +1,1 @@
+convert INPUT_NAME -crop 960x540+2880+0 OUTPUT_NAME
