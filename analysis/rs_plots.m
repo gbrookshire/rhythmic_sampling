@@ -560,6 +560,10 @@ print('-dpng', '-r300', ...
 clear variables
 rs_setup
 
+win_size = 0.1;
+win_str = sprintf('win_%.1fs', win_size);
+
+
 approx_eq = @(x,y) abs(x - y) < 0.1;
 
 % Hold onto the data for all subject
@@ -573,7 +577,7 @@ for i_subject = 1:height(subject_info)
     end
     fname = subject_info.meg{i_subject};
     disp(fname)
-    hf_fname = [exp_dir 'tfr/trial/' fname '/high.mat'];
+    hf_fname = [exp_dir 'tfr/' win_str '/trial/' fname '/high.mat'];
     %finfo = dir(hf_fname);
     %disp(finfo.date)
     hf = load(hf_fname);
@@ -639,7 +643,7 @@ for i_subject = 1:height(subject_info)
     hold off
 
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/stim_onset/' strrep(fname, '/', '_')])
+        [exp_dir 'plots/stim_onset/' win_str '/' strrep(fname, '/', '_')])
 end
 
 % Plot the averages over all subjects
@@ -687,7 +691,7 @@ xticks(0:4)
 hold off
 
 print('-dpng', '-r300', ...
-    [exp_dir 'plots/stim_onset/overall'])
+    [exp_dir 'plots/stim_onset/' win_str '/overall'])
 
 
 %% Simulated data - example trial
