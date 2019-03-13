@@ -1,4 +1,4 @@
-function out = rs_powerdiff(i_subject)
+function out = rs_powerdiff(i_subject, win_size, segment_type)
 
 % Get the ratio of normalized power at each side
 %
@@ -13,9 +13,11 @@ function out = rs_powerdiff(i_subject)
 
 rs_setup
 
-win_size = 0.1;
+% segment_type = 'target'; % target | trial
+% win_size = 0.2;
+
 win_str = sprintf('win_%.1fs', win_size);
-tfr_dir = [exp_dir 'tfr/' win_str '/target/'];
+tfr_dir = [exp_dir 'tfr/' win_str '/' segment_type '/'];
 
 % Load target-segmented HF TFR
 % Read in the data segmented around targets
