@@ -1055,13 +1055,15 @@ clear variables
 close all
 rs_setup
 
+win_size = 0.1; % Size of the TFR window used
+
 % Read in the data
 powdiff = nan(height(subject_info), 2, 101); % Subject x Accuracy x Time
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
-    p = rs_powerdiff(i_subject);
+    p = rs_powerdiff(i_subject, win_size, 'target');
     for hit = 0:1
         x = nanmean(p.powdiff(p.trialinfo(:, 1) == hit, :), 1);
         powdiff(i_subject, hit+1, :) = x;
@@ -1124,7 +1126,34 @@ hold off
 %     'ok', 'LineWidth', 2)
 % hold off
 
-print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/targ-non-diff'])
+fn = sprintf('targ-non-diff_win%.1fs', win_size);
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn])
+
+
+%% Power fluctuations between target/non-target stimuli across the trial
+
+clear variables
+close all
+rs_setup
+
+win_size = 0.1; % Size of the TFR window used
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    p = rs_powerdiff(i_subject, win_size, 'target');
+
+    % Compute and plot the FFT of the power difference
+    nfft = 2^6;
+    sample_per = mean(diff(p.time));
+    Fs = 1 / sample_per;
+    f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+    y = fft(p., nfft, 2);
+    Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
+
+    
+end
 
     
 %% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
