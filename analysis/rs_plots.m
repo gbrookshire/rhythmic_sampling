@@ -238,9 +238,7 @@ end
 
 clear variables
 rs_setup
-close all
 
-figure('position', [50, 50, 300, 200])
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -261,17 +259,24 @@ for i_subject = 1:height(subject_info)
     spec = ft_selectdata(cfg, spec);
 
     p = spec.powspctrm;
-    p = p / sum(p); % Normalize
-    hold on
-    plot(spec.freq, db(p, 'power'))
-
+    %disp(size(p))
+    %p = p / sum(p); % Normalize
+    s(i_subject,:) = p;
 end
+
+
+close all
+figure('position', [50, 50, 300, 200])
+plot(spec.freq, db(s, 'power'), '-', 'color', [1 1 1] * 0.6)
+hold on
+plot(spec.freq, db(nanmean(s, 1), 'power'), '-b', 'LineWidth', 1.5)
+
 xlabel('Frequency (Hz)')
-ylabel('Power')
+ylabel('Power (dB)')
 xlim([0 100])
-plot(exp_params.tagged_freqs, [-38 -38], '^r')
+%plot(exp_params.tagged_freqs, [-38 -38], '^r')
 hold off
-print('-dpng', [exp_dir 'plots/spectra'])
+print('-depsc', [exp_dir 'plots/spectra'])
 
 
 %% Scalp topo of the SNR for the tagged frequencys
@@ -280,6 +285,9 @@ print('-dpng', [exp_dir 'plots/spectra'])
 clear variables
 rs_setup
 
+% Object to hold topographies across subjects
+
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -287,11 +295,11 @@ for i_subject = 1:height(subject_info)
     fname = subject_info.meg{i_subject};
     close all
 
-    spec = load([exp_dir 'spectra\' fname '\spectra']);
+    spec = load([exp_dir 'spectra/' fname '/spectra']);
     spec = spec.freq_data;
-    snr = load([exp_dir 'spectra\' fname '\snr']);
+    snr = load([exp_dir 'spectra/' fname '/snr']);
     snr = snr.snr;
-    grad = load([exp_dir 'grad\' fname '\grad'], 'grad'); % To combine grads
+    grad = load([exp_dir 'grad/' fname '/grad'], 'grad'); % To combine grads
 
     f_tag = exp_params.tagged_freqs; % Tagged frequencies
 
