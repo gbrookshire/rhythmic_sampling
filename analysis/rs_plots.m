@@ -287,7 +287,7 @@ clear variables
 rs_setup
 
 % Object to hold topographies across subjects
-
+topos = nan(height(subject_info), 204, 2); % Subject x Chan x Freq
 
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
@@ -314,6 +314,8 @@ for i_subject = 1:height(subject_info)
                 cfg = [];
                 cfg.method = 'sum';
                 x = ft_combineplanar(cfg, x);
+                topos(i_subject,:,i_freq) = x.powspctrm; % Save the powspect
+                topo_struct = x;
             end
             subplot(3, length(f_tag), i_plot)
             title(sprintf('%s, %d Hz', ...
@@ -337,7 +339,6 @@ for i_subject = 1:height(subject_info)
             c = colorbar();
             c.Label.String = 'SNR';
             i_plot = i_plot + 1;
-            clear x
         end
     end
 
@@ -352,9 +353,26 @@ for i_subject = 1:height(subject_info)
     xlabel('Frequency (Hz)')
     ylabel('Power (dB)')
 
-    print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'/','_')])
+    %print('-dpng', '-r300', [exp_dir 'plots/snr_topo/' strrep(fname,'/','_')])
 end
 
+% Plot the average topography across subjects & frequencies
+close all
+figure('position', [200, 200, 200, 200])
+topo_struct.powspctrm = squeeze(mean(nanmean(x, 1), 2));
+cfg = [];
+cfg.layout = chan.(sensor_type).layout;
+cfg.zlim = [1 max(topo_struct.powspctrm)];
+cfg.colorbar = 'no';
+cfg.style = 'straight';
+cfg.comment = 'no';
+cfg.shading = 'interp';
+cfg.markersymbol = '.';
+cfg.gridscale = 200;
+ft_topoplotTFR(cfg, topo_struct)
+c = colorbar();
+c.Label.String = 'SNR';
+print('-dpng', '-r300', [exp_dir 'plots/snr_topo/avg'])
 
 %% Plot the RESS spatial filters 
 
