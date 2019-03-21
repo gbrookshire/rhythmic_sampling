@@ -266,7 +266,7 @@ end
 
 
 close all
-figure('position', [50, 50, 300, 200])
+figure('position', [50, 50, 200, 200])
 plot(spec.freq, db(s, 'power'), '-', 'color', [1 1 1] * 0.6)
 hold on
 plot(spec.freq, db(nanmean(s, 1), 'power'), '-b', 'LineWidth', 1.5)
@@ -274,6 +274,7 @@ plot(spec.freq, db(nanmean(s, 1), 'power'), '-b', 'LineWidth', 1.5)
 xlabel('Frequency (Hz)')
 ylabel('Power (dB)')
 xlim([0 100])
+box('off')
 %plot(exp_params.tagged_freqs, [-38 -38], '^r')
 hold off
 print('-depsc', [exp_dir 'plots/spectra'])
