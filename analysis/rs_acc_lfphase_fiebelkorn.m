@@ -29,9 +29,12 @@ rs_setup
 
 % Read in the data segmented around targets
 fname = subject_info.meg{i_subject};
-fn = [exp_dir 'tfr/target/' fname '/low'];
+fn = [exp_dir 'tfr/win_0.1s/target/' fname '/low'];
 d = load(fn);
 d = d.low_freq_data;
+
+% Read in CSV to get which side target was on
+behav = rs_behavior(i_subject);
 
 % Select only hits and misses
 cfg = [];
@@ -54,6 +57,7 @@ for i_freq = 1:length(d.freq)
 end
 
 hit = d.trialinfo(:,1); % Was each trial a hit or miss
+targ_right = strcmp('right', behav.target_side(d.trialinfo(:,2)));
 
 %{
 % TEST - add hits only when 0 < phase < pi/2
@@ -77,25 +81,31 @@ phase_bin_step_size = 5;
 phase_bin_width = deg2rad(phase_bin_width);
 phase_bin_step_size = deg2rad(phase_bin_step_size); 
 n_bins =  2 * pi / phase_bin_step_size;
-hit_rate = nan([... % Phase Bin * Channel * Freq
+hit_rate = nan([... % Phase Bin * Target Side * Channel * Freq
     n_bins, ...
+    2, ...
     length(d.label), ...
     length(d.freq)]);
 n_trials = hit_rate;
+
 for i_bin = 1:n_bins % Takes a minute or two
     % Get the difference between MEG phase and center of the bin
     bin_center = -pi + (i_bin * phase_bin_step_size);
     complex_diff = phase - bin_center;
     theta_diff = abs(angle(exp(1i * complex_diff)));
     for i_freq = 1:length(d.freq)
-        tfr_window_inx = t_choice(i_freq); % TFR window just before target
+        tfr_win_inx = t_choice(i_freq); % TFR wind just before targ
         for i_chan = 1:length(d.label)
-            % Keep trials that are within width/2 of the bin center
-            theta = theta_diff(:, i_chan, i_freq, tfr_window_inx);
-            trials_in_bin = theta < (phase_bin_width / 2);
-            hr = mean(hit(trials_in_bin));
-            hit_rate(i_bin, i_chan, i_freq) = hr;
-            n_trials(i_bin, i_chan, i_freq) = sum(trials_in_bin);
+            for targ_side = 1:2 % 1:left, 2:right
+                trl_inx = targ_right == (targ_side - 1);
+                % Keep trials that are within width/2 of the bin center
+                theta = theta_diff(trl_inx, i_chan, i_freq, tfr_win_inx);
+                trials_in_bin = theta < (phase_bin_width / 2);
+                hr = mean(hit(trials_in_bin));
+                hit_rate(i_bin, targ_side, i_chan, i_freq) = hr;
+                trl_count = sum(trials_in_bin);
+                n_trials(i_bin, targ_side, i_chan, i_freq) = trl_count;
+            end
         end
     end
 end
@@ -107,5 +117,5 @@ z = squeeze(abs(y(2,:,:))); % Get periodicity at the freq of interest
 label = d.label;
 freq = d.freq;
 dimord = 'phasebin_chan_freq';
-save([exp_dir 'tfr/target/' fname '/lfphase_acc_fieb'], ...
+save([exp_dir 'tfr/win_0.1s/target/' fname '/lfphase_acc_fieb'], ...
     'hit_rate', 'n_trials', 'z', 'n_bins', 'label', 'freq', 'dimord')
