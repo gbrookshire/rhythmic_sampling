@@ -116,6 +116,6 @@ z = squeeze(abs(y(2,:,:,:))); % Get periodicity at the freq of interest
 
 label = d.label;
 freq = d.freq;
-dimord = 'phasebin_chan_freq';
+dimord = 'phasebin_targetside_chan_freq';
 save([exp_dir 'tfr/win_0.1s/target/' fname '/lfphase_acc_fieb'], ...
     'hit_rate', 'n_trials', 'z', 'n_bins', 'label', 'freq', 'dimord')
