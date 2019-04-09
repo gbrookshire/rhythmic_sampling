@@ -3,6 +3,8 @@ rs_base_path
 addpath([base_dir 'fieldtrip-20181118/'])
 ft_defaults
 
+addpath([base_dir 'rhythmic_sampling/analysis/'])
+
 exp_dir = [base_dir 'rhythmic_sampling_data/'];
 cd(exp_dir);
 
