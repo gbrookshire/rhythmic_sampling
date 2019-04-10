@@ -52,7 +52,7 @@ for i_targ_side = 1:2
         d_sub = ft_selectdata(cfg, d);
 
         % HP filter 
-        hp_freq = 1; % Hz
+        hp_freq = 2; % Hz
         filt_order = 5;
         fsample = mean(diff(d.time)) ^ -1;
         nyq = fsample / 2;
