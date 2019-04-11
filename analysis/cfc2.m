@@ -26,6 +26,7 @@ for i_freq = 1:length(freq)
     wavelet = taper .* exp(1i * 2 * pi * f .* (1:N) / fsample);
     wavelets{i_freq} = wavelet;
 end
+clear wavelet
 
 % Compute CFC
 cfc_data = nan(length(freq), ... % CarFreq x ModFreq x Chan
@@ -42,7 +43,7 @@ for i_channel = 1:length(data.label)
         pwr = cell([1 length(data.trial)]);
         for i_trial = 1:length(data.trial)
             s = data.trial{i_trial}(i_channel, :);
-            c = conv(s, wavelet, 'same');
+            c = conv(s, wavelets{i_freq}, 'same');
             sP = abs(c) .^ 2; % Fluctuations in power over time
             pwr{i_trial} = sP;
         end
