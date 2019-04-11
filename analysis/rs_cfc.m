@@ -8,8 +8,14 @@ rs_setup
 
 % Load the data
 fname = subject_info.meg{i_subject};
-data = rs_preproc_ress(i_subject, 'trial');
 behav = rs_behavior(i_subject); % For RT
+
+% % Load data with RESS filters
+% data = rs_preproc_ress(i_subject, 'trial');
+
+% Load data for each channel
+data = load([exp_dir 'preproc/trial/' fname '/preproc']);
+data = data.data;
 
 %{
 % SIMULATED DATA
@@ -52,6 +58,7 @@ freq = 30:90;
 nfft = 2 ^ 10;
 width = 6; 
 
+%{
 % Compute CFC separately on each freq at its correct side
 cfc_data = [];
 trial_lens = [];
@@ -70,5 +77,12 @@ for side_63 = {'left' 'right'}
     cfc_data.(side_63{1}) = cfc_sub; 
     trial_lens.(side_63{1}) = cellfun(@length, data_sub.time);
 end
+%}
+
+% Compute CFC for all channels (not RESS filters)
+% Both tagged frequencies at once
+[cfc_data, mod_freq] = cfc2(data, freq, nfft, width);
+trial_lens = cellfun(@length, data.time);
+
 
 save([save_dir fname '/cfc'], 'cfc_data', 'mod_freq', 'trial_lens')
