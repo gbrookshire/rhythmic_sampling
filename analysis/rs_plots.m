@@ -830,7 +830,7 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    d = load([exp_dir 'cfc/' fname '/cfc']);
+    d = load([exp_dir 'cfc/ress/' fname '/cfc']);
     mod_freq_sel = d.mod_freq < 30;
     mf = d.mod_freq(mod_freq_sel);
     
@@ -855,11 +855,12 @@ for i_subject = 1:height(subject_info)
     ylabel('Carrier frequency (Hz)')
     xlabel('Modulation frequency (Hz)')
 
-    print('-dpng', '-r300', ...
-        [exp_dir 'plots/cfc/' strrep(fname, '/', '_')])
+%     print('-dpng', '-r300', ...
+%         [exp_dir 'plots/cfc/' strrep(fname, '/', '_')])
 end
 
 % Avg over subjects
+tagged = nan(2, 2, length(mf)); % Side * TagFreq * ModFreq
 for i_freq = 1:2
     for i_side = 1:2
         subplot(2, 2, i_side + (2 * (i_freq - 1)))
@@ -875,13 +876,34 @@ for i_freq = 1:2
         title(sprintf('%i Hz, %s', ...
             exp_params.tagged_freqs(i_freq), ...
             sides{i_side}))
+        
+        % Take out modulation at the tagged frequency
+        tagged_freq_inx = find(freqs == exp_params.tagged_freqs(i_freq));
+        tagged(i_side,i_freq,:) = x(tagged_freq_inx,:);
     end
 end    
 ylabel('Carrier frequency (Hz)')
 xlabel('Modulation frequency (Hz)')
-print('-dpng', '-r300', [exp_dir 'plots/cfc/avg'])
+% print('-dpng', '-r300', [exp_dir 'plots/cfc/avg'])
 
+% Plot a line-plot of power fluctuations at the tagged frequency
+close all
+plot(mf, db(squeeze(mean(mean(tagged, 1), 2)), 'power'), 'linewidth', 2)
+xlabel('Modulation frequency (Hz)')
+ylabel('Power (dB)')
+xlim([0 15])
+box off
 
+width = 5;
+height = 4;
+set(gcf,'units','centimeters')
+set(gcf,'paperunits','centimeters')
+set(gcf, 'PaperPositionMode', 'manual');
+set(gcf,'papersize', [width height])
+set(gcf,'paperposition',[0,0,width,height])
+set(gcf, 'renderer', 'painters');
+
+print('-depsc', [exp_dir 'plots/cfc/avg_line_tagged'])
 
 %% Plot cross-correlation of power at the two tagged frequencies
 
@@ -1037,11 +1059,13 @@ for i_side = 1:2
         i_plot = i_plot + 1;
     end
 end
-print('-dpng', '-r300', [exp_dir 'plots/hf_acc_by_side-' win_str '.png'])
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/high_freq/hf_acc_by_side-' win_str '.png'])
 
 
-% Plot it, collapsing over side
-figure
+%% Plot it, collapsing over side
+close all
+% figure
 i_plot = 1;
 for i_freq = 1:2
     targ_freq = exp_params.tagged_freqs(i_freq);
@@ -1056,10 +1080,12 @@ for i_freq = 1:2
         subplot(2, 3, i_plot)
         imagesc(d_sub.time, d_sub.freq, x)
         set(gca, 'YDir', 'normal')
-        title(sprintf('%i Hz, %s', ...
-            targ_freq, hit_labels{hit+1}))
+%         title(sprintf('%i Hz, %s', ...
+%             targ_freq, hit_labels{hit+1}))
+        title(hit_labels{hit+1})
 
         i_plot = i_plot + 1;
+    
     end
 
     subplot(2, 3, i_plot)
@@ -1067,17 +1093,29 @@ for i_freq = 1:2
     clims = [-1 1] * max(max(abs(xdiff)));
     imagesc(d_sub.time, d_sub.freq, xdiff, clims)
     set(gca, 'YDir', 'normal')
-    title(sprintf('%i Hz, Diff', ...
-        targ_freq))
+%     title(sprintf('%i Hz, Diff', ...
+%         targ_freq))
+    title('diff')
 
     i_plot = i_plot + 1;
+    
 end
 
 subplot(2,3,4)
 ylabel('Frequency (Hz)')
 xlabel('Time (s)')
 
-print('-dpng', '-r300', [exp_dir 'plots/hf_acc-' win_str '.png'])
+width = 12;
+height = 6;
+% set(gcf,'units','centimeters')
+set(gcf,'paperunits','centimeters')
+% set(gcf, 'PaperPositionMode', 'manual');
+% set(gcf,'papersize', [width height])
+set(gcf,'paperposition',[0,0,width,height])
+% set(gcf, 'renderer', 'painters');
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '.png'])
 
 
 %% Compare power at the target/non-target stimulus between hits and misses
@@ -1090,18 +1128,47 @@ win_size = 0.1; % Size of the TFR window used
 
 % Read in the data
 powdiff = nan(height(subject_info), 2, 101); % Subject x Accuracy x Time
+powdiff_all = cell([1 height(subject_info)]);
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
     p = rs_powerdiff(i_subject, win_size, 'target');
+    powdiff_all{i_subject} = p;
     for hit = 0:1
         x = nanmean(p.powdiff(p.trialinfo(:, 1) == hit, :), 1);
         powdiff(i_subject, hit+1, :) = x;
     end
 end
     
-%% Plot it
+% Plot it
+
+% Individual subjects
+for i_subject = 1:height(subject_info)
+    
+    % Misses
+    x = squeeze(powdiff(i_subject,1,:));
+    plot(p.time, x, '-b', 'LineWidth', 2)
+    hold on
+    
+    % Hits
+    x = squeeze(powdiff(i_subject,2,:));
+    plot(p.time, x, '-r', 'LineWidth', 2)
+
+    % Labels
+    xlabel('Time (s)')
+    ylabel(sprintf('Targ - Non-targ power\n(Z)'))
+    text(-0.4, 0.15, 'Hit', 'color', 'r')
+    text(-0.4, 0.11, 'Miss', 'color', 'b')
+    hold off
+    
+    fn = sprintf('targ-non-diff_win%.1fs_%s', ...
+        win_size, strrep(subject_info.meg{i_subject}, '/', '_'));
+    print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
+end
+close all
+
+%% All subjects
 
 sterr = @(x) nanstd(x, 1) / sqrt(size(x, 1));
 subplot(2, 1, 1)
@@ -1122,6 +1189,7 @@ x_se = sterr(x);
 fill([p.time fliplr(p.time)], [x_mean + x_se, fliplr(x_mean - x_se)], ...
     'r', 'FaceAlpha', 0.3, 'EdgeColor', 'none')
 plot(p.time, x_mean, '-r', 'LineWidth', 2)
+plot(p.time(logical(h)), zeros(sum(h)) - 0.09, 'k*')
 
 % Labels
 xlabel('Time (s)')
@@ -1143,6 +1211,7 @@ fill([p.time fliplr(p.time)], ... %[x_mean + x_se, fliplr(x_mean - x_se)], ...
     [0.5 0 0.5], 'FaceAlpha', 0.3, 'EdgeColor', 'none')
 hold on
 plot(p.time, x_mean, '-', 'LineWidth', 2, 'color', [0.5 0 0.5])
+plot(p.time(logical(h)), zeros(sum(h)) - 0.19, 'k*')
 
 text(-0.4, 0.3, 'Difference (Hit - Miss)', 'color', [0.5 0 0.5])
 xlabel('Time (s)')
@@ -1158,35 +1227,108 @@ hold off
 % hold off
 
 fn = sprintf('targ-non-diff_win%.1fs', win_size);
-print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn])
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
 
 
-%% Power fluctuations between target/non-target stimuli across the trial
+% How many significant points did we get?
+sum(h)
+% How many would we expect to get by chance?
+length(h) * 0.05
 
-clear variables
-close all
-rs_setup
+%% Spectrum of avg target/non-target power-diffs
 
-win_size = 0.1; % Size of the TFR window used
+% Test whether there are stropnger rhythms during hits than during misses.
+% Does this analysis actually make sense? I think what we'd actually expect
+% is not that the strength of oscillations differ between hits and misses,
+% but that the *phase* differs.
 
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    p = rs_powerdiff(i_subject, win_size, 'target');
+n_timepoints = floor(size(powdiff, 3) / 2);
+nfft = 2 ^ ceil(log2(n_timepoints));
+sample_per = mean(diff(p.time));
+Fs = 1 / sample_per;
+f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+y = fft(powdiff(:,:,1:n_timepoints), nfft, 3);
+y = y(:,:,1:nfft/2+1);
+Pyy = 1 / (nfft * Fs) * abs(y(:,:,1:nfft/2+1)) .^ 2; % Power spectrum
 
-    % Compute and plot the FFT of the power difference
-    nfft = 2^6;
-    sample_per = mean(diff(p.time));
-    Fs = 1 / sample_per;
-    f = (1/sample_per) * (0:(nfft / 2)) / nfft;
-    y = fft(p., nfft, 2);
-    Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
+% Half-assed stats
+ttest2(squeeze(Pyy(:,1,:)), squeeze(Pyy(:,2,:)))
 
-    
+% Plot the power spectrum averaged over participants
+line_colors = {'b' 'r'};
+tag = {'Miss' 'Hit'};
+subplot(1, 2, 1)
+for i_hit = 1:2
+    plot(f, log10(squeeze(nanmean(Pyy(:, i_hit, :), 1))), ...
+        'color', line_colors{i_hit})
+    hold on
 end
+hold off
+xlim([0 20])
+xlabel('Frequency (Hz)')
+ylabel('Power (log10)')
+text(15, -3.4, 'Hit', 'color', line_colors{2})
+text(15, -3.5, 'Miss', 'color', line_colors{1})
+title('Power of Target-Nontarget env.')
 
-    
+% Difference between the spectra by subject
+subplot(1, 2, 2)
+Pyy_diff = squeeze(log10(Pyy(:,2,:)) - log10(Pyy(:,1,:)));
+plot(f, Pyy_diff, ...
+    'color', [0.8 0.5 0.8])
+hold on
+plot(f, nanmean(Pyy_diff, 1), ...
+    'linewidth', 2, ...
+    'color', [0.5 0 0.5])
+plot([0 50], [0 0], '--k')
+hold off
+xlim([0 20])
+xlabel('Frequency (Hz)')
+ylabel('Power (log10)')
+title('Diff in Targ-Nontarg spectra (Hit-Miss)')
+
+
+fn = sprintf('targ-non-diff_win%.1fs_spectra', win_size);
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
+
+
+%% Look at differences in phase
+
+% I think we want to read in the trialwise data first
+% For each trial, do an FFT
+% Get diff in complex FFT coefficient for each trial
+% Average across trials (within each frequency)
+% Compute the angle and radius of the averaged coefficient
+
+% Compare phase using the Hilbert transform
+h = nan(size(powdiff));
+for i_subject = 1:height(subject_info)
+    for i_hit = 1:2
+        x = squeeze(powdiff(i_subject, i_hit, :));
+        h(i_subject, i_hit, :) = hilbert(x);
+    end
+end
+phi = angle(h);
+phi_diff = squeeze(phi(:,2,:) - phi(:,1,:));
+phase_cons = mean(exp(1j * phi_diff), 2);
+
+% Plot it
+plot(real(phase_cons), imag(phase_cons), 'bo')
+hold on
+a = nanmean(phase_cons); % Average phase difference
+plot([0 real(a)], [0 imag(a)], '-r', 'linewidth', 1.5)
+plot([0 0], [-20 20], '-k')
+plot([-20 20], [0 0], '-k')
+xlim([-1 1] * 0.3)
+ylim([-1 1] * 0.3)
+xlabel('Re')
+ylabel('Im')
+hold off
+
+fn = sprintf('targ-non-diff_win%.1fs_phase', win_size);
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
+
+
 %% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
 
 clear variables
@@ -1199,7 +1341,7 @@ for i_subject = 1:height(subject_info)
         continue
     end
     fname = subject_info.meg{i_subject};
-    fn = [exp_dir 'tfr/target/' fname '/lfphase_acc_fieb'];
+    fn = [exp_dir 'tfr/win_0.1s/target/' fname '/lfphase_acc_fieb'];
     d = load(fn);
     grad = load([exp_dir 'grad/' fname '/grad'], 'grad'); % To combine grads
     d.grad = grad.grad;
@@ -1208,7 +1350,8 @@ end
 
 % Plot it
 
-z_planar = nan([height(subject_info) 204 size(d.z, 2)]);
+% subject * chan * freq
+z_planar = nan([height(subject_info) 204 size(d.z, 3)]);
 
 for i_subject = 1:length(d_all)
     if subject_info.exclude(i_subject)
@@ -1220,7 +1363,8 @@ for i_subject = 1:length(d_all)
 
     % dependence of hit-rate on phase across channels
     close all
-    imagesc(d.freq, 1:length(d.label), d.z)
+    z = squeeze(mean(d.z, 1));
+    imagesc(d.freq, 1:length(d.label), z)
     set(gca, 'YDir', 'normal')
     xlabel('Frequency (Hz)')
     ylabel('Channel')
@@ -1234,7 +1378,7 @@ for i_subject = 1:length(d_all)
     d_topo.freq = d.freq;
     d_topo.grad = d.grad;
     d_topo.time = 0;
-    d_topo.powspctrm = d.z;
+    d_topo.powspctrm = z;
     d_topo.dimord = 'chan_freq_time';
     cfg = [];
     cfg.method = 'sum';
