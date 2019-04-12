@@ -817,7 +817,7 @@ xlabel('Modulation Frequency (Hz)')
 print('-dpng', '-r300', [exp_dir 'plots/tagged_spect/avg'])
 
 
-%% Plot CFC
+%% Plot CFC - RESS
 
 clear variables
 rs_setup
@@ -904,6 +904,64 @@ set(gcf,'paperposition',[0,0,width,height])
 set(gcf, 'renderer', 'painters');
 
 print('-depsc', [exp_dir 'plots/cfc/avg_line_tagged'])
+
+
+%% Plot CFC - computed over raw channels
+
+clear variables
+rs_setup
+
+freqs = 30:90;
+sides = {'left' 'right'};
+
+% Read in 1 preprocessed datafile to get channel names
+d = load('preproc/target/181009_b46d/181009/preproc.mat');
+channel_names = d.data.label;
+clear d
+
+% Make an occipital ROI based on SNR topographies
+snr_roi = [2032 2033 ...
+    2042 2043 ...
+    2112 2113];
+snr_roi = cellfun(@(n) ['MEG' num2str(n)], ...
+    num2cell(snr_roi), ...
+    'UniformOutput', false);
+snr_roi_inx = ismember(channel_names, snr_roi);
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    d = load([exp_dir 'cfc/all_chans/' fname '/cfc']);
+    mf = d.mod_freq;
+    mf_sel = mf < 50;
+    mf = mf(mf_sel);
+    
+    % Average over occipital ROI
+    x = mean(d.cfc_data(:,mf_sel,snr_roi_inx), 3);
+    overall_cfc(i_subject,:,:) = x;
+    
+    imagesc(mf, freqs, x)
+    set(gca, 'YDir', 'normal')
+    %colorbar;
+    ylabel('Carrier frequency (Hz)')
+    xlabel('Modulation frequency (Hz)')
+    xlim([0 50])
+
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/cfc/all_chans/' strrep(fname, '/', '_')])
+end
+
+
+% Plot average over subjects
+imagesc(mf, freqs, squeeze(nanmean(overall_cfc, 1)))
+set(gca, 'YDir', 'normal')
+%colorbar;
+ylabel('Carrier frequency (Hz)')
+xlabel('Modulation frequency (Hz)')
+
+print('-dpng', '-r300', [exp_dir 'plots/cfc/all_chans/avg'])
 
 %% Plot cross-correlation of power at the two tagged frequencies
 
