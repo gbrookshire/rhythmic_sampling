@@ -1065,13 +1065,14 @@ for i_subject = 1:height(subject_info)
         end
     end
 end
+agg_data_orig = agg_data;
 
 % Normalize power within each participant, side, freq
 % Divide by the area under the curve
 for i_side = 1:2
     for i_freq = 1:2
         for i_subject = 1:size(agg_data, 1)
-            x = agg_data(i_subject,i_side,i_freq,:,:,:); % Select data
+            x = agg_data_orig(i_subject,i_side,i_freq,:,:,:); % Select data
             x_bar = mean(x, 4); % Avg over hits and misses
             auc = sum(sum(x_bar, 5), 6); % Area under the curve 
             agg_data(i_subject,i_side,i_freq,:,:,:) = x / auc;
@@ -1174,6 +1175,107 @@ set(gcf,'paperposition',[0,0,width,height])
 
 print('-dpng', '-r300', ...
     [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '.png'])
+
+
+
+%% Plot the difference as the ratio of power in hits to misses
+
+i_plot = 1;
+for i_freq = 1:2
+    targ_freq = exp_params.tagged_freqs(i_freq);
+
+    for hit = [0 1]
+        x = agg_data_orig(:,:,i_freq,hit+1,:,:);
+        x = nanmean(x, 2); % Average over sides
+        x = nanmean(x, 1); % Average over subjects
+        x = squeeze(x);
+        hit_miss(:,:,hit+1) = x;
+
+        subplot(2, 3, i_plot)
+        imagesc(d_sub.time, d_sub.freq, x)
+        set(gca, 'YDir', 'normal')
+        title(hit_labels{hit+1})
+
+        i_plot = i_plot + 1;
+    
+    end
+
+    subplot(2, 3, i_plot)
+    h = hit_miss(:,:,2);
+    m = hit_miss(:,:,1);
+    %xcomp = h ./ m;
+    xcomp = (h-m) ./ (h+m);
+    %clims = [-1 1] * max(max(abs(xdiff)));
+    imagesc(d_sub.time, d_sub.freq, xcomp) %, clims)
+    set(gca, 'YDir', 'normal')
+    title('diff')
+
+    i_plot = i_plot + 1;
+    
+end
+
+subplot(2,3,4)
+ylabel('Frequency (Hz)')
+xlabel('Time (s)')
+
+width = 12;
+height = 6;
+set(gcf,'paperunits','centimeters')
+set(gcf,'paperposition',[0,0,width,height])
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '_ratio.png'])
+
+% Run some very simple statistics
+% Get a map of t-statistics 
+% agg_data: Subj x Side x TaggedFreq x Hit X TFRfreq x Time
+x = nanmean(agg_data_orig, 2); % Average over sides
+h = x(:,:,:,2,:,:);
+m = x(:,:,:,1,:,:);
+%xcomp = h ./ m;
+xcomp = (h-m) ./ (h+m);
+xcomp = squeeze(xcomp);
+
+[h,p,ci,stats] = ttest(xcomp, 0, 'dim', 1, 'alpha', 0.01);
+
+for i_freq = 1:2
+
+    f = exp_params.tagged_freqs(i_freq);
+
+    % Plot t-values
+    subplot(2,2,(i_freq-1)*2 + 1)
+    t = squeeze(stats.tstat(:,i_freq,:,:));
+    %clims = [-1 1] * max(max(abs(t)));
+    clims = [-1 1] * 2.5;
+    imagesc(d_sub.time, d_sub.freq, t, clims)
+    set(gca, 'YDir', 'normal')
+    title(sprintf('%i Hz, t', f))
+    %colorbar;
+    hold on
+    plot(0.5 * [-1 1], [f f], '--w')
+    hold off
+
+    % Plot points where this sample is signif
+    subplot(2,2,(i_freq-1)*2 + 2)
+    imagesc(d_sub.time, d_sub.freq, squeeze(h(:,i_freq,:,:)))
+    set(gca, 'YDir', 'normal')
+    title('Signif')
+    hold on
+    plot(0.5 * [-1 1], [f f], '--w')
+    hold off
+end
+
+subplot(2,2,3)
+ylabel('Frequency (Hz)')
+xlabel('Time (s)')
+
+width = 8;
+height = 6;
+set(gcf,'paperunits','centimeters')
+set(gcf,'paperposition',[0,0,width,height])
+
+print('-dpng', '-r300', ...
+    [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '_ratio_stats.png'])
 
 
 %% Compare power at the target/non-target stimulus between hits and misses
