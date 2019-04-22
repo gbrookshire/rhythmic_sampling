@@ -4,8 +4,6 @@ function rs_alpha_peaks(i_subject)
 
 % TODO
 % Check freq smoothing of the TFRs
-% Dynamically adjust the colorscale
-% Check for FIXMEs
 
 %{
 Following Spaak et al (2012)
@@ -19,7 +17,6 @@ Following Spaak et al (2012)
     - 20-300 Hz in steps of 2 Hz
     - 7 cycles
 %}
-
 
 
 rs_setup
@@ -149,22 +146,6 @@ for i_seg = 1:length(segment_info_shifted)
     data_seg.trialinfo(end+1,:) = [s.n_trial, s.n_chan];
 end
 
-% % Test plots
-% cfg = [];
-% cfg.bpfilter = 'yes';
-% cfg.bpfreq = [7 14];
-% cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
-% data_seg_alpha = ft_preprocessing(cfg, data_seg);
-% 
-% for i_trial = 1:100
-%     plot(data_seg_alpha.time{i_trial}, ...
-%         data_seg_alpha.trial{i_trial}(data_seg.trialinfo(i_trial,2),:))
-%     hold on
-%     plot(0, 0, 'k+')
-%     hold off
-%     input('')
-% end
-
 
 %{
 % Weird -- the alpha phase is pretty different between the two RESS channels
@@ -214,77 +195,3 @@ end
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
 save(fn, 'data_seg', 'avg_sels', 'avg_counts')
-
-%% Plot it
-%
-fname = subject_info.meg{i_subject};
-fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-load(fn)
-
-cfg = [];
-cfg.bpfilter = 'yes';
-cfg.bpfreq = [7 14];
-cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
-data_seg_alpha = ft_preprocessing(cfg, data_seg);
-
-for i_chan = 1:length(data_seg.label)
-    for i_tagfreq = 1:2 % Which tagged freq is on the left side
-        % Avg alpha activity over selected channels & trials
-        cfg = [];
-        cfg.trials = avg_sels{i_chan,i_tagfreq}.trial;
-        cfg.channel = avg_sels{i_chan,i_tagfreq}.channel;
-        d_alpha = ft_timelockanalysis(cfg, data_seg_alpha);
-        % Compute TFRs
-        cfg.method = 'mtmconvol';
-        cfg.foi = 20:2:100;
-        cfg.taper = 'hanning';
-        cfg.t_ftimwin = 7 ./ cfg.foi;
-        cfg.toi = 'all';
-        d_tfr = ft_freqanalysis(cfg, data_seg);
-        
-        i_cond = ((i_chan - 1) * 2) + i_tagfreq;
-        x_lim = 0.3;
-        
-        % Plot TFR
-        subplot(2, 4, i_cond)
-        imagesc(d_tfr.time, d_tfr.freq, squeeze(d_tfr.powspctrm))
-        set(gca, 'YDir', 'normal')
-        xlim([-1 1] * x_lim)
-        ylim([40 90])
-        title(sprintf('%s, %i Hz, n=%i', ...
-            data_preproc.label{i_chan}, ...
-            exp_params.tagged_freqs(i_tagfreq), ...
-            avg_counts(i_chan, i_tagfreq)))
-
-        
-        % Plot alpha
-        subplot(2, 4, i_cond + 4)
-        plot(t, d_alpha.avg)
-        hold on
-        plot(0, 0, 'k+')
-        hold off
-        xlim([-1 1] * x_lim)
-        
-    end
-end
-
-subplot(2, 4, 1)
-ylabel('Frequency (Hz)')
-
-subplot(2, 4, 5)
-ylabel('Amplitude (T)')
-xlabel('Time (S)')
-
-width = 25;
-height = 10;
-set(gcf,'units','centimeters')
-set(gcf,'paperunits','centimeters')
-set(gcf, 'PaperPositionMode', 'manual');
-set(gcf,'papersize', [width height])
-set(gcf,'paperposition',[0,0,width,height])
-set(gcf, 'renderer', 'painters');
-
-fname = subject_info.meg{i_subject};
-fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
-print('-depsc', fn)
-%}
