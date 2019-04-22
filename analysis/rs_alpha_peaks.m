@@ -1,7 +1,9 @@
+function rs_alpha_peaks(i_subject)
+
 % Compute the TFR around alpha peaks
 
 % TODO
-% Split by RFT frequency
+% Check freq smoothing of the TFRs
 % Dynamically adjust the colorscale
 % Check for FIXMEs
 
@@ -21,7 +23,9 @@ Following Spaak et al (2012)
 
 
 rs_setup
-segment_duration = 1; % s
+segment_duration = 0.8; % s
+thrsh_alpha = 60; % Keep segments of data with alpha pow above this percentile
+thrsh_time = 0.8; % Keep segments above the alpha threshold for this dur (s)
 
 % Load behavioral data (to get RTs)
 behav = rs_behavior(i_subject);
@@ -32,6 +36,7 @@ behav = rs_behavior(i_subject);
 % data_preproc = data_preproc.data;
 
 data_preproc = rs_preproc_ress(i_subject, 'trial');
+
 fsample = 1 / mean(diff(data_preproc.time{1}));
 segment_width = round((segment_duration/2) * fsample);
 
@@ -46,16 +51,18 @@ data_alpha = ft_preprocessing(cfg, data_preproc);
 cfg = [];
 cfg.hilbert = 'abs';
 data_alpha_pow = ft_preprocessing(cfg, data_alpha);
+cfg = []; % Look at slower fluctuations in power (widen the window)
+cfg.lpfilter = 'yes';
+cfg.lpfreq = 3;
+data_alpha_pow = ft_preprocessing(cfg, data_alpha_pow);
 
 % Convenience function to concatenate all trials
 conc = @(x) cat(2, x{:});
 
 % Get the alpha power cutoffs at each channel 
-thrsh_alpha = 60; % Percentile
 cutoffs = prctile(conc(data_alpha_pow.trial), thrsh_alpha, 2);
 
 % Look for contiguous segments of data with alpha power above that threshold
-thrsh_time = 0.8; % seconds
 thrsh_samp = thrsh_time * fsample; % minimum number of samples to keep
 % high_power = cellfun(@(x) x > cutoffs, ...
 %     data_alpha_pow.trial, ...
@@ -161,59 +168,103 @@ subplot(2,1,2),hold off
 
 % Average over segments
 % Do this separately for segments at each channel
+% Keep track of resuls in a cell: Channel * TaggedFreq
+avg_segs = cell([length(data_seg.label) length(exp_params.tagged_freqs)]);
+avg_sels = avg_segs;
+avg_counts = nan(size(avg_segs));
+
 cfg = [];
 cfg.bpfilter = 'yes';
 cfg.bpfreq = [7 14];
-cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
+cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
 data_seg_alpha = ft_preprocessing(cfg, data_seg);
-cfg = [];
-cfg.trials = data_seg.trialinfo(:,2) == 1;
-data_seg_avg_1 = ft_timelockanalysis(cfg, data_seg_alpha); 
-cfg = [];
-cfg.trials = data_seg.trialinfo(:,2) == 2;
-data_seg_avg_2 = ft_timelockanalysis(cfg, data_seg_alpha);
 
-% Compute the TFR for these segments
-% Do this separately for each RESS channel, and each RFT freq
-cfg = [];
-cfg.method = 'mtmconvol';
-cfg.foi = 20:2:100;
-cfg.taper = 'hanning';
-cfg.t_ftimwin = 7 ./ cfg.foi;
-cfg.toi = 'all';
+for i_chan = 1:length(data_seg.label)
+    for i_tagfreq = 1:2 % Which tagged freq is on the left side
+        % Select trials where the segment occured in this channel
+        chan_trial_sel = data_seg.trialinfo(:,2) == i_chan;
+        % Select trials where the segment occured at this tagged freq
+        frq = exp_params.tagged_freqs(i_tagfreq);
+        rft_trial_sel =behav{data_seg.trialinfo(:,1), 'freq_left'} == frq;
+        % Put together the trial selections
+        trial_sel = chan_trial_sel & rft_trial_sel;
+        % Select the channel
+        chan_sel = zeros(size(data_seg.label));
+        chan_sel(i_chan) = 1;
+        % Save the relevant information
+        sels = [];
+        sels.trial = trial_sel;
+        sels.channel = chan_sel;
+        avg_sels{i_chan, i_tagfreq} = sels;
+        avg_counts(i_chan, i_tagfreq) = sum(trial_sel);
+    end
+end
 
-cfg.trials = data_seg.trialinfo(:,2) == 1;
-data_seg_tfr_1 = ft_freqanalysis(cfg, data_seg);
+fname = subject_info.meg{i_subject};
+fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
+save(fn, 'avg_sels', 'avg_counts')
 
-cfg.trials = data_seg.trialinfo(:,2) == 2;
-data_seg_tfr_2 = ft_freqanalysis(cfg, data_seg);
+%% Plot it
+%{
+fname = subject_info.meg{i_subject};
+fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
+load(fn)
 
+for i_chan = 1:length(data_seg.label)
+    for i_tagfreq = 1:2 % Which tagged freq is on the left side
+        % Avg alpha activity over selected channels & trials
+        cfg = [];
+        cfg.trials = avg_sels{i_chan,i_tagfreq}.trial;
+        cfg.channel = avg_sels{i_chan,i_tagfreq}.channel;
+        d_alpha = ft_timelockanalysis(cfg, data_seg_alpha);
+        % Compute TFRs
+        cfg.method = 'mtmconvol';
+        cfg.foi = 20:2:100;
+        cfg.taper = 'hanning';
+        cfg.t_ftimwin = 7 ./ cfg.foi;
+        cfg.toi = 'all';
+        d_tfr = ft_freqanalysis(cfg, data_seg);
+        
+        i_cond = ((i_chan - 1) * 2) + i_tagfreq;
+        x_lim = 0.3;
+        
+        % Plot TFR
+        subplot(2, 4, i_cond)
+        imagesc(d_tfr.time, d_tfr.freq, squeeze(d_tfr.powspctrm))
+        set(gca, 'YDir', 'normal')
+        xlim([-1 1] * x_lim)
+        ylim([40 90])
+        title(sprintf('%s, %i Hz, n=%i', ...
+            data_preproc.label{i_chan}, ...
+            exp_params.tagged_freqs(i_tagfreq), ...
+            avg_counts(i_chan, i_tagfreq)))
 
-% Plot it
-x_lim = 0.3;
-subplot(2,2,1)
-cfg = [];
-cfg.channel = 1;
-cfg.xlim = [-1 1] * x_lim;
-cfg.ylim = [40 90];
-cfg.colorbar = 'no';
-cfg.zlim = [0 4e-28];
-ft_singleplotTFR(cfg, data_seg_tfr_1)
+        
+        % Plot alpha
+        subplot(2, 4, i_cond + 4)
+        plot(t, d_alpha.avg)
+        xlim([-1 1] * x_lim)
+        
+    end
+end
 
-subplot(2,2,2)
-cfg.channel = 2;
-cfg.zlim = [0 1e-28];
-ft_singleplotTFR(cfg, data_seg_tfr_2)
+subplot(2, 4, 1)
+ylabel('Frequency (Hz)')
 
-subplot(2,2,3) 
-plot(t, data_seg_avg_1.avg(1,:))
-xlim( [-1 1] * x_lim)
+subplot(2, 4, 5)
+ylabel('Amplitude (T)')
+xlabel('Time (S)')
 
-subplot(2,2,4) 
-plot(t, data_seg_avg_2.avg(2,:))
-xlim( [-1 1] * x_lim)
+width = 25;
+height = 10;
+set(gcf,'units','centimeters')
+set(gcf,'paperunits','centimeters')
+set(gcf, 'PaperPositionMode', 'manual');
+set(gcf,'papersize', [width height])
+set(gcf,'paperposition',[0,0,width,height])
+set(gcf, 'renderer', 'painters');
 
-
-
-
-
+fname = subject_info.meg{i_subject};
+fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
+print('-depsc', fn)
+%}
