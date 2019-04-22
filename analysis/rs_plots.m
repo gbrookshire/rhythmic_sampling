@@ -1700,9 +1700,159 @@ print('-dpng', '-r300', [exp_dir 'plots/accuracy/low_freq/pbi_avg'])
 % end
 
 
+%% Alpha peaks
+
+clear all_tfr
+clear all_alpha
+
+for i_subject = 1:size(subject_info, 1)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    
+    fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
+    load(fn)
+    
+    cfg = [];
+    cfg.bpfilter = 'yes';
+    cfg.bpfreq = [7 14];
+    cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
+    data_seg_alpha = ft_preprocessing(cfg, data_seg);
+
+    close all
+    for i_chan = 1:length(data_seg.label)
+        for i_tagfreq = 1:2 % Which tagged freq is on the left side
+            % Avg alpha activity over selected channels & trials
+            cfg = [];
+            cfg.trials = avg_sels{i_chan,i_tagfreq}.trial;
+            cfg.channel = data_seg.label(avg_sels{i_chan,i_tagfreq}.channel);
+            d_alpha = ft_timelockanalysis(cfg, data_seg_alpha);
+            all_alpha(i_subject,i_chan,i_tagfreq,:) = d_alpha.avg;
+            % Compute TFRs
+            cfg.method = 'mtmconvol';
+            cfg.foi = 55:2:90;
+            cfg.taper = 'hanning';
+            cfg.t_ftimwin = 7 ./ cfg.foi;
+            cfg.toi = 'all';
+            d_tfr = ft_freqanalysis(cfg, data_seg);
+            x = squeeze(d_tfr.powspctrm);
+            all_tfr(i_subject,i_chan,i_tagfreq,:,:) = x;
+
+            i_cond = ((i_chan - 1) * 2) + i_tagfreq;
+            x_lim = 0.3;
+
+            % Plot TFR
+            subplot(2, 4, i_cond)
+            imagesc(d_tfr.time, d_tfr.freq, squeeze(d_tfr.powspctrm))
+            set(gca, 'YDir', 'normal')
+            xlim([-1 1] * x_lim)
+            title(sprintf('%s, %i Hz, n=%i', ...
+                data_preproc.label{i_chan}, ...
+                exp_params.tagged_freqs(i_tagfreq), ...
+                avg_counts(i_chan, i_tagfreq)))
+
+            % Plot alpha
+            subplot(2, 4, i_cond + 4)
+            plot(t, d_alpha.avg)
+            hold on
+            plot(0, 0, 'k+')
+            hold off
+            xlim([-1 1] * x_lim)
+
+        end
+    
+    % Adjust color scale within each channel
+    x = all_tfr(i_subject,i_chan,:,:,:);
+    cmax = max(reshape(x, [1 numel(x)]));
+    for i_plot = (1:2) + ((i_chan - 1) * 2)
+        subplot(2, 4, i_plot)
+        caxis([0 cmax])
+    end
+        
+    end
+
+    subplot(2, 4, 1)
+    ylabel('Frequency (Hz)')
+
+    subplot(2, 4, 5)
+    ylabel('Amplitude (T)')
+    xlabel('Time (S)')
+
+    width = 25;
+    height = 10;
+    set(gcf,'units','centimeters')
+    set(gcf,'paperunits','centimeters')
+    set(gcf, 'PaperPositionMode', 'manual');
+    set(gcf,'papersize', [width height])
+    set(gcf,'paperposition',[0,0,width,height])
+    set(gcf, 'renderer', 'painters');
+
+    fname = subject_info.meg{i_subject};
+    fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
+    print('-dpng', fn)
+
+end
 
 
+%% Get the avg over subjects
 
+close all
+for i_chan = 1:length(data_seg.label)
+    for i_tagfreq = 1:2 % Which tagged freq is on the left side
+        i_cond = ((i_chan - 1) * 2) + i_tagfreq;
+        x_lim = 0.3;
+
+        % Plot TFR
+        subplot(2, 4, i_cond)
+        x = squeeze(nanmean(all_tfr(:,i_chan,i_tagfreq,:,:), 1));
+        imagesc(d_tfr.time, d_tfr.freq, x)
+        set(gca, 'YDir', 'normal')
+        xlim([-1 1] * x_lim)
+        title(sprintf('%s, %i Hz', ...
+            data_preproc.label{i_chan}, ...
+            exp_params.tagged_freqs(i_tagfreq)))
+
+        % Plot alpha
+        subplot(2, 4, i_cond + 4)
+        x = squeeze(nanmean(all_alpha(:,i_chan,i_tagfreq,:), 1));
+        plot(t, x)
+        hold on
+        plot(0, 0, 'k+')
+        hold off
+        xlim([-1 1] * x_lim)
+
+    end
+        
+    % Adjust color scale
+    x = nanmean(all_tfr, 1);
+    cmax = max(reshape(x, [1 numel(x)]));
+    for i_plot = 1:4
+        subplot(2, 4, i_plot)
+        caxis([0 cmax])
+    end
+
+end
+
+subplot(2, 4, 1)
+ylabel('Frequency (Hz)')
+
+subplot(2, 4, 5)
+ylabel('Amplitude (T)')
+xlabel('Time (S)')
+
+width = 25;
+height = 10;
+set(gcf,'units','centimeters')
+set(gcf,'paperunits','centimeters')
+set(gcf, 'PaperPositionMode', 'manual');
+set(gcf,'papersize', [width height])
+set(gcf,'paperposition',[0,0,width,height])
+set(gcf, 'renderer', 'painters');
+
+fname = subject_info.meg{i_subject};
+fn = [exp_dir 'plots/alpha_peaks/avg'];
+print('-dpng', fn)
 
 
 
