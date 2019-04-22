@@ -64,9 +64,6 @@ cutoffs = prctile(conc(data_alpha_pow.trial), thrsh_alpha, 2);
 
 % Look for contiguous segments of data with alpha power above that threshold
 thrsh_samp = thrsh_time * fsample; % minimum number of samples to keep
-% high_power = cellfun(@(x) x > cutoffs, ...
-%     data_alpha_pow.trial, ...
-%     'UniformOutput', false);
 clear segment_info
 seg_counter = 0;
 for i_trial = 1:length(data_preproc.trial)
@@ -121,13 +118,15 @@ for i_seg = 1:length(segment_info)
     [~, locs] = findpeaks(x);
     dist_from_center = abs(locs - segment_width);
     [~, center_inx] = min(dist_from_center);
+
     % Realign to this peak
     shift = segment_width - locs(center_inx);
     s.seg_midpoint = s.seg_midpoint + shift;
     s.beg = s.beg - shift;
     s.end = s.end - shift;
     segment_info_shifted(i_seg) = s;
-    max_shift = max(shift, max_shift); 
+    max_shift = max(shift, max_shift);
+
 end
 
 % Cut out those segments from the alpha data
@@ -150,6 +149,23 @@ for i_seg = 1:length(segment_info_shifted)
     data_seg.trialinfo(end+1,:) = [s.n_trial, s.n_chan];
 end
 
+% % Test plots
+% cfg = [];
+% cfg.bpfilter = 'yes';
+% cfg.bpfreq = [7 14];
+% cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
+% data_seg_alpha = ft_preprocessing(cfg, data_seg);
+% 
+% for i_trial = 1:100
+%     plot(data_seg_alpha.time{i_trial}, ...
+%         data_seg_alpha.trial{i_trial}(data_seg.trialinfo(i_trial,2),:))
+%     hold on
+%     plot(0, 0, 'k+')
+%     hold off
+%     input('')
+% end
+
+
 %{
 % Weird -- the alpha phase is pretty different between the two RESS channels
 for i_seg = 1:length(data_seg.trial)
@@ -169,15 +185,8 @@ subplot(2,1,2),hold off
 % Average over segments
 % Do this separately for segments at each channel
 % Keep track of resuls in a cell: Channel * TaggedFreq
-avg_segs = cell([length(data_seg.label) length(exp_params.tagged_freqs)]);
-avg_sels = avg_segs;
-avg_counts = nan(size(avg_segs));
-
-cfg = [];
-cfg.bpfilter = 'yes';
-cfg.bpfreq = [7 14];
-cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
-data_seg_alpha = ft_preprocessing(cfg, data_seg);
+avg_sels = cell([length(data_seg.label) length(exp_params.tagged_freqs)]);
+avg_counts = nan(size(avg_sels));
 
 for i_chan = 1:length(data_seg.label)
     for i_tagfreq = 1:2 % Which tagged freq is on the left side
@@ -185,12 +194,14 @@ for i_chan = 1:length(data_seg.label)
         chan_trial_sel = data_seg.trialinfo(:,2) == i_chan;
         % Select trials where the segment occured at this tagged freq
         frq = exp_params.tagged_freqs(i_tagfreq);
-        rft_trial_sel =behav{data_seg.trialinfo(:,1), 'freq_left'} == frq;
+        trial_num_by_seg = data_seg.trialinfo(:,1);
+        rft_trial_sel = behav{trial_num_by_seg, 'freq_left'} == frq;
         % Put together the trial selections
         trial_sel = chan_trial_sel & rft_trial_sel;
         % Select the channel
         chan_sel = zeros(size(data_seg.label));
         chan_sel(i_chan) = 1;
+        chan_sel = logical(chan_sel);
         % Save the relevant information
         sels = [];
         sels.trial = trial_sel;
@@ -202,13 +213,19 @@ end
 
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-save(fn, 'avg_sels', 'avg_counts')
+save(fn, 'data_seg', 'avg_sels', 'avg_counts')
 
 %% Plot it
-%{
+%
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
 load(fn)
+
+cfg = [];
+cfg.bpfilter = 'yes';
+cfg.bpfreq = [7 14];
+cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
+data_seg_alpha = ft_preprocessing(cfg, data_seg);
 
 for i_chan = 1:length(data_seg.label)
     for i_tagfreq = 1:2 % Which tagged freq is on the left side
@@ -243,6 +260,9 @@ for i_chan = 1:length(data_seg.label)
         % Plot alpha
         subplot(2, 4, i_cond + 4)
         plot(t, d_alpha.avg)
+        hold on
+        plot(0, 0, 'k+')
+        hold off
         xlim([-1 1] * x_lim)
         
     end
