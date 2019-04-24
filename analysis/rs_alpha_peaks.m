@@ -146,6 +146,11 @@ for i_seg = 1:length(segment_info_shifted)
     data_seg.trialinfo(end+1,:) = [s.n_trial, s.n_chan];
 end
 
+% Detrend each segment
+cfg = [];
+cfg.detrend = 'yes';
+data_seg = ft_preprocessing(cfg, data_seg);
+
 
 %{
 % Weird -- the alpha phase is pretty different between the two RESS channels
