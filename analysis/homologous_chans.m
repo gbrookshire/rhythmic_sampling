@@ -64,8 +64,6 @@ for i_chan = 1:length(left_inx)
 end
 
 if cmb_planar
-    hmlgs = homologous_chans(); % map left/right homologous channels
-    close all
     % Get the names of combined-planar labels
     cmb_label = @(s) sprintf('%s+%s3', s, s(4:6));
     hmlgs(endsWith(hmlgs(:,1), '3'), :) = [];
