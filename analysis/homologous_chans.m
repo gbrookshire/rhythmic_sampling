@@ -1,6 +1,10 @@
-function channel_labels = homologous_chans()
+function hmlgs = homologous_chans(cmb_planar)
 
 % Match up homologous channels on the left and right
+if nargin < 1
+    cmb_planar = false;
+end
+
 
 % Load the magnetometer layout
 cfg = [];
@@ -41,7 +45,7 @@ end
 clear right_x_inx right_y_inx right_chan_inx right_pos_dist
 
 % Make the list of channel names
-channel_labels = cell([0 2]);
+hmlgs = cell([0 2]);
 for i_chan = 1:length(left_inx)
     % Append the magnetometers
     mag_label_left = lay.label{left_inx(i_chan)};
@@ -49,12 +53,38 @@ for i_chan = 1:length(left_inx)
     if ~startsWith(mag_label_left, 'MEG')
         continue
     end
-    channel_labels{end + 1, 1} = mag_label_left;
-    channel_labels{end, 2} = mag_label_right;
+    hmlgs{end + 1, 1} = mag_label_left;
+    hmlgs{end, 2} = mag_label_right;
     % Append the gradiometers
     for n_grad = 2:3
         mag2grad = @(s) [s(1:(end-1)) num2str(n_grad)];
-        channel_labels{end + 1, 1} = mag2grad(mag_label_left);
-        channel_labels{end, 2} = mag2grad(mag_label_right);
+        hmlgs{end + 1, 1} = mag2grad(mag_label_left);
+        hmlgs{end, 2} = mag2grad(mag_label_right);
+    end
+end
+
+if cmb_planar
+    hmlgs = homologous_chans(); % map left/right homologous channels
+    close all
+    % Get the names of combined-planar labels
+    cmb_label = @(s) sprintf('%s+%s3', s, s(4:6));
+    hmlgs(endsWith(hmlgs(:,1), '3'), :) = [];
+    for i_chan = 1:size(hmlgs, 1)
+        chan_label = hmlgs{i_chan, 1};
+        switch chan_label(end)
+            case '1'
+                % Magnetometer - don't do anything
+                continue
+            case '2'
+                % Convert to combined planar grad
+                for i_col = 1:2
+                    hmlgs{i_chan,i_col} = cmb_label(hmlgs{i_chan,i_col});
+                end
+            case '3'
+                % Delete these - combined with '2' planar grads
+                error('Missed a combined planar gradiometer')
+            otherwise
+                error('Didn''t catch the last character')
+        end
     end
 end
