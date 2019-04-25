@@ -38,6 +38,7 @@ for i_chan = 1:length(left_inx)
         error('Didn''t find any homologous channels')
     end
 end
+clear right_x_inx right_y_inx right_chan_inx right_pos_dist
 
 % Make the list of channel names
 channel_labels = cell([0 2]);
@@ -52,7 +53,7 @@ for i_chan = 1:length(left_inx)
     channel_labels{end, 2} = mag_label_right;
     % Append the gradiometers
     for n_grad = 2:3
-        mag2grad = @(s) strrep(s, '1', num2str(n_grad));
+        mag2grad = @(s) [s(1:(end-1)) num2str(n_grad)];
         channel_labels{end + 1, 1} = mag2grad(mag_label_left);
         channel_labels{end, 2} = mag2grad(mag_label_right);
     end
