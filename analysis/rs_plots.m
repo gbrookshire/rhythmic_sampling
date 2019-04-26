@@ -1738,9 +1738,16 @@ for i_subject = 1:size(subject_info, 1)
             cfg.toi = 'all';
             d_tfr = ft_freqanalysis(cfg, data_seg);
             x = squeeze(d_tfr.powspctrm);
-            sd_x = std(reshape(x, [1 numel(x)]), 'omitnan');
-            m_x = nanmean(reshape(x, [1 numel(x)]));
-            x = (x - m_x) ./ sd_x;
+            % % Standardize power using z-scores
+            % sd_x = std(reshape(x, [1 numel(x)]), 'omitnan');
+            % m_x = nanmean(reshape(x, [1 numel(x)]));
+            % x = (x - m_x) ./ sd_x;
+            % Standardize by dividing out the mean power
+            t_inx = (-0.3 < d_tfr.time) & (d_tfr.time < 0.3);
+            for i_freq = 1:length(d_tfr.freq)
+                x(i_freq,:) = x(i_freq,:) ./ mean(x(i_freq,t_inx));
+            end
+            % Store the standardized values
             all_tfr(i_subject,i_chan,i_tagfreq,:,:) = x;
 
             i_cond = ((i_chan - 1) * 2) + i_tagfreq;
@@ -1767,10 +1774,10 @@ for i_subject = 1:size(subject_info, 1)
         end
     
     % Adjust color scale within each channel
-    for i_plot = (1:2) + ((i_chan - 1) * 2)
-        subplot(2, 4, i_plot)
-        caxis([-1 1] * 2)
-    end
+%     for i_plot = (1:2) + ((i_chan - 1) * 2)
+%         subplot(2, 4, i_plot)
+%         caxis([-1 1] * 2)
+%     end
         
     end
 
@@ -1831,7 +1838,9 @@ for i_chan = 1:length(data_seg.label)
 %     cmax = max(reshape(x, [1 numel(x)]));
     for i_plot = 1:4
         subplot(2, 4, i_plot)
-        caxis([-1 1] * 1)
+%         caxis([-1 1] * 1)
+        f = 5/6;
+        caxis([f f^-1])
     end
 
 end
