@@ -195,4 +195,4 @@ end
 
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-save(fn, 'data_seg', 'data_seg_alpha', 'avg_sels', 'avg_counts')
+save(fn, 'data_seg', 'avg_sels', 'avg_counts')
