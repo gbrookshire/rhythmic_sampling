@@ -2,9 +2,6 @@ function rs_alpha_peaks(i_subject)
 
 % Compute the TFR around alpha peaks
 
-% TODO
-% Check freq smoothing of the TFRs
-
 %{
 Following Spaak et al (2012)
 - Only select segments in which alpha power is > 60th percentile for >= 800 ms
@@ -151,7 +148,6 @@ cfg = [];
 cfg.detrend = 'yes';
 data_seg = ft_preprocessing(cfg, data_seg);
 
-
 %{
 % Weird -- the alpha phase is pretty different between the two RESS channels
 for i_seg = 1:length(data_seg.trial)
@@ -199,4 +195,4 @@ end
 
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-save(fn, 'data_seg', 'avg_sels', 'avg_counts')
+save(fn, 'data_seg', 'data_seg_alpha', 'avg_sels', 'avg_counts')
