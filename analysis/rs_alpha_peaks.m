@@ -18,7 +18,7 @@ Following Spaak et al (2012)
 
 rs_setup
 segment_duration = 0.8; % s
-thrsh_alpha = 60; % Keep segments of data with alpha pow above this percentile
+thrsh_alpha = 40; % Keep segments of data with alpha pow above this percentile
 thrsh_time = 0.8; % Keep segments above the alpha threshold for this dur (s)
 
 % Load behavioral data (to get RTs)
