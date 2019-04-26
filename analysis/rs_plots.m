@@ -1839,7 +1839,7 @@ for i_chan = 1:length(data_seg.label)
     for i_plot = 1:4
         subplot(2, 4, i_plot)
 %         caxis([-1 1] * 1)
-        f = 5/6;
+        f = 4/5;
         caxis([f f^-1])
     end
 
