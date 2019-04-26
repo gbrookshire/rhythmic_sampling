@@ -1702,28 +1702,29 @@ print('-dpng', '-r300', [exp_dir 'plots/accuracy/low_freq/pbi_avg'])
 
 %% Alpha peaks
 
-clear all_tfr
-clear all_alpha
+clear variables
+rs_setup
 
 for i_subject = 1:size(subject_info, 1)
     if subject_info.exclude(i_subject)
         continue
     end
-    fname = subject_info.meg{i_subject};
-    
-    fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-    load(fn)
-    
+    fn = subject_info.meg{i_subject};
+    load([exp_dir 'alpha_peaks/' strrep(fn, '/', '_')]);
+%     close all
+    % BP filter in the alpha band
     cfg = [];
     cfg.bpfilter = 'yes';
     cfg.bpfreq = [7 14];
-    cfg.bpfilttype = 'but'; %FIRLS warning: not recommended for neural signals
-    data_seg_alpha = ft_preprocessing(cfg, data_seg);
+    cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
+    data_seg_alpha = ft_preprocessing(cfg, data_seg); 
 
-    close all
     for i_chan = 1:length(data_seg.label)
         for i_tagfreq = 1:2 % Which tagged freq is on the left side
             % Avg alpha activity over selected channels & trials
+            if sum(avg_sels{i_chan,i_tagfreq}.trial) == 0
+                continue
+            end
             cfg = [];
             cfg.trials = avg_sels{i_chan,i_tagfreq}.trial;
             cfg.channel = data_seg.label(avg_sels{i_chan,i_tagfreq}.channel);
@@ -1737,6 +1738,9 @@ for i_subject = 1:size(subject_info, 1)
             cfg.toi = 'all';
             d_tfr = ft_freqanalysis(cfg, data_seg);
             x = squeeze(d_tfr.powspctrm);
+            sd_x = std(reshape(x, [1 numel(x)]), 'omitnan');
+            m_x = nanmean(reshape(x, [1 numel(x)]));
+            x = (x - m_x) ./ sd_x;
             all_tfr(i_subject,i_chan,i_tagfreq,:,:) = x;
 
             i_cond = ((i_chan - 1) * 2) + i_tagfreq;
@@ -1744,17 +1748,17 @@ for i_subject = 1:size(subject_info, 1)
 
             % Plot TFR
             subplot(2, 4, i_cond)
-            imagesc(d_tfr.time, d_tfr.freq, squeeze(d_tfr.powspctrm))
+            imagesc(d_tfr.time, d_tfr.freq, x)
             set(gca, 'YDir', 'normal')
             xlim([-1 1] * x_lim)
             title(sprintf('%s, %i Hz, n=%i', ...
-                data_preproc.label{i_chan}, ...
+                data_seg_alpha.label{i_chan}, ...
                 exp_params.tagged_freqs(i_tagfreq), ...
                 avg_counts(i_chan, i_tagfreq)))
 
             % Plot alpha
             subplot(2, 4, i_cond + 4)
-            plot(t, d_alpha.avg)
+            plot(d_alpha.time, d_alpha.avg)
             hold on
             plot(0, 0, 'k+')
             hold off
@@ -1763,11 +1767,9 @@ for i_subject = 1:size(subject_info, 1)
         end
     
     % Adjust color scale within each channel
-    x = all_tfr(i_subject,i_chan,:,:,:);
-    cmax = max(reshape(x, [1 numel(x)]));
     for i_plot = (1:2) + ((i_chan - 1) * 2)
         subplot(2, 4, i_plot)
-        caxis([0 cmax])
+        caxis([-1 1] * 2)
     end
         
     end
@@ -1810,13 +1812,13 @@ for i_chan = 1:length(data_seg.label)
         set(gca, 'YDir', 'normal')
         xlim([-1 1] * x_lim)
         title(sprintf('%s, %i Hz', ...
-            data_preproc.label{i_chan}, ...
+            data_seg.label{i_chan}, ...
             exp_params.tagged_freqs(i_tagfreq)))
 
         % Plot alpha
         subplot(2, 4, i_cond + 4)
         x = squeeze(nanmean(all_alpha(:,i_chan,i_tagfreq,:), 1));
-        plot(t, x)
+        plot(d_alpha.time, x)
         hold on
         plot(0, 0, 'k+')
         hold off
@@ -1825,11 +1827,11 @@ for i_chan = 1:length(data_seg.label)
     end
         
     % Adjust color scale
-    x = nanmean(all_tfr, 1);
-    cmax = max(reshape(x, [1 numel(x)]));
+%     x = nanmean(all_tfr, 1);
+%     cmax = max(reshape(x, [1 numel(x)]));
     for i_plot = 1:4
         subplot(2, 4, i_plot)
-        caxis([0 cmax])
+        caxis([-1 1] * 1)
     end
 
 end
