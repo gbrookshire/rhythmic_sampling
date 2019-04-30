@@ -76,6 +76,10 @@ for i_preproc_trial = 1:length(data_alpha.trial)
         endings(chuck_segments) = [];
         t_beg(chuck_segments) = [];
         t_end(chuck_segments) = [];
+        % Round to the nearest ms and go slightly before
+        % To make sure this catches the right samples
+        t_beg = round(t_beg, 3);
+        t_end = round(t_end, 3);
         % Save the remaining segments
         o = ones(length(centers), 1);
         s = [i_preproc_trial*o i_chan*o centers' beginnings' endings' t_beg' t_end'];
@@ -87,8 +91,7 @@ end
 
 % Set up the time variables for the segment and whole trials
 t_seg = -(segment_duration/2):(1/fsample):(segment_duration/2);
-% t_seg = t_seg(1:(end-1)); % So that t_inx works later on
-t_whole = data_tfr.time;
+t_whole = round(data_tfr.time, 3);
 
 % Set up Fieldtrip-style data struct for alpha
 data_seg_alpha = [];
@@ -121,10 +124,6 @@ for i_segment = 1:size(segments, 1)
     data_seg_alpha.time{i_segment} = t_seg;
     % Get the TFR data
     t_inx = (t_beg <= t_whole) & (t_whole <= t_end);
-    % Make sure it's the right length (not off by 1)
-    if sum(t_inx) == length(t_seg) - 1
-        t_inx(max(find(t_inx))+1) = true;
-    end
     x = data_tfr.powspctrm(preproc_trial_num,chan,:,t_inx);
     data_seg_tfr.powspctrm(i_segment, chan, :, :) = x;
 end
@@ -173,7 +172,7 @@ end
 
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-save(fn, '-v7.3', 'data_seg_alpha', 'data_seg_tfr', 'segments')
+save(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments')
 
 
 %% Plot the results
@@ -189,7 +188,12 @@ for i_chan = 1:2
         lpos = spacing + (width + spacing) * (i_cond-1);
         subplot('position', [lpos, 0.35, width, 0.55])
         d = cond_tfr{i_chan, i_rft_freq};
-        imagesc(d.time, d.freq, squeeze(d.powspctrm))
+        x = squeeze(d.powspctrm);
+        % Divide by mean in each freq
+        for i_freq = 1:length(d.freq)
+            x(i_freq,:) = x(i_freq,:) / nanmean(x(i_freq,:));
+        end
+        imagesc(d.time, d.freq, x)
         set(gca, 'YDir', 'normal')
         xlim([-1 1] * x_lim)
         if i_cond == 1
@@ -220,3 +224,17 @@ for i_chan = 1:2
         i_cond = i_cond + 1;
     end
 end
+
+width = 25;
+height = 10;
+set(gcf,'units','centimeters')
+set(gcf,'paperunits','centimeters')
+set(gcf, 'PaperPositionMode', 'manual');
+set(gcf,'papersize', [width height])
+set(gcf,'paperposition',[0,0,width,height])
+set(gcf, 'renderer', 'painters');
+
+fname = subject_info.meg{i_subject};
+fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
+print('-dpng', fn)
+
