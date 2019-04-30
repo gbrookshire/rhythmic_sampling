@@ -3,36 +3,34 @@ function rs_alpha_peaks(i_subject)
 % Compute the TFR around alpha peaks
 
 %{
-Following Spaak et al (2012)
-- Only select segments in which alpha power is > 60th percentile for >= 800 ms
-    - This selected ~3% of the data
-- Trimmed out 1 s of data centered on these alpha bursts
-- BP-filter the alpha signal
-    - two-pass FIR-LS filter b/w 7 and 14 Hz (order: 426)
-- TFRs of the signal
-    - Hanning taper
-    - 20-300 Hz in steps of 2 Hz
-    - 7 cycles
+v2
+- Look at all segments of data
+- Timelock to each alpha peak
+- Then start to throw away segments with lower power
+- Compute power on all data
+- Then re-segment
 %}
-
 
 rs_setup
 segment_duration = 0.8; % s
-thrsh_alpha = 40; % Keep segments of data with alpha pow above this percentile
-thrsh_time = 0.8; % Keep segments above the alpha threshold for this dur (s)
 
 % Load behavioral data (to get RTs)
 behav = rs_behavior(i_subject);
 
-% % Load data
-% fname = subject_info.meg{i_subject};
-% data_preproc = load([exp_dir 'preproc/trial/' fname '/preproc']);
-% data_preproc = data_preproc.data;
-
+% Load preprocessed data
 data_preproc = rs_preproc_ress(i_subject, 'trial');
 
 fsample = 1 / mean(diff(data_preproc.time{1}));
 segment_width = round((segment_duration/2) * fsample);
+
+% Compute TFRs over all data
+cfg.method = 'mtmconvol';
+cfg.foi = 55:1:90;
+cfg.taper = 'hanning';
+cfg.t_ftimwin = 6 ./ cfg.foi;
+cfg.toi = 'all';
+cfg.keeptrials = 'yes';
+data_tfr = ft_freqanalysis(cfg, data_preproc);
 
 % Get the band-passed alpha oscillations
 cfg = [];
@@ -41,158 +39,184 @@ cfg.bpfreq = [7 14];
 cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
 data_alpha = ft_preprocessing(cfg, data_preproc);
 
-% Get alpha power in order to trim out high-power segments
-cfg = [];
-cfg.hilbert = 'abs';
-data_alpha_pow = ft_preprocessing(cfg, data_alpha);
-cfg = []; % Look at slower fluctuations in power (widen the window)
-cfg.lpfilter = 'yes';
-cfg.lpfreq = 3;
-data_alpha_pow = ft_preprocessing(cfg, data_alpha_pow);
-
-% Convenience function to concatenate all trials
-conc = @(x) cat(2, x{:});
-
-% Get the alpha power cutoffs at each channel 
-cutoffs = prctile(conc(data_alpha_pow.trial), thrsh_alpha, 2);
-
-% Look for contiguous segments of data with alpha power above that threshold
-thrsh_samp = thrsh_time * fsample; % minimum number of samples to keep
-clear segment_info
-seg_counter = 0;
-for i_trial = 1:length(data_preproc.trial)
-    rt = behav(behav.TrialNumber == i_trial,:).rt;
-    for i_chan = 1:length(data_preproc.label)
-        x = data_alpha_pow.trial{i_trial}(i_chan,:);
-        x_thresh = x > cutoffs(i_chan);
-        x_change = [0 diff(x_thresh)];
-        onsets = (x_thresh == 1) & (x_change == 1);
-        offsets = (x_thresh == 0) & (x_change == -1);
-        if x_thresh(1) == 1
-            onsets(1) = 1;
-        end
-        if x_thresh(end) == 1
-            offsets(end) = 1;
-        end
-        segments = [find(onsets)' find(offsets)'];
-        seg_dur = diff(segments, 1, 2);
-        for i_seg = 1:size(segments, 1)
-            % Check whether the segment is too early in the trial
-            seg_time = data_preproc.time{i_trial};
-            seg_time = seg_time(segments(i_seg,:));
-            too_early = ~any(seg_time < 0.5);
-            % Check whether the segment is long enough
-            long_enough = seg_dur(i_seg) > thrsh_samp;
-            % Check whether the segment happens before the response
-            too_late = any(seg_time > rt);
-            if long_enough && ~too_early && ~too_late
-                s = [];
-                s.n_trial = i_trial;
-                s.n_chan = i_chan;
-                s.seg_dur = seg_dur(i_seg);
-                s.seg_midpoint = round(mean(segments(i_seg,:)));
-                s.beg = s.seg_midpoint - segment_width;
-                s.end = s.seg_midpoint + segment_width;
-                if s.beg > 0 % If this starts after the ft.trial
-                    seg_counter = seg_counter + 1;
-                    segment_info(seg_counter) = s;
-                end
-            end
-        end
+% Find overlapping segments centered around alpha peaks
+% Go through each trial, and look for alpha peaks
+% Identify center, beginning, and ending of each segment
+% We need to be careful to keep different kinds of 'trials' distinc
+% - exp_trial: trial numbers as counted by the experiment script
+% - preproc_trial: FT-trial numbers as counted by rs_preproc
+% - segments: Snippets of data (coded as 'trials' in a FT object)
+segments = nan([0 7]); % Preproc Trial, chan, center, begin, end, t_begin, t_end
+for i_preproc_trial = 1:length(data_alpha.trial)
+    t = data_alpha.time{i_preproc_trial};
+    exp_trial_num = data_alpha.trialinfo(i_preproc_trial,2); % trial in orig exp
+    for i_chan = 1:length(data_alpha.label)
+        [~, centers] = findpeaks(data_alpha.trial{i_preproc_trial}(i_chan,:), ...
+            'MinPeakHeight', 0);
+        beginnings = centers - segment_width;
+        endings = centers + segment_width;
+        % Chuck segments that would start before there's data, or that
+        % would end after the data ends
+        too_early = beginnings <= 0;
+        too_late = endings > length(t);
+        chuck_segments = too_early | too_late;
+        centers(chuck_segments) = [];
+        beginnings(chuck_segments) = [];
+        endings(chuck_segments) = [];
+        % Check whether the segments overlap with resps, stim onset, etc
+        t_beg = t(beginnings);
+        t_end = t(endings);
+        after_stim_onset = t_beg > 0.5; % Avoid transients from stim onset
+        rt = behav(behav.TrialNumber == exp_trial_num, :).rt;
+        before_rt = t_end < rt;
+        before_trial_end = t_end < 4.0;
+        chuck_segments = ~(after_stim_onset & before_rt & before_trial_end);
+        centers(chuck_segments) = [];
+        beginnings(chuck_segments) = [];
+        endings(chuck_segments) = [];
+        t_beg(chuck_segments) = [];
+        t_end(chuck_segments) = [];
+        % Save the remaining segments
+        o = ones(length(centers), 1);
+        s = [i_preproc_trial*o i_chan*o centers' beginnings' endings' t_beg' t_end'];
+        segments = [segments; s];
     end
 end
-clear s seg_time seg_dur segments seg_counter offsets onsets
 
-% Align segments to the nearest alpha peak
-max_shift = 0; % Keep track of the biggest shift
-for i_seg = 1:length(segment_info)
-    s = segment_info(i_seg);
-    x = data_alpha.trial{s.n_trial}(s.n_chan, s.beg:s.end);
-    % Find the closest alpha peak to the middle of this segment
-    [~, locs] = findpeaks(x);
-    dist_from_center = abs(locs - segment_width);
-    [~, center_inx] = min(dist_from_center);
+% Snip the MEG data out
 
-    % Realign to this peak
-    shift = segment_width - locs(center_inx);
-    s.seg_midpoint = s.seg_midpoint + shift;
-    s.beg = s.beg - shift;
-    s.end = s.end - shift;
-    segment_info_shifted(i_seg) = s;
-    max_shift = max(shift, max_shift);
+% Set up the time variables for the segment and whole trials
+t_seg = -(segment_duration/2):(1/fsample):(segment_duration/2);
+% t_seg = t_seg(1:(end-1)); % So that t_inx works later on
+t_whole = data_tfr.time;
 
-end
+% Set up Fieldtrip-style data struct for alpha
+data_seg_alpha = [];
+data_seg_alpha.label = data_preproc.label;
+data_seg_alpha.time = {};
+data_seg_alpha.trial = {};
 
-% Cut out those segments from the alpha data
-t = -(segment_duration/2):(1/fsample):(segment_duration/2);
-data_seg = [];
-data_seg.label = data_preproc.label;
-data_seg.trial = {};
-data_seg.time = {};
-data_seg.trialinfo = nan([0 2]); % Keep track of trial num & targeted chan
-for i_seg = 1:length(segment_info_shifted)
-    s = segment_info_shifted(i_seg);
-    try
-        x = data_preproc.trial{s.n_trial}(:, s.beg:s.end);
-    catch me
-        disp(me.identifier)
-        continue
+% Set up FT-style data struct for TFR
+data_seg_tfr = data_tfr;
+data_seg_tfr.time = t_seg;
+data_seg_tfr.powspctrm = nan(size(segments, 1),... % rpt_chan_freq_time
+    length(data_tfr.label), ...
+    length(data_tfr.freq), ...
+    length(t_seg));
+
+% Stick segments into the data structs
+for i_segment = 1:size(segments, 1)
+    % Info about each seg
+    seg_info = segments(i_segment,:);
+    preproc_trial_num = seg_info(1); % Number of the trial in data_preproc
+    chan = seg_info(2);
+    centersamp = seg_info(3);
+    beginsamp = seg_info(4);
+    endsamp = seg_info(5);
+    t_beg = seg_info(6);
+    t_end = seg_info(7);
+    % Get the alpha-filtered data
+    x = data_alpha.trial{preproc_trial_num}(:,beginsamp:endsamp);
+    data_seg_alpha.trial{i_segment} = x;
+    data_seg_alpha.time{i_segment} = t_seg;
+    % Get the TFR data
+    t_inx = (t_beg <= t_whole) & (t_whole <= t_end);
+    % Make sure it's the right length (not off by 1)
+    if sum(t_inx) == length(t_seg) - 1
+        t_inx(max(find(t_inx))+1) = true;
     end
-    data_seg.trial{end+1} = x;
-    data_seg.time{end+1} = t;
-    data_seg.trialinfo(end+1,:) = [s.n_trial, s.n_chan];
+    x = data_tfr.powspctrm(preproc_trial_num,chan,:,t_inx);
+    data_seg_tfr.powspctrm(i_segment, chan, :, :) = x;
 end
 
-% Detrend each segment
-cfg = [];
-cfg.detrend = 'yes';
-data_seg = ft_preprocessing(cfg, data_seg);
-
-%{
-% Weird -- the alpha phase is pretty different between the two RESS channels
-for i_seg = 1:length(data_seg.trial)
-    n_chan = segment_info_shifted(i_seg).n_chan;
-    subplot(2,1,1) % Plot the selected channel
-    plot(t, data_seg.trial{i_seg}(n_chan,:))
-    hold on
-    subplot(2,1,2) % Plot the non-selected channel
-    n_chan = mod(n_chan, 2) + 1;
-    plot(t, data_seg.trial{i_seg}(n_chan,:))
-    hold on
-end
-subplot(2,1,1),hold off
-subplot(2,1,2),hold off
-%}
-
-% Average over segments
-% Do this separately for segments at each channel
-% Keep track of resuls in a cell: Channel * TaggedFreq
-avg_sels = cell([length(data_seg.label) length(exp_params.tagged_freqs)]);
-avg_counts = nan(size(avg_sels));
-
-for i_chan = 1:length(data_seg.label)
-    for i_tagfreq = 1:2 % Which tagged freq is on the left side
-        % Select trials where the segment occured in this channel
-        chan_trial_sel = data_seg.trialinfo(:,2) == i_chan;
-        % Select trials where the segment occured at this tagged freq
-        frq = exp_params.tagged_freqs(i_tagfreq);
-        trial_num_by_seg = data_seg.trialinfo(:,1);
-        rft_trial_sel = behav{trial_num_by_seg, 'freq_left'} == frq;
-        % Put together the trial selections
+% Average within each condition, b/c the TFR objects are huge (>2.2 GB)
+cond_counts = nan(2,2);
+cond_alpha = cell(2,2);
+cond_tfr = cell(2,2);
+% Get the RFT freq on the left side for each segment
+preproc_trial_nums = segments(:,1);
+preproc_left_rft_freqs = data_preproc.trialinfo(:,3);
+seg_left_rft_freqs = preproc_left_rft_freqs(preproc_trial_nums);
+rft_freqs = exp_params.tagged_freqs;
+% Make the averages for each condition
+for i_chan = 1:length(data_preproc.label)
+    for i_rft_freq = 1:2
+        % Select segments with the alpha peak in this (virtual) channel
+        chan_trial_sel = segments(:,2) == i_chan;
+        % Select segments with each RFT frequency at this chan
+        % First get trials with this RFT frequency on the LEFT
+        rft_trial_sel = seg_left_rft_freqs == rft_freqs(i_rft_freq);
+        % If we're actually looking at the right virtual channel, invert it
+        if i_chan == 2
+            rft_trial_sel = ~rft_trial_sel
+        end
+        % Combine trial selections
         trial_sel = chan_trial_sel & rft_trial_sel;
-        % Select the channel
-        chan_sel = zeros(size(data_seg.label));
-        chan_sel(i_chan) = 1;
-        chan_sel = logical(chan_sel);
-        % Save the relevant information
-        sels = [];
-        sels.trial = trial_sel;
-        sels.channel = chan_sel;
-        avg_sels{i_chan, i_tagfreq} = sels;
-        avg_counts(i_chan, i_tagfreq) = sum(trial_sel);
+        cond_counts(i_chan, i_rft_freq) = sum(trial_sel);
+        % Average over alpha activity
+        cfg = [];
+        cfg.trials = trial_sel;
+        cfg.channel = data_seg_alpha.label(i_chan);
+        avg_alpha = ft_timelockanalysis(cfg, data_seg_alpha);
+        cond_alpha{i_chan, i_rft_freq} = avg_alpha;
+        % Average over TFRs
+        avg_tfr = data_seg_tfr;
+        avg_tfr.label = {'chan'};
+        x = avg_tfr.powspctrm;
+        x = x(trial_sel, i_chan, :, :);
+        x = mean(x, 1);
+        avg_tfr.powspctrm = x;
+        cond_tfr{i_chan, i_rft_freq} = avg_tfr;
     end
 end
+
 
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-save(fn, 'data_seg', 'avg_sels', 'avg_counts')
+save(fn, '-v7.3', 'data_seg_alpha', 'data_seg_tfr', 'segments')
+
+
+%% Plot the results
+side_labels = {'left' 'right'};
+x_lim = 0.3;
+close all
+i_cond = 1;
+for i_chan = 1:2
+    for i_rft_freq = 1:2
+        % Plot the TFR
+        width = 0.19;
+        spacing = 0.05;
+        lpos = spacing + (width + spacing) * (i_cond-1);
+        subplot('position', [lpos, 0.35, width, 0.55])
+        d = cond_tfr{i_chan, i_rft_freq};
+        imagesc(d.time, d.freq, squeeze(d.powspctrm))
+        set(gca, 'YDir', 'normal')
+        xlim([-1 1] * x_lim)
+        if i_cond == 1
+            ylabel('Frequency (Hz)')
+        end
+        colorbar('SouthOutside')
+        
+        % Add a title
+        title(sprintf('%s, %i Hz, n=%i', ...
+            side_labels{i_chan}, ...
+            rft_freqs(i_rft_freq), ...
+            cond_counts(i_chan, i_rft_freq)))
+
+        % Plot the alpha power
+        subplot('position', [lpos, 0.13, width, 0.17])
+        d = cond_alpha{i_chan, i_rft_freq};
+        plot(d.time, d.avg, '-b')
+        hold on
+        plot(0, 0, '+k')
+        hold off
+        xlim([-1 1] * x_lim)
+        
+        if i_cond == 1
+            ylabel('Amplitude (T)')
+            xlabel('Time (s)')
+        end
+        
+        i_cond = i_cond + 1;
+    end
+end
