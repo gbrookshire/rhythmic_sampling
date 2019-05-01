@@ -1709,14 +1709,11 @@ rft_freqs = exp_params.tagged_freqs;
 all_data = cell([1 height(subject_info)]);
 
 for i_subject = 1:height(subject_info) % 0]
-    if i_subject == 0
-        % Average over everyone
-        % For now, do nothing
-    elseif subject_info.exclude(i_subject)
+    if subject_info.exclude(i_subject)
         continue
     else
         fname = subject_info.meg{i_subject};
-        fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
+        fn = [exp_dir 'alpha_peaks/prct100/' strrep(fname, '/', '_')];
         data = load(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments');
         all_data{i_subject} = data;
     end
@@ -1770,236 +1767,148 @@ for i_subject = 1:height(subject_info) % 0]
         end
     end
 
-    width = 25;
-    height = 10;
+    fig_width = 25;
+    fig_height = 10;
     set(gcf,'units','centimeters')
     set(gcf,'paperunits','centimeters')
     set(gcf, 'PaperPositionMode', 'manual');
-    set(gcf,'papersize', [width height])
-    set(gcf,'paperposition',[0,0,width,height])
+    set(gcf,'papersize', [fig_width fig_height])
+    set(gcf,'paperposition',[0,0,fig_width,fig_height])
     set(gcf, 'renderer', 'painters');
 
     fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
     print('-dpng', fn)
 end
 
+%% Look rhythms in HF power, when locked to alpha peaks
+% Is this double-dipping?
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-%% Alpha peaks ---- OLD
-
-clear variables
-rs_setup
-
-for i_subject = 1:size(subject_info, 1)
-    if subject_info.exclude(i_subject)
-        continue
-    end
-    fn = subject_info.meg{i_subject};
-    load([exp_dir 'alpha_peaks/' strrep(fn, '/', '_')]);
-%     close all
-    % BP filter in the alpha band
-    cfg = [];
-    cfg.bpfilter = 'yes';
-    cfg.bpfreq = [7 14];
-    cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
-    data_seg_alpha = ft_preprocessing(cfg, data_seg); 
-
-    for i_chan = 1:length(data_seg.label)
-        for i_tagfreq = 1:2 % Which tagged freq is on the left side
-            % Avg alpha activity over selected channels & trials
-            if sum(avg_sels{i_chan,i_tagfreq}.trial) == 0
-                continue
-            end
-            cfg = [];
-            cfg.trials = avg_sels{i_chan,i_tagfreq}.trial;
-            cfg.channel = data_seg.label(avg_sels{i_chan,i_tagfreq}.channel);
-            d_alpha = ft_timelockanalysis(cfg, data_seg_alpha);
-            all_alpha(i_subject,i_chan,i_tagfreq,:) = d_alpha.avg;
-            % Compute TFRs
-            cfg.method = 'mtmconvol';
-            cfg.foi = 55:1:90;
-            cfg.taper = 'hanning';
-            cfg.t_ftimwin = 6 ./ cfg.foi;
-            cfg.toi = 'all';
-            d_tfr = ft_freqanalysis(cfg, data_seg);
-            x = squeeze(d_tfr.powspctrm);
-            % % Standardize power using z-scores
-            % sd_x = std(reshape(x, [1 numel(x)]), 'omitnan');
-            % m_x = nanmean(reshape(x, [1 numel(x)]));
-            % x = (x - m_x) ./ sd_x;
-            % Standardize by dividing out the mean power
-            t_inx = (-0.3 < d_tfr.time) & (d_tfr.time < 0.3);
-            for i_freq = 1:length(d_tfr.freq)
-                x(i_freq,:) = x(i_freq,:) ./ mean(x(i_freq,t_inx));
-            end
-            % Store the standardized values
-            all_tfr(i_subject,i_chan,i_tagfreq,:,:) = x;
-
-            i_cond = ((i_chan - 1) * 2) + i_tagfreq;
-            x_lim = 0.3;
-
-            % Plot TFR
-            subplot(2, 4, i_cond)
-            imagesc(d_tfr.time, d_tfr.freq, x)
-            set(gca, 'YDir', 'normal')
-            xlim([-1 1] * x_lim)
-            title(sprintf('%s, %i Hz, n=%i', ...
-                data_seg_alpha.label{i_chan}, ...
-                exp_params.tagged_freqs(i_tagfreq), ...
-                avg_counts(i_chan, i_tagfreq)))
-
-            % Plot alpha
-            subplot(2, 4, i_cond + 4)
-            plot(d_alpha.time, d_alpha.avg)
-            hold on
-            plot(0, 0, 'k+')
-            hold off
-            xlim([-1 1] * x_lim)
-
-        end
-    
-    % Adjust color scale within each channel
-%     for i_plot = (1:2) + ((i_chan - 1) * 2)
-%         subplot(2, 4, i_plot)
-%         caxis([-1 1] * 2)
-%     end
-        
-    end
-
-    subplot(2, 4, 1)
-    ylabel('Frequency (Hz)')
-
-    subplot(2, 4, 5)
-    ylabel('Amplitude (T)')
-    xlabel('Time (S)')
-
-    width = 25;
-    height = 10;
-    set(gcf,'units','centimeters')
-    set(gcf,'paperunits','centimeters')
-    set(gcf, 'PaperPositionMode', 'manual');
-    set(gcf,'papersize', [width height])
-    set(gcf,'paperposition',[0,0,width,height])
-    set(gcf, 'renderer', 'painters');
-
-    fname = subject_info.meg{i_subject};
-    fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
-    print('-dpng', fn)
-
-end
-
-
-%% Get the avg over subjects
-
+clear all_spectra
 close all
-for i_chan = 1:length(data_seg.label)
-    for i_tagfreq = 1:2 % Which tagged freq is on the left side
-        i_cond = ((i_chan - 1) * 2) + i_tagfreq;
-        x_lim = 0.3;
 
-        % Plot TFR
-        subplot(2, 4, i_cond)
-        x = squeeze(nanmean(all_tfr(:,i_chan,i_tagfreq,:,:), 1));
-        imagesc(d_tfr.time, d_tfr.freq, x)
-        set(gca, 'YDir', 'normal')
-        xlim([-1 1] * x_lim)
-        title(sprintf('%s, %i Hz', ...
-            data_seg.label{i_chan}, ...
-            exp_params.tagged_freqs(i_tagfreq)))
-
-        % Plot alpha
-        subplot(2, 4, i_cond + 4)
-        x = squeeze(nanmean(all_alpha(:,i_chan,i_tagfreq,:), 1));
-        plot(d_alpha.time, x)
-        hold on
-        plot(0, 0, 'k+')
-        hold off
-        xlim([-1 1] * x_lim)
-
+for i_subject = [1:height(subject_info) 0]
+    if i_subject == 0
+        % Average across subjects
+        fname = 'avg';
+    elseif subject_info.exclude(i_subject)
+        continue
+    else
+        fname = subject_info.meg{i_subject};
+        data = all_data{i_subject};        
     end
-        
-    % Adjust color scale
-%     x = nanmean(all_tfr, 1);
-%     cmax = max(reshape(x, [1 numel(x)]));
-    for i_plot = 1:4
-        subplot(2, 4, i_plot)
-%         caxis([-1 1] * 1)
-        f = 4/5;
-        caxis([f f^-1])
+
+    side_labels = {'left' 'right'};
+    x_lim = 0.3;
+    %close all
+    i_cond = 1;
+    for i_chan = 1:2
+        for i_rft_freq = 1:2
+            subplot(2,2,i_cond)
+            
+            data_cond = data.cond_tfr{i_chan, i_rft_freq};
+            t_inx = (-x_lim < data_cond.time) & (data_cond.time < x_lim);
+            x = squeeze(data_cond.powspctrm);
+            x = x(:,t_inx);
+            % Divide by mean in each freq
+            for i_freq = 1:length(data_cond.freq)
+               x(i_freq,:) = x(i_freq,:) / nanmean(x(i_freq,:));
+            end
+           
+            % FFT of power fluctuations at freq
+            nfft = 2 ^ nextpow2(size(x, 2));
+            nfft = size(x, 2);
+            sample_per = mean(diff(data_cond.time));
+            Fs = 1 / sample_per;
+            f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+            f_inx = 1 < f & f < 31;
+            y = fft(x, nfft, 2);
+            Pyy = 1 / (nfft * Fs) * abs(y(:,1:round(nfft/2)+1)) .^ 2; % Power spectrum
+            Pyy = Pyy(:,f_inx);
+            f = f(f_inx);
+            if i_subject == 0 %% Averages
+                Pyy = squeeze(nanmean(all_spectra(:,i_cond,:,:), 1));
+            else
+                all_spectra(i_subject,i_cond,:,:) = Pyy;
+            end
+            imagesc(f, data_cond.freq, db((Pyy), 'power'))
+            set(gca, 'YDir', 'normal')
+            xlabel('FFT Frequency (Hz)')
+            ylabel('TFR Frequency (Hz)')
+            xlim([1 30])
+            colorbar;
+            
+            % Add a title
+            title(sprintf('%s, %i Hz', ...
+                side_labels{i_chan}, ...
+                rft_freqs(i_rft_freq)))
+            
+            i_cond = i_cond + 1;
+        end
     end
+    
+    fn = [exp_dir 'plots/alpha_peaks/spect_' strrep(fname, '/', '_')];
+    print('-dpng', fn)
 
 end
 
-subplot(2, 4, 1)
-ylabel('Frequency (Hz)')
+%{
+% simulated data
+x = rand(size(x));
+x = x .* sin(data_cond.time(t_inx) * 10 * 2 * pi);
+nfft = 2 ^ nextpow2(size(x, 2));
+sample_per = mean(diff(data_cond.time));
+Fs = 1 / sample_per;
+f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+y = fft(x, nfft, 2);
+Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
+imagesc(f, data_cond.freq, db((Pyy), 'power'))
+set(gca, 'YDir', 'normal')
+xlim([1 30])
+%}
 
-subplot(2, 4, 5)
-ylabel('Amplitude (T)')
-xlabel('Time (S)')
+%% 
 
-width = 25;
-height = 10;
-set(gcf,'units','centimeters')
-set(gcf,'paperunits','centimeters')
-set(gcf, 'PaperPositionMode', 'manual');
-set(gcf,'papersize', [width height])
-set(gcf,'paperposition',[0,0,width,height])
-set(gcf, 'renderer', 'painters');
 
-fname = subject_info.meg{i_subject};
-fn = [exp_dir 'plots/alpha_peaks/avg'];
-print('-dpng', fn)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
