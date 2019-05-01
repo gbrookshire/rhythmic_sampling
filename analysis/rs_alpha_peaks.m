@@ -12,7 +12,7 @@ v2
 %}
 
 rs_setup
-segment_duration = 0.8; % s
+segment_duration = 0.8; % seconds
 
 % Load behavioral data (to get RTs)
 behav = rs_behavior(i_subject);
@@ -128,6 +128,22 @@ for i_segment = 1:size(segments, 1)
     data_seg_tfr.powspctrm(i_segment, chan, :, :) = x;
 end
 
+% Keep segments above a certain alpha-power threshold
+alpha_thresh_perc = 50;
+% Get average alpha power over each seg
+cfg = [];
+cfg.hilbert = 'abs';
+data_seg_alpha_power = ft_preprocessing(cfg, data_seg_alpha);
+cfg = [];
+cfg.latency = 'all';
+cfg.avgovertime = 'yes';
+data_seg_alpha_power = ft_selectdata(cfg, data_seg_alpha_power);
+avg_alpha_power = [data_seg_alpha_power.trial{:}];
+% Get the percentiles for each channel
+alpha_thresh_pow = prctile(avg_alpha_power, alpha_thresh_perc, 2);
+%Which trials are above each their trialwise percentile?
+alpha_pow_trial_sel = avg_alpha_power > alpha_thresh_pow;
+
 % Average within each condition, b/c the TFR objects are huge (>2.2 GB)
 cond_counts = nan(2,2);
 cond_alpha = cell(2,2);
@@ -147,10 +163,12 @@ for i_chan = 1:length(data_preproc.label)
         rft_trial_sel = seg_left_rft_freqs == rft_freqs(i_rft_freq);
         % If we're actually looking at the right virtual channel, invert it
         if i_chan == 2
-            rft_trial_sel = ~rft_trial_sel
+            rft_trial_sel = ~rft_trial_sel;
         end
+        % Select segments with high alpha power at this channel
+        alpha_sel = alpha_pow_trial_sel(i_chan,:)';
         % Combine trial selections
-        trial_sel = chan_trial_sel & rft_trial_sel;
+        trial_sel = chan_trial_sel & rft_trial_sel & alpha_sel;
         cond_counts(i_chan, i_rft_freq) = sum(trial_sel);
         % Average over alpha activity
         cfg = [];
