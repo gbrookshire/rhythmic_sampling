@@ -1699,8 +1699,144 @@ print('-dpng', '-r300', [exp_dir 'plots/accuracy/low_freq/pbi_avg'])
 %         [exp_dir 'plots/accuracy/low_freq/pbi_topo_' strrep(fname, '/', '_')])
 % end
 
-
 %% Alpha peaks
+
+clear variables
+close all
+rs_setup
+rft_freqs = exp_params.tagged_freqs;
+
+all_data = cell([1 height(subject_info)]);
+
+for i_subject = 1:height(subject_info) % 0]
+    if i_subject == 0
+        % Average over everyone
+        % For now, do nothing
+    elseif subject_info.exclude(i_subject)
+        continue
+    else
+        fname = subject_info.meg{i_subject};
+        fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
+        data = load(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments');
+        all_data{i_subject} = data;
+    end
+
+    side_labels = {'left' 'right'};
+    x_lim = 0.3;
+    %close all
+    i_cond = 1;
+    for i_chan = 1:2
+        for i_rft_freq = 1:2
+            % Plot the TFR
+            width = 0.19;
+            spacing = 0.05;
+            lpos = spacing + (width + spacing) * (i_cond-1);
+            subplot('position', [lpos, 0.35, width, 0.55])
+            d = data.cond_tfr{i_chan, i_rft_freq};
+            x = squeeze(d.powspctrm);
+            % Divide by mean in each freq
+            for i_freq = 1:length(d.freq)
+                x(i_freq,:) = x(i_freq,:) / nanmean(x(i_freq,:));
+            end
+            imagesc(d.time, d.freq, x)
+            set(gca, 'YDir', 'normal')
+            xlim([-1 1] * x_lim)
+            if i_cond == 1
+                ylabel('Frequency (Hz)')
+            end
+            colorbar('SouthOutside')
+
+            % Add a title
+            title(sprintf('%s, %i Hz, n=%i', ...
+                side_labels{i_chan}, ...
+                rft_freqs(i_rft_freq), ...
+                data.cond_counts(i_chan, i_rft_freq)))
+
+            % Plot the alpha power
+            subplot('position', [lpos, 0.13, width, 0.17])
+            d = data.cond_alpha{i_chan, i_rft_freq};
+            plot(d.time, d.avg, '-b')
+            hold on
+            plot(0, 0, '+k')
+            hold off
+            xlim([-1 1] * x_lim)
+
+            if i_cond == 1
+                ylabel('Amplitude (T)')
+                xlabel('Time (s)')
+            end
+
+            i_cond = i_cond + 1;
+        end
+    end
+
+    width = 25;
+    height = 10;
+    set(gcf,'units','centimeters')
+    set(gcf,'paperunits','centimeters')
+    set(gcf, 'PaperPositionMode', 'manual');
+    set(gcf,'papersize', [width height])
+    set(gcf,'paperposition',[0,0,width,height])
+    set(gcf, 'renderer', 'painters');
+
+    fn = [exp_dir 'plots/alpha_peaks/' strrep(fname, '/', '_')];
+    print('-dpng', fn)
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% Alpha peaks ---- OLD
 
 clear variables
 rs_setup
@@ -1732,9 +1868,9 @@ for i_subject = 1:size(subject_info, 1)
             all_alpha(i_subject,i_chan,i_tagfreq,:) = d_alpha.avg;
             % Compute TFRs
             cfg.method = 'mtmconvol';
-            cfg.foi = 55:2:90;
+            cfg.foi = 55:1:90;
             cfg.taper = 'hanning';
-            cfg.t_ftimwin = 7 ./ cfg.foi;
+            cfg.t_ftimwin = 6 ./ cfg.foi;
             cfg.toi = 'all';
             d_tfr = ft_freqanalysis(cfg, data_seg);
             x = squeeze(d_tfr.powspctrm);
