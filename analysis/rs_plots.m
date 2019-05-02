@@ -1703,17 +1703,22 @@ print('-dpng', '-r300', [exp_dir 'plots/accuracy/low_freq/pbi_avg'])
 
 clear variables
 close all
+
+vers = 'prct100'; % Which version of the analysis to run
+vers = 'theta_test';
+vers = 'beta_test';
+
 rs_setup
 rft_freqs = exp_params.tagged_freqs;
 
 all_data = cell([1 height(subject_info)]);
 
-for i_subject = 1:height(subject_info) % 0]
+for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     else
         fname = subject_info.meg{i_subject};
-        fn = [exp_dir 'alpha_peaks/prct100/' strrep(fname, '/', '_')];
+        fn = [exp_dir 'alpha_peaks/' vers '/' strrep(fname, '/', '_')];
         data = load(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments');
         all_data{i_subject} = data;
     end
