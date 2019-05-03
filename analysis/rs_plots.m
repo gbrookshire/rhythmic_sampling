@@ -1705,8 +1705,8 @@ clear variables
 close all
 
 vers = 'prct100'; % Which version of the analysis to run
-vers = 'theta_test';
-vers = 'beta_test';
+%vers = 'teta_test';
+%vers = 'beta_test';
 
 rs_setup
 rft_freqs = exp_params.tagged_freqs;
@@ -1785,7 +1785,7 @@ for i_subject = 1:height(subject_info)
     print('-dpng', fn)
 end
 
-%% Look rhythms in HF power, when locked to alpha peaks
+% Look for rhythms in HF power, when locked to alpha peaks
 % Is this double-dipping?
 
 clear all_spectra
@@ -1871,3 +1871,176 @@ set(gca, 'YDir', 'normal')
 xlim([1 30])
 %}
 
+%% Alpha-peaks - compare the two tagged frequencies
+
+clear variables
+close all
+
+vers = 'prct100'; % Which version of the analysis to run
+%vers = 'teta_test';
+%vers = 'beta_test';
+x_lim = 0.3;
+
+
+rs_setup
+rft_freqs = exp_params.tagged_freqs;
+
+clear all_spectra
+clear all_x
+
+for i_subject = [1:height(subject_info) 0]
+    if i_subject == 0 
+        fname = 'avg';
+    elseif subject_info.exclude(i_subject)
+        continue
+    else
+        fname = subject_info.meg{i_subject};
+        fn = [exp_dir 'alpha_peaks/' vers '/' strrep(fname, '/', '_')];
+        data = load(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments');
+    end
+    
+    if i_subject == 1
+        t = data.cond_tfr{1,1}.time;
+        t_inx = (-x_lim <= t) & (t <= x_lim);
+        f_tfr = data.cond_tfr{1,1}.freq;
+        sample_per = mean(diff(t));
+        Fs = 1 / sample_per;
+    end
+        
+    side_labels = {'left' 'right'};
+    for i_chan = 1:2
+        d63 = squeeze(data.cond_tfr{i_chan, 1}.powspctrm);
+        d78 = squeeze(data.cond_tfr{i_chan, 2}.powspctrm);
+        x = (d63 - d78) ./ (d63 + d78);
+        x = x(:,t_inx);
+        if i_subject == 0 %% Averages
+            x = squeeze(nanmean(all_x(:,i_chan,:,:), 1));
+        else
+            all_x(i_subject,i_chan,:,:) = x;
+        end
+
+        % Plot the difference-over-sum
+        subplot(2,2,i_chan)
+        imagesc(t, f_tfr, x)
+        set(gca, 'YDir', 'normal')
+        xlim([-1 1] * x_lim)
+        xlabel('Time (s)')
+        ylabel('Frequency (Hz)')
+        colorbar('EastOutside')
+        title(side_labels{i_chan})
+        
+        % Get the spectrum of the difference-over-sum
+        subplot(2,2,i_chan+2)
+        nfft = size(x, 2);
+        f_fft = (1/sample_per) * (0:(nfft / 2)) / nfft;
+        f_inx = 1 < f_fft & f_fft < 31;
+        y = fft(x, nfft, 2);
+        Pyy = 1 / (nfft * Fs) * abs(y(:,1:round(nfft/2)+1)) .^ 2; % Pow
+        Pyy = Pyy(:,f_inx);
+        f_fft = f_fft(f_inx);
+        if i_subject == 0 %% Averages
+            Pyy = squeeze(nanmean(all_spectra(:,i_chan,:,:), 1));
+        else
+            all_spectra(i_subject,i_chan,:,:) = Pyy;
+        end
+        imagesc(f_fft, f_tfr, db((Pyy), 'power'))
+        set(gca, 'YDir', 'normal')
+        xlabel('FFT Frequency (Hz)')
+        ylabel('TFR Frequency (Hz)')
+        xlim([1 30])
+        colorbar;
+    end
+    
+    fig_width = 15;
+    fig_height = 12;
+    set(gcf,'units','centimeters')
+    set(gcf,'paperunits','centimeters')
+    set(gcf, 'PaperPositionMode', 'manual');
+    set(gcf,'papersize', [fig_width fig_height])
+    set(gcf,'paperposition', [0,0,fig_width,fig_height])
+    set(gcf, 'renderer', 'painters');
+
+    fn = [exp_dir 'plots/alpha_peaks/diff_over_sum/' strrep(fname, '/', '_')];
+    print('-dpng', fn)
+end
+
+
+%% Plot alpha topography
+
+
+clear variables
+close all
+rs_setup
+
+tfr_dir = [exp_dir 'tfr/win_0.2s/'];
+
+% Read in all data
+% Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+
+    % Read in the data segmented around targets
+    behav = rs_behavior(i_subject);
+    fname = subject_info.meg{i_subject};
+    fn = [tfr_dir 'trial/' fname '/low'];
+    d = load(fn);
+    d = d.low_freq_data;
+
+    % Convert from complex fourier spec to power spec
+    d.powspctrm = abs(d.fourierspctrm) .^ 2;
+    d = rmfield(d, 'fourierspctrm');
+
+    % Read in the grad structure (to be able to combine grads)
+    fn = [exp_dir 'grad/' fname '/grad'];
+    grad = load(fn);
+    d.grad = grad.grad;
+    % Combine planar gradiometers
+    cfg = [];
+    cfg.method = 'sum';
+    cfg.updatesens = 'yes';
+    d = ft_combineplanar(cfg, d);
+
+    % Average in the alpha band
+    cfg = [];
+    cfg.trials = 'all';
+    cfg.avgoverrpt = 'yes';
+    
+%     cfg.latency = [0.5 5];
+%     cfg.avgovertime = 'yes';
+%     cfg.nanmean = 'yes';
+ 
+    cfg.frequency = [7 14];
+    cfg.avgoverfreq = 'yes';
+    cfg.nanmean = 'yes';
+ 
+    cfg.channel = 'MEG*1';
+    d_mag = ft_selectdata(cfg, d);
+    
+    cfg.channel = 'MEG*3';
+    d_grad = ft_selectdata(cfg, d);
+    
+    % Plot them
+    subplot(1,2,1)
+    cfg = [];
+    cfg.xlim = [0.5 4];
+    cfg.style = 'straight';
+    cfg.comment = 'no';
+    cfg.shading = 'interp';
+    cfg.markersymbol = '.';
+    cfg.gridscale = 200;
+    cfg.colorbar = 'South';
+    cfg.layout = chan.mag.layout;
+    ft_topoplotTFR(cfg, d_mag)
+    title('Magnetometers')
+
+    subplot(1,2,2)
+    cfg.layout = chan.grad_cmb.layout;
+    ft_topoplotTFR(cfg, d_grad)
+    title('Gradiometers')
+    
+    fn = [exp_dir 'plots/alpha_topo/' strrep(fname, '/', '_')];
+    print('-dpng', fn)
+    
+end
