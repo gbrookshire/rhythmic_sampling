@@ -18,8 +18,19 @@ segment_duration = 0.8; % seconds
 behav = rs_behavior(i_subject);
 
 % Load preprocessed data
-data_preproc = rs_preproc_ress(i_subject, 'trial');
+fname = subject_info.meg{i_subject};
+data_preproc = load([exp_dir 'preproc/trial/' fname '/preproc']);
+data_preproc = data_preproc.data;
 
+% Add a column to trialinfo for which frequency was shown on the left
+data_preproc.trialinfo(:,3) = behav.freq_left(data_preproc.trialinfo(:,2));
+
+% Select the channels that show the highest SNR
+cfg = [];
+cfg.channel = snr_roi;
+data_preproc = ft_selectdata(cfg, data_preproc);
+
+% Get some metadata
 fsample = 1 / mean(diff(data_preproc.time{1}));
 segment_width = round((segment_duration/2) * fsample);
 
@@ -30,6 +41,7 @@ cfg.taper = 'hanning';
 cfg.t_ftimwin = 6 ./ cfg.foi;
 cfg.toi = 'all';
 cfg.keeptrials = 'yes';
+cfg.pad = 'nextpow2';
 data_tfr = ft_freqanalysis(cfg, data_preproc);
 
 % Get the band-passed alpha oscillations
@@ -131,7 +143,7 @@ for i_segment = 1:size(segments, 1)
 end
 
 % Keep segments above a certain alpha-power threshold
-alpha_thresh_perc = 50;
+alpha_thresh_perc = 00; % 0 -> keep everything
 % Get average alpha power over each seg
 cfg = [];
 cfg.hilbert = 'abs';

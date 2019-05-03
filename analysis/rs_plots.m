@@ -1876,7 +1876,8 @@ xlim([1 30])
 clear variables
 close all
 
-vers = 'prct100'; % Which version of the analysis to run
+vers = '';
+% vers = 'prct100'; % Which version of the analysis to run
 %vers = 'teta_test';
 %vers = 'beta_test';
 x_lim = 0.3;
@@ -1908,7 +1909,8 @@ for i_subject = [1:height(subject_info) 0]
     end
         
     side_labels = {'left' 'right'};
-    for i_chan = 1:2
+    nchans = size(data.cond_alpha, 1);
+    for i_chan = 1:nchans
         d63 = squeeze(data.cond_tfr{i_chan, 1}.powspctrm);
         d78 = squeeze(data.cond_tfr{i_chan, 2}.powspctrm);
         x = (d63 - d78) ./ (d63 + d78);
@@ -1920,17 +1922,23 @@ for i_subject = [1:height(subject_info) 0]
         end
 
         % Plot the difference-over-sum
-        subplot(2,2,i_chan)
+        figure(1)
+        subplot(3,3,i_chan)
         imagesc(t, f_tfr, x)
+        hold on
+        plot([-1 1], 63 * [1 1], '--w')
+        plot([-1 1], 78 * [1 1], '--w')
+        hold off
         set(gca, 'YDir', 'normal')
         xlim([-1 1] * x_lim)
         xlabel('Time (s)')
-        ylabel('Frequency (Hz)')
+        ylabel('Freq (Hz)')
         colorbar('EastOutside')
-        title(side_labels{i_chan})
+        title(data.cond_alpha{i_chan,1}.label{1})
         
         % Get the spectrum of the difference-over-sum
-        subplot(2,2,i_chan+2)
+        figure(2)
+        subplot(3,3,i_chan)
         nfft = size(x, 2);
         f_fft = (1/sample_per) * (0:(nfft / 2)) / nfft;
         f_inx = 1 < f_fft & f_fft < 31;
@@ -1944,24 +1952,34 @@ for i_subject = [1:height(subject_info) 0]
             all_spectra(i_subject,i_chan,:,:) = Pyy;
         end
         imagesc(f_fft, f_tfr, db((Pyy), 'power'))
+        hold on
+        plot([-1 1], 63 * [1 1], '--w')
+        plot([-1 1], 78 * [1 1], '--w')
+        hold off
         set(gca, 'YDir', 'normal')
-        xlabel('FFT Frequency (Hz)')
-        ylabel('TFR Frequency (Hz)')
+        xlabel('FFT Freq (Hz)')
+        ylabel('TFR Freq (Hz)')
         xlim([1 30])
         colorbar;
     end
     
-    fig_width = 15;
-    fig_height = 12;
-    set(gcf,'units','centimeters')
-    set(gcf,'paperunits','centimeters')
-    set(gcf, 'PaperPositionMode', 'manual');
-    set(gcf,'papersize', [fig_width fig_height])
-    set(gcf,'paperposition', [0,0,fig_width,fig_height])
-    set(gcf, 'renderer', 'painters');
-
-    fn = [exp_dir 'plots/alpha_peaks/diff_over_sum/' strrep(fname, '/', '_')];
-    print('-dpng', fn)
+    fignames = {'tfr' 'spectra'};
+    for i_fig = 1:2
+        figure(i_fig)
+        fig_width = 30;
+        fig_height = 15;
+        set(gcf,'units','centimeters')
+        set(gcf,'paperunits','centimeters')
+        set(gcf, 'PaperPositionMode', 'manual');
+        set(gcf,'papersize', [fig_width fig_height])
+        set(gcf,'paperposition', [0,0,fig_width,fig_height])
+        set(gcf, 'renderer', 'painters');
+        fn = sprintf('%splots/alpha_peaks/%s-%s', ...
+            exp_dir, ...
+            fignames{i_fig}, ...
+            strrep(fname, '/', '_'));  
+        print('-dpng', fn)
+    end
 end
 
 
