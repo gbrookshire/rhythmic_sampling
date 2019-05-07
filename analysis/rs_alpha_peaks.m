@@ -47,9 +47,9 @@ data_tfr = ft_freqanalysis(cfg, data_preproc);
 % Get the band-passed alpha oscillations
 cfg = [];
 cfg.bpfilter = 'yes';
-cfg.bpfreq = [7 14];
-%cfg.bpfreq = [3 7]; % Test in the theta band
-%cfg.bpfreq = [15 25]; % Test in the beta band
+% cfg.bpfreq = [7 14];
+% cfg.bpfreq = [3 7]; % Test in the theta band
+cfg.bpfreq = [15 25]; % Test in the beta band
 cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
 data_alpha = ft_preprocessing(cfg, data_preproc);
 
@@ -109,7 +109,7 @@ t_whole = round(data_tfr.time, 3);
 
 % Set up Fieldtrip-style data struct for alpha
 data_seg_alpha = [];
-data_seg_alpha.label = data_preproc.label;
+data_seg_alpha.label = data_alpha.label;
 data_seg_alpha.time = {};
 data_seg_alpha.trial = {};
 
@@ -158,7 +158,7 @@ alpha_thresh_pow = prctile(avg_alpha_power, alpha_thresh_perc, 2);
 %Which trials are above each their trialwise percentile?
 alpha_pow_trial_sel = avg_alpha_power > alpha_thresh_pow;
 
-% Average within each condition, b/c the TFR objects are huge (>2.2 GB)
+% Average within each condition, b/c the TFR objects are huge
 cond_counts = nan(2,2);
 cond_alpha = cell(2,2);
 cond_tfr = cell(2,2);
