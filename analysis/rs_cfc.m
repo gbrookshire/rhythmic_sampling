@@ -1,8 +1,6 @@
 function rs_cfc(i_subject)
 
 % Run the CFC analysis for one subject
-% TODO 
-%   this can't deal with short segments. Maybe don't downsample first?
 
 rs_setup
 

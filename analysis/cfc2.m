@@ -32,8 +32,9 @@ clear wavelet
 cfc_data = nan(length(freq), ... % CarFreq x ModFreq x Chan
     nfft, ...
     length(data.label));
-% 
+
 for i_channel = 1:length(data.label)
+    disp(i_channel)
     for i_freq = 1:length(freq)
         % Each run through this takes ~1.6 sec
         % 1.6 s * 304 (channels) * 61 (freqs) = 8.25 hours
