@@ -4,14 +4,11 @@ clear variables
 close all
 rs_setup
 
-% Which TFR window to use?
-win_size = 0.2;
-win_str = sprintf('win_%.1fs', win_size);
-tfr_dir = [exp_dir 'tfr/' win_str '/'];
+tfr_dir = [exp_dir 'tfr/target/'];
 
+% Read in all data
 % Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
-agg_data = nan([height(subject_info), 204, 11, 101, 2, 2]);
-
+agg_data = nan([height(subject_info), 204, 28, 41, 2, 2]);
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -20,19 +17,14 @@ for i_subject = 1:height(subject_info)
     % Read in the data segmented around targets
     behav = rs_behavior(i_subject);
     fname = subject_info.meg{i_subject};
-    fn = [tfr_dir 'target/' fname '/low'];
+    fn = [tfr_dir fname '/low_standard'];
     d = load(fn);
     d = d.low_freq_data;
     
-    % Convert from complex fourier spec to power spec
-    d.powspctrm = abs(d.fourierspctrm) .^ 2;
-    d = rmfield(d, 'fourierspctrm');
-    
-    % Read in the grad structure (to be able to combine grads)
+    % Combine planar gradiometers
     fn = [exp_dir 'grad/' fname '/grad'];
     grad = load(fn);
     d.grad = grad.grad;
-    % Combine planar gradiometers
     cfg = [];
     cfg.method = 'sum';
     cfg.updatesens = 'yes';
@@ -60,6 +52,12 @@ for i_subject = 1:height(subject_info)
     clear d_sub
 end
 
+% Save a version of the original data
+agg_data_orig = agg_data;
+
+
+%% Find which channels are on the left/right side
+
 hmlgs = homologous_chans(true); % map left/right homologous channels
 close all
 
@@ -79,26 +77,6 @@ for i_chan = 1:length(d.label)
     right_inx(end+1) = homologous_chan_inx;
 end
 
-% Save a version of the original data
-agg_data_orig = agg_data;
-
-
-%% Normalize the power within subjects on each side
-%{
-agg_data = agg_data_orig; % Set to the original data
-for i_subject = 1:height(subject_info)
-    for i_chan = 1:length(d.label)
-        for i_freq = 1:length(d.freq)
-            x = agg_data(i_subject,i_chan,i_freq,:,:,:);
-            sd_x = std(reshape(x, [1 numel(x)]), 'omitnan');
-            m_x = nanmean(reshape(x, [1 numel(x)]));
-            z_x = (x - m_x) / sd_x;
-            agg_data(i_subject,i_chan,i_freq,:,:,:) = z_x;
-        end
-    end
-end
-%}
-
 %% Select channels for an occipital ROI
 occip_chans = {'191x' '231x' '201x' '202x' '203x' '204x'...
     '194x' '192x' '234x' '232x'};
@@ -111,8 +89,9 @@ cmb_grad_names = cellfun(...
     'UniformOutput', false);
 roi = ismember(d.label, [mag_names cmb_grad_names]);
 
+%% Plot the results -- new
+cm = flipud(lbmap(100, 'RedBlue'));
 
-% Plot the results
 for i_subject = 0:height(subject_info)
     if i_subject == 0 % Plot all subjects
         i_subject = true([1 height(subject_info)]);
@@ -124,63 +103,49 @@ for i_subject = 0:height(subject_info)
     end
     fn = [exp_dir 'plots/alpha_power/' fn];
 
-    i_plot = 1;
-    for hit = [0 1] 
-        for i_targ_side = 1:2 
-
-            % Find which channels are ipsi/contra-lateral to the target
-            switch side_labels{i_targ_side}
-                case 'left'
-                    ipsi_inx = left_inx;
-                    contra_inx = right_inx;
-                case 'right'
-                    ipsi_inx = right_inx;
-                    contra_inx = left_inx;
-                otherwise
-                    error('oops')
+    % For each side of the head
+    for i_chan_side = 1:2
+        for i_targ_side = 1:2
+            % Select channels on this side
+            if i_chan_side == 1
+                chan_side_inx = left_inx;
+            elseif i_chan_side == 2
+                chan_side_inx = right_inx;
+            else
+                error('oops')
             end
-            
             % Convert chan selection to logical inx to combine w/ ROI
-            i_inx = false([1 length(d.label)]);
-            i_inx(ipsi_inx) = true;
-            i_inx = i_inx' & roi;
-            c_inx = false([1 length(d.label)]);
-            c_inx(contra_inx) = true;
-            c_inx = c_inx' & roi;
-            clear ipsi_inx contra_inx
-
-            % Compute comparison: (Ipsi - Contra) / (Ipsi + Contra)
-            x_ipsi = agg_data(:,i_inx,:,:,i_targ_side,hit+1);
-            x_contra = agg_data(:,c_inx,:,:,i_targ_side,hit+1);
-            x_comp = (x_ipsi - x_contra) ./ (x_ipsi + x_contra);
-            % x_comp = (x_ipsi - x_contra);
-            
+            chan_inx = false([length(d.label) 1]);
+            chan_inx(chan_side_inx) = true;
+            chan_inx = chan_inx & roi;
+            % Extract the data for hits and misses
+            d_a = agg_data_orig(i_subject,chan_inx,:,:,i_targ_side,:);
+            d_h = d_a(:,:,:,:,:,2);
+            d_m = d_a(:,:,:,:,:,1);
+            % Compare hits and misses
+            d_x = (d_h - d_m) ./ (d_h + d_m);
+            % Average over channels
+            d_x = nanmean(d_x, 2);
+            % Average over subjects
+            d_x = nanmean(d_x, 1);
+            d_x = squeeze(d_x);
 
             % Plot the results
+            i_plot = (2 * (i_targ_side - 1)) + i_chan_side;
             subplot(2,2,i_plot)
-            x = squeeze(mean(nanmean(x_comp(i_subject,:,:,:), 1), 2));
-            imagesc(d.time, d.freq, x)
+            imagesc(d.time, d.freq, d_x)
+            xlim(0.7 * [-1 1])
+            xlabel('Time (s)')
+            ylabel('Freq (Hz)')
+            colorbar('EastOutside')
+            colormap(cm)
             set(gca, 'YDir', 'normal')
-            title(sprintf('Targ: %s, Hit: %i', side_labels{i_targ_side}, hit))
-%             % Fix the color scale so it's constant between all plots
-%             caxis([min(reshape(x_comp, [1 numel(x_comp)])) ...
-%                 max(reshape(x_comp, [1 numel(x_comp)]))])
-            %caxis([-1 1] * 0.5)
-            i_plot = i_plot + 1;
-        end 
+            caxis([-1 1] * max(max(abs(d_x))) * 0.75) % Center color axis
+            title(sprintf('Chans: %s, Targ: %s', ...
+                side_labels{i_chan_side}, ...
+                side_labels{i_targ_side}))
+        end
     end
     
     print('-dpng', fn)
 end
-
-
-
-
-
-
-
-
-
-
-
-
