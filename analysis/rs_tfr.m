@@ -73,7 +73,13 @@ cfg = cfg_base;
 cfg.output = 'pow';
 cfg.foi = 3:30;
 cfg.t_ftimwin = 0.5 * ones(size(cfg.foi));
-cfg.toi = -1:0.05:1;
+if strcmp(segment_type, 'target')
+    cfg.toi = -1:0.05:1;
+elseif strcmp(segment_type, 'trial')
+    cfg.toi = toi;
+else
+    error('segment type <%s> not recognized', segment_type)
+end
 cfg.pad = 7;
 cfg.padtype = 'mirror';
 low_freq_data = ft_freqanalysis(cfg, d);
