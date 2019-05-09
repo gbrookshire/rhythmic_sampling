@@ -58,6 +58,7 @@ for i_channel = 1:length(data.label)
             trial_length = size(data.trial{i_trial}, 2);
             pad_length = (ceil(trial_length / nfft) * nfft) - trial_length;
             s = data.trial{i_trial}(i_channel, :); % Raw data
+            s = detrend(s); % Detrend the data before appending NaNs
             x_padded{i_trial} = append_nan(s, pad_length);
             y_padded{i_trial} = append_nan(pwr{i_trial}, pad_length);
         end
