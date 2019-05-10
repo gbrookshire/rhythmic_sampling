@@ -872,7 +872,7 @@ for i_freq = 1:2
         x = squeeze(mean(overall_cfc(:,freq_inx,i_side,:,:), 1));
         imagesc(mf, freqs, x)
         set(gca, 'YDir', 'normal')
-        %colorbar;
+        colorbar('EastOutside');
         title(sprintf('%i Hz, %s', ...
             exp_params.tagged_freqs(i_freq), ...
             sides{i_side}))
@@ -891,7 +891,7 @@ close all
 plot(mf, db(squeeze(mean(mean(tagged, 1), 2)), 'power'), 'linewidth', 2)
 xlabel('Modulation frequency (Hz)')
 ylabel('Power (dB)')
-xlim([0 15])
+xlim([1 15])
 box off
 
 width = 5;
@@ -919,49 +919,45 @@ d = load('preproc/target/181009_b46d/181009/preproc.mat');
 channel_names = d.data.label;
 clear d
 
-% Make an occipital ROI based on SNR topographies
-snr_roi = [2032 2033 ...
-    2042 2043 ...
-    2112 2113];
-snr_roi = cellfun(@(n) ['MEG' num2str(n)], ...
-    num2cell(snr_roi), ...
-    'UniformOutput', false);
+% Only keep gradiometers - magnetometers have weird modulated noise
+snr_roi = {'MEG2032' 'MEG2033' 'MEG2042' 'MEG2043' 'MEG2112' 'MEG2113'};
 snr_roi_inx = ismember(channel_names, snr_roi);
+
+vers = 'all_chans/nodetrend/';
 
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
     fname = subject_info.meg{i_subject};
-    d = load([exp_dir 'cfc/all_chans/' fname '/cfc']);
+    d = load([exp_dir 'cfc/' vers fname '/cfc']);
     mf = d.mod_freq;
-    mf_sel = mf < 50;
+    mf_sel = (1 < mf) & (mf < 30);
     mf = mf(mf_sel);
     
-    % Average over occipital ROI
+    % Average over ROI
     x = mean(d.cfc_data(:,mf_sel,snr_roi_inx), 3);
     overall_cfc(i_subject,:,:) = x;
     
     imagesc(mf, freqs, x)
     set(gca, 'YDir', 'normal')
-    %colorbar;
+    colorbar;
     ylabel('Carrier frequency (Hz)')
     xlabel('Modulation frequency (Hz)')
-    xlim([0 50])
 
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/cfc/all_chans/' strrep(fname, '/', '_')])
+        [exp_dir 'plots/cfc/' vers strrep(fname, '/', '_')])
 end
 
 
 % Plot average over subjects
 imagesc(mf, freqs, squeeze(nanmean(overall_cfc, 1)))
 set(gca, 'YDir', 'normal')
-%colorbar;
+colorbar;
 ylabel('Carrier frequency (Hz)')
 xlabel('Modulation frequency (Hz)')
 
-print('-dpng', '-r300', [exp_dir 'plots/cfc/all_chans/avg'])
+print('-dpng', '-r300', [exp_dir 'plots/cfc/' vers 'avg'])
 
 %% Plot cross-correlation of power at the two tagged frequencies
 
@@ -1876,7 +1872,7 @@ xlim([1 30])
 clear variables
 close all
 
-vers = '';
+vers = 'indiv_chans/alpha/';
 % vers = 'prct100'; % Which version of the analysis to run
 %vers = 'teta_test';
 %vers = 'beta_test';
@@ -1893,6 +1889,8 @@ for i_subject = [1:height(subject_info) 0]
     if i_subject == 0 
         fname = 'avg';
     elseif subject_info.exclude(i_subject)
+        continue
+    elseif i_subject == 4
         continue
     else
         fname = subject_info.meg{i_subject};
@@ -1911,6 +1909,9 @@ for i_subject = [1:height(subject_info) 0]
     side_labels = {'left' 'right'};
     nchans = size(data.cond_alpha, 1);
     for i_chan = 1:nchans
+        % We're comparing the stim at 63 Hz to the stim at 78 Hz.
+        % Because these were always on opposite sides, this is equivalent
+        % to looking within each frequency and comparing stim (L-R)/(L+R)
         d63 = squeeze(data.cond_tfr{i_chan, 1}.powspctrm);
         d78 = squeeze(data.cond_tfr{i_chan, 2}.powspctrm);
         x = (d63 - d78) ./ (d63 + d78);
@@ -1920,6 +1921,8 @@ for i_subject = [1:height(subject_info) 0]
         else
             all_x(i_subject,i_chan,:,:) = x;
         end
+        
+        chan_name = data.cond_alpha{i_chan,1}.label{1};
 
         % Plot the difference-over-sum
         figure(1)
@@ -1934,7 +1937,7 @@ for i_subject = [1:height(subject_info) 0]
         xlabel('Time (s)')
         ylabel('Freq (Hz)')
         colorbar('EastOutside')
-        title(data.cond_alpha{i_chan,1}.label{1})
+        title(chan_name)
         
         % Get the spectrum of the difference-over-sum
         figure(2)
@@ -1953,18 +1956,31 @@ for i_subject = [1:height(subject_info) 0]
         end
         imagesc(f_fft, f_tfr, db((Pyy), 'power'))
         hold on
-        plot([-1 1], 63 * [1 1], '--w')
-        plot([-1 1], 78 * [1 1], '--w')
+        plot(minmax(f_fft), 63 * [1 1], '--w')
+        plot(minmax(f_fft), 78 * [1 1], '--w')
         hold off
         set(gca, 'YDir', 'normal')
         xlabel('FFT Freq (Hz)')
         ylabel('TFR Freq (Hz)')
         xlim([1 30])
         colorbar;
+        title(chan_name)
+        
+        % Plot the average alpha traces
+        figure(3)
+        subplot(3,3,i_chan)
+        for i_tfr_freq = 1:2
+            plot(t, data.cond_alpha{i_chan, i_tfr_freq}.avg)
+            hold on
+        end
+        hold off
+        xlim([-1 1] * x_lim)
+        title(chan_name)
+
     end
     
-    fignames = {'tfr' 'spectra'};
-    for i_fig = 1:2
+    fignames = {'tfr' 'spectra' 'alpha'};
+    for i_fig = 1:3
         figure(i_fig)
         fig_width = 30;
         fig_height = 15;
@@ -1974,8 +1990,9 @@ for i_subject = [1:height(subject_info) 0]
         set(gcf,'papersize', [fig_width fig_height])
         set(gcf,'paperposition', [0,0,fig_width,fig_height])
         set(gcf, 'renderer', 'painters');
-        fn = sprintf('%splots/alpha_peaks/%s-%s', ...
+        fn = sprintf('%splots/alpha_peaks/%s/%s-%s', ...
             exp_dir, ...
+            vers, ...
             fignames{i_fig}, ...
             strrep(fname, '/', '_'));  
         print('-dpng', fn)
@@ -2062,3 +2079,79 @@ for i_subject = 1:height(subject_info)
     print('-dpng', fn)
     
 end
+
+%% Identify channels where alpha decreases relative to baseline
+
+clear variables
+close all
+rs_setup
+
+%
+for i_subject = [1:height(subject_info) 0]
+    if i_subject == 0
+%         figure
+        d.tfr.powspctrm = squeeze(nanmean(overall_powspctrm, 1));
+        fname = 'avg';
+    elseif subject_info.exclude(i_subject)
+        continue
+    else
+        % Read in the data segmented around targets
+        fname = subject_info.meg{i_subject};
+        fn = [exp_dir 'tfr/trial/' fname '/baseline_alpha'];
+        d = load(fn);
+        x = d.tfr.powspctrm;
+        overall_powspctrm(i_subject,:,:,:) = x;
+    end
+
+%     subplot(4,4,i_subject)
+    cfg = [];
+    cfg.channel = snr_roi;
+    cfg.baseline = [-1 -0.5];
+    cfg.baselinetype = 'db';
+    ft_singleplotTFR(cfg, d.tfr)
+    
+    fn = [exp_dir 'plots/alpha_baseline/' strrep(fname, '/', '_')];
+    print('-dpng', fn)
+
+end
+
+%% Plot the topography of the avg response
+
+grad = load([exp_dir 'grad/' subject_info.meg{1} '/grad']);
+d.tfr.grad = grad.grad;
+
+cfg = [];
+cfg.baseline = [-1 -0.5];
+cfg.baselinetype = 'db';
+x = ft_freqbaseline(cfg, d.tfr);
+
+cfg = [];
+cfg.method = 'sum';
+x = ft_combineplanar(cfg, x);
+
+% ROI to highlight
+high_alpha_chans = {'204x', '192x', '194x', '191x',...
+                    '203x', '234x', '232x', '231x',};
+mag_names = cellfun(@(s) ['MEG' s(1:(end-1)) '1'], ...
+    high_alpha_chans, ...
+    'UniformOutput', false);
+cmb_grad_names = cellfun(...
+    @(s) ['MEG' s(1:(end-1)) '2+' s(1:(end-1)) '3'], ...
+    high_alpha_chans, ...
+    'UniformOutput', false);
+
+cfg = [];
+cfg.xlim = [0.4 0.8];
+cfg.ylim = [7 14];
+cfg.layout = chan.grad_cmb.layout;
+cfg.style = 'straight';
+cfg.highlight = 'on';
+cfg.highlightchannel = cmb_grad_names;
+cfg.highlightsymbol = '.';
+cfg.highlightsize = 15;
+ft_topoplotTFR(cfg, x)
+title('')
+
+fn = [exp_dir 'plots/alpha_baseline/topo'];
+print('-dpng', fn)
+
