@@ -47,9 +47,9 @@ data_tfr = ft_freqanalysis(cfg, data_preproc);
 % Get the band-passed alpha oscillations
 cfg = [];
 cfg.bpfilter = 'yes';
-% cfg.bpfreq = [7 14];
+cfg.bpfreq = [7 14];
 % cfg.bpfreq = [3 7]; % Test in the theta band
-cfg.bpfreq = [15 25]; % Test in the beta band
+% cfg.bpfreq = [15 25]; % Test in the beta band
 cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
 data_alpha = ft_preprocessing(cfg, data_preproc);
 
@@ -107,11 +107,12 @@ end
 t_seg = -(segment_duration/2):(1/fsample):(segment_duration/2);
 t_whole = round(data_tfr.time, 3);
 
-% Set up Fieldtrip-style data struct for alpha
+% Set up Fieldtrip-style data structs for raw data and alpha
 data_seg_alpha = [];
 data_seg_alpha.label = data_alpha.label;
 data_seg_alpha.time = {};
 data_seg_alpha.trial = {};
+data_seg_raw = data_seg_alpha;
 
 % Set up FT-style data struct for TFR
 data_seg_tfr = data_tfr;
@@ -132,6 +133,10 @@ for i_segment = 1:size(segments, 1)
     endsamp = seg_info(5);
     t_beg = seg_info(6);
     t_end = seg_info(7);
+    % Get the raw data
+    x = data_preproc.trial{preproc_trial_num}(:,beginsamp:endsamp);
+    data_seg_raw.trial{i_segment} = x;
+    data_seg_raw.time{i_segment} = t_seg;
     % Get the alpha-filtered data
     x = data_alpha.trial{preproc_trial_num}(:,beginsamp:endsamp);
     data_seg_alpha.trial{i_segment} = x;
@@ -155,12 +160,12 @@ data_seg_alpha_power = ft_selectdata(cfg, data_seg_alpha_power);
 avg_alpha_power = [data_seg_alpha_power.trial{:}];
 % Get the percentiles for each channel
 alpha_thresh_pow = prctile(avg_alpha_power, alpha_thresh_perc, 2);
-%Which trials are above each their trialwise percentile?
+% Which trials are above each their trialwise percentile?
 alpha_pow_trial_sel = avg_alpha_power > alpha_thresh_pow;
 
 % Average within each condition, b/c the TFR objects are huge
 cond_counts = nan(2,2);
-cond_alpha = cell(2,2);
+cond_raw = cell(2,2);
 cond_tfr = cell(2,2);
 % Get the RFT freq on the left side for each segment
 preproc_trial_nums = segments(:,1);
@@ -184,10 +189,13 @@ for i_chan = 1:length(data_preproc.label)
         % Combine trial selections
         trial_sel = chan_trial_sel & rft_trial_sel & alpha_sel;
         cond_counts(i_chan, i_rft_freq) = sum(trial_sel);
-        % Average over alpha activity
+        % Average over raw activity
         cfg = [];
         cfg.trials = trial_sel;
-        cfg.channel = data_seg_alpha.label(i_chan);
+        cfg.channel = data_seg_raw.label(i_chan);
+        avg_raw = ft_timelockanalysis(cfg, data_seg_raw);
+        cond_raw{i_chan, i_rft_freq} = avg_raw;
+        % Average over BP-filtered alpha activity
         avg_alpha = ft_timelockanalysis(cfg, data_seg_alpha);
         cond_alpha{i_chan, i_rft_freq} = avg_alpha;
         % Average over TFRs
@@ -204,4 +212,4 @@ end
 
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
-save(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments')
+save(fn, 'cond_counts', 'cond_raw', 'cond_alpha', 'cond_tfr', 'segments')
