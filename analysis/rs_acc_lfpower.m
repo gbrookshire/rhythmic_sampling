@@ -103,6 +103,8 @@ for i_subject = 0:height(subject_info)
     end
     fn = [exp_dir 'plots/alpha_power/' fn];
 
+    % Compare hits and misses
+    %{
     % For each side of the head
     for i_chan_side = 1:2
         for i_targ_side = 1:2
@@ -146,6 +148,62 @@ for i_subject = 0:height(subject_info)
                 side_labels{i_targ_side}))
         end
     end
+    %}
+    
+    % Compare left-hits and right-hits
+    % For each side of the head
+    clear d_agg
+    for i_chan_side = 1:2
+        % Select channels on this side
+        if i_chan_side == 1
+            chan_side_inx = left_inx;
+        elseif i_chan_side == 2
+            chan_side_inx = right_inx;
+        else
+            error('oops')
+        end
+        % Convert chan selection to logical inx to combine w/ ROI
+        chan_inx = false([length(d.label) 1]);
+        chan_inx(chan_side_inx) = true;
+        chan_inx = chan_inx & roi;
+        % Extract the data for hits and misses
+        d_a = agg_data_orig(i_subject,chan_inx,:,:,:,2);
+        d_l = d_a(:,:,:,:,1,:);
+        d_r = d_a(:,:,:,:,2,:);
+        % Compare left-hits vs right-hits
+        d_x = (d_l - d_r) ./ (d_l + d_r);
+        % Average over channels
+        d_x = nanmean(d_x, 2);
+        % Average over subjects
+        d_x = nanmean(d_x, 1);
+        d_x = squeeze(d_x);
+        d_agg(:,:,i_chan_side) = d_x;
+
+        % Plot the results
+        i_plot = i_chan_side;
+        subplot(3,1,i_plot)
+        imagesc(d.time, d.freq, d_x)
+        xlim(0.7 * [-1 1])
+%         xlabel('Time (s)')
+        ylabel('Freq (Hz)')
+        colorbar('EastOutside')
+        colormap(cm)
+        set(gca, 'YDir', 'normal')
+        caxis([-1 1] * max(max(abs(d_x))) * 0.75) % Center color axis
+        title(sprintf('Chans: %s', ...
+            side_labels{i_chan_side}))
+    end
+    % Difference between L & R channels
+    subplot(3,1,3)
+    imagesc(d.time, d.freq, d_agg(:,:,1) - d_agg(:,:,2))
+    xlim(0.7 * [-1 1])
+    xlabel('Time (s)')
+    ylabel('Freq (Hz)')
+    colorbar('EastOutside')
+    colormap(cm)
+    set(gca, 'YDir', 'normal')
+    caxis([-1 1] * max(max(abs(d_x))) * 0.75) % Center color axis
+    title('Difference')
     
     print('-dpng', fn)
 end
