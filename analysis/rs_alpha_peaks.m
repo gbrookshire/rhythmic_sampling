@@ -14,6 +14,17 @@ v2
 rs_setup
 segment_duration = 0.8; % seconds
 
+%{
+% SIMULATED data
+fname = 'SIMULATED';
+i_subject = 1; % For RTs
+data_preproc = rs_simulate_alpha_peaks();
+data_preproc.trialinfo(:,3) = randsample(...
+    exp_params.tagged_freqs, ...
+    length(data_preproc.trial), ...
+    true);
+%}
+
 % Load behavioral data (to get RTs)
 behav = rs_behavior(i_subject);
 
@@ -21,7 +32,6 @@ behav = rs_behavior(i_subject);
 fname = subject_info.meg{i_subject};
 data_preproc = load([exp_dir 'preproc/trial/' fname '/preproc']);
 data_preproc = data_preproc.data;
-
 % Add a column to trialinfo for which frequency was shown on the left
 data_preproc.trialinfo(:,3) = behav.freq_left(data_preproc.trialinfo(:,2));
 
@@ -47,9 +57,9 @@ data_tfr = ft_freqanalysis(cfg, data_preproc);
 % Get the band-passed alpha oscillations
 cfg = [];
 cfg.bpfilter = 'yes';
-cfg.bpfreq = [7 14];
+% cfg.bpfreq = [7 14];
 % cfg.bpfreq = [3 7]; % Test in the theta band
-% cfg.bpfreq = [15 25]; % Test in the beta band
+cfg.bpfreq = [15 25]; % Test in the beta band
 cfg.bpfilttype = 'but'; %FIRLS get a warning: not recommended for neural signals
 data_alpha = ft_preprocessing(cfg, data_preproc);
 
@@ -210,6 +220,5 @@ for i_chan = 1:length(data_preproc.label)
 end
 
 
-fname = subject_info.meg{i_subject};
 fn = [exp_dir 'alpha_peaks/' strrep(fname, '/', '_')];
 save(fn, 'cond_counts', 'cond_raw', 'cond_alpha', 'cond_tfr', 'segments')
