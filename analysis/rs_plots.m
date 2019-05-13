@@ -721,7 +721,7 @@ print('-dpng', '-r300', ...
     [exp_dir 'plots/stim_onset/' win_str '/overall'])
 
 
-%% Simulated data - example trial
+%% Simulated data - theta-band modulation
 
 d = rs_simulate_flicker();
 
@@ -739,6 +739,25 @@ xlim([2 3])
 print('-dpng', '-r300', ...
     [exp_dir 'plots/simulated/example'])
 
+
+%% Simulated data - alpha phase coding
+
+d = rs_simulate_alpha_peaks();
+
+i_trial = 1;
+
+t = d.time{i_trial};
+plot(t, d.trial{i_trial}(1,:), '-r', ...
+    t, d.trial{i_trial}(2,:) + 1, '-', ...
+    t, d.trial{i_trial}(3,:) + 2, '-b')
+xlim([1 2])
+xlabel('Time (s)')
+ylabel('Amplitude')
+yticks((1:3) - 0.5)
+yticklabels(d.label)
+box('off')
+
+print('-dpng', [exp_dir 'plots/alpha_peaks/simulation']);
 
 %% Plot spectra the envelope of tagged frequencies
 
@@ -1872,10 +1891,7 @@ xlim([1 30])
 clear variables
 close all
 
-vers = 'indiv_chans/alpha/';
-% vers = 'prct100'; % Which version of the analysis to run
-%vers = 'teta_test';
-%vers = 'beta_test';
+vers = 'indiv_chans/theta/';
 x_lim = 0.3;
 
 
@@ -1885,20 +1901,22 @@ rft_freqs = exp_params.tagged_freqs;
 clear all_spectra
 clear all_x
 
-for i_subject = [1:height(subject_info) 0]
+for i_subject = inf %[1:height(subject_info) 0]
     if i_subject == 0 
         fname = 'avg';
+    elseif i_subject == inf
+        fname = 'SIMULATED';
+        fn = [exp_dir 'alpha_peaks/' vers '/' strrep(fname, '/', '_')];
+        data = load(fn);
     elseif subject_info.exclude(i_subject)
-        continue
-    elseif i_subject == 4
         continue
     else
         fname = subject_info.meg{i_subject};
         fn = [exp_dir 'alpha_peaks/' vers '/' strrep(fname, '/', '_')];
-        data = load(fn, 'cond_counts', 'cond_alpha', 'cond_tfr', 'segments');
+        data = load(fn);
     end
     
-    if i_subject == 1
+    if i_subject == inf
         t = data.cond_tfr{1,1}.time;
         t_inx = (-x_lim <= t) & (t <= x_lim);
         f_tfr = data.cond_tfr{1,1}.freq;
@@ -1918,6 +1936,8 @@ for i_subject = [1:height(subject_info) 0]
         x = x(:,t_inx);
         if i_subject == 0 %% Averages
             x = squeeze(nanmean(all_x(:,i_chan,:,:), 1));
+        elseif i_subject == inf
+            disp('Simulated data')
         else
             all_x(i_subject,i_chan,:,:) = x;
         end
@@ -1951,6 +1971,8 @@ for i_subject = [1:height(subject_info) 0]
         f_fft = f_fft(f_inx);
         if i_subject == 0 %% Averages
             Pyy = squeeze(nanmean(all_spectra(:,i_chan,:,:), 1));
+        elseif i_subject == inf
+            disp('Simulated')
         else
             all_spectra(i_subject,i_chan,:,:) = Pyy;
         end
