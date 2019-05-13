@@ -14,26 +14,25 @@ v2
 rs_setup
 segment_duration = 0.8; % seconds
 
-%{
-% SIMULATED data
-fname = 'SIMULATED';
-i_subject = 1; % For RTs
-data_preproc = rs_simulate_alpha_peaks();
-data_preproc.trialinfo(:,3) = randsample(...
-    exp_params.tagged_freqs, ...
-    length(data_preproc.trial), ...
-    true);
-%}
-
-% Load behavioral data (to get RTs)
-behav = rs_behavior(i_subject);
-
-% Load preprocessed data
-fname = subject_info.meg{i_subject};
-data_preproc = load([exp_dir 'preproc/trial/' fname '/preproc']);
-data_preproc = data_preproc.data;
-% Add a column to trialinfo for which frequency was shown on the left
-data_preproc.trialinfo(:,3) = behav.freq_left(data_preproc.trialinfo(:,2));
+if i_subject == inf
+    % SIMULATED data
+    fname = 'SIMULATED';
+    behav = rs_behavior(1);
+    data_preproc = rs_simulate_alpha_peaks();
+    data_preproc.trialinfo(:,3) = randsample(...
+        exp_params.tagged_freqs, ...
+        length(data_preproc.trial), ...
+        true);
+else
+    % Load behavioral data (to get RTs)
+    behav = rs_behavior(i_subject);
+    % Load preprocessed data
+    fname = subject_info.meg{i_subject};
+    data_preproc = load([exp_dir 'preproc/trial/' fname '/preproc']);
+    data_preproc = data_preproc.data;
+    % Add a column to trialinfo for which frequency was shown on the left
+    data_preproc.trialinfo(:,3) = behav.freq_left(data_preproc.trialinfo(:,2));
+end
 
 % Select the channels that show the highest SNR
 cfg = [];
