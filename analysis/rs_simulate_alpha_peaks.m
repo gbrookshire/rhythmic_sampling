@@ -43,7 +43,7 @@ for i_trial = 1:n_trials
     y = y + x_filt;
     
     % Add noise
-    noise_amp = 0.0;
+    noise_amp = 0.20;
     y = y + (noise_amp * rand(size(y)));   
     
     trials{i_trial} = y;
