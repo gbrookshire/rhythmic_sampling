@@ -50,25 +50,28 @@ for i_targ_side = 1:2
         cfg = [];
         cfg.trials = trial_sel;
         d_sub = ft_selectdata(cfg, d);
-
-        % HP filter 
-        hp_freq = 2; % Hz
-        filt_order = 5;
-        fsample = mean(diff(d.time)) ^ -1;
-        nyq = fsample / 2;
-        [b, a] = butter(filt_order, hp_freq / nyq, 'high');
         pwr = d_sub.powspctrm;
-        pwr_filt = nan(size(d_sub.powspctrm));
-        for i_trial = 1:size(pwr, 1)
-            for i_channel = 1:length(d.label)
-                for i_freq = 1:length(d.freq)
-                    x = squeeze(pwr(i_trial,i_channel,i_freq,:));
-                    x = filtfilt(b, a, x);
-                    pwr_filt(i_trial,i_channel,i_freq,:) = x;
-                end
-            end
-        end
-        clear pwr
+        
+        pwr_filt = pwr; clear pwr;
+        
+%         % HP filter
+%         warning('HP filtering power time-courses at 2 Hz!')
+%         hp_freq = 2; % Hz
+%         filt_order = 5;
+%         fsample = mean(diff(d.time)) ^ -1;
+%         nyq = fsample / 2;
+%         [b, a] = butter(filt_order, hp_freq / nyq, 'high');
+%         pwr_filt = nan(size(d_sub.powspctrm));
+%         for i_trial = 1:size(pwr, 1)
+%             for i_channel = 1:length(d.label)
+%                 for i_freq = 1:length(d.freq)
+%                     x = squeeze(pwr(i_trial,i_channel,i_freq,:));
+%                     x = filtfilt(b, a, x);
+%                     pwr_filt(i_trial,i_channel,i_freq,:) = x;
+%                 end
+%             end
+%         end
+%         clear pwr
         
         % Cut out transients (don't have to worry about that for target-seg)
 
