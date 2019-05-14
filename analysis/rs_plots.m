@@ -1503,6 +1503,55 @@ hold off
 fn = sprintf('targ-non-diff_win%.1fs_phase', win_size);
 print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
 
+%% Pairwise phase consistency metric (PCM) following Landau et al 2015
+
+% From Landau et al (2015)
+% This phase consistency metric (PCM) assumes a value of -1 if target 
+% events leading to hits versus misses are preceded by perfectly opposing 
+% LGA phases.  It  assumes  a  value  of  1  if  target  events  leading  
+% to hits versus misses are preceded by perfectly aligned LGA phases.
+
+clear variables
+close all
+rs_setup
+
+% Read in the data
+pcm = nan(height(subject_info), 33); % Subject * Freq
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    [f, c] = rs_pcm(i_subject);
+    pcm(i_subject,:) = c;   
+end
+
+% Simple stats
+[h, p, ci] = ttest(pcm);
+
+% Plot it
+% subplot(1,2,1)
+fill([f, fliplr(f)], [ci(1,:) fliplr(ci(2,:))], ...
+    'b', 'edgecolor', 'none', 'facealpha', 0.3)
+hold on
+% plot(f, pcm, '-', 'LineWidth', 0.5, 'color', [1 1 1] * 0.6)
+hold on
+plot(f, nanmean(pcm, 1), '-b', 'LineWidth', 2)
+plot([min(f) max(f)], [0 0], '-k')
+hold off
+xlim([1 20])
+xlabel('Frequency (Hz)')
+ylabel('PCM')
+
+% % Plot correlation of PCM and RFT amplitude
+% rri = rs_rft_responsivness();
+% subplot(1,2,2)
+% plot(pcm(:,f==4.6875), rri, 'ok')
+% xlabel('PCM')
+% ylabel('RRI')
+
+print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/pcm.png'])
+
+
 
 %% Hit rate as a function of LF phase (analysis like Fiebelkorn et al 2018)
 
@@ -1891,10 +1940,10 @@ xlim([1 30])
 clear variables
 close all
 
-vers = 'indiv_chans/theta/';
+vers = 'indiv_chans/beta/';
 x_lim = 0.3;
 
-
+ft_p[re
 rs_setup
 rft_freqs = exp_params.tagged_freqs;
 
