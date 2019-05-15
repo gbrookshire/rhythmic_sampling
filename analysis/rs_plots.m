@@ -1940,17 +1940,16 @@ xlim([1 30])
 clear variables
 close all
 
-vers = 'indiv_chans/beta/';
+vers = 'overlap/indiv_chans/alpha/';
 x_lim = 0.3;
 
-ft_p[re
 rs_setup
 rft_freqs = exp_params.tagged_freqs;
 
 clear all_spectra
 clear all_x
 
-for i_subject = inf %[1:height(subject_info) 0]
+for i_subject = [1:height(subject_info) 0] %inf
     if i_subject == 0 
         fname = 'avg';
     elseif i_subject == inf
@@ -1965,7 +1964,7 @@ for i_subject = inf %[1:height(subject_info) 0]
         data = load(fn);
     end
     
-    if i_subject == inf
+    if (i_subject == 1) || (i_subject == inf)
         t = data.cond_tfr{1,1}.time;
         t_inx = (-x_lim <= t) & (t <= x_lim);
         f_tfr = data.cond_tfr{1,1}.freq;
@@ -1993,6 +1992,69 @@ for i_subject = inf %[1:height(subject_info) 0]
         
         chan_name = data.cond_alpha{i_chan,1}.label{1};
 
+        % Plot details
+        n_rows = 3;
+        n_cols = 3;
+        space = 0.07;
+        subplot_width = (1 / n_rows) - space - 0.01;
+        subplot_height = (1 / n_cols) - space - 0.01;
+        tfr_height = subplot_height * 0.67;
+        trace_height = subplot_height * 0.33;
+        i_col = ceil(i_chan / n_cols);
+        i_row = mod(i_chan, n_rows);
+        if i_row == 0
+            i_row = 3;
+        end
+        xpos = space + (i_row - 1) * (space + subplot_width);
+        ypos = space + (i_col - 1) * (space + subplot_height);
+
+         % Plot the trace
+        subplot('position', [xpos, ypos, subplot_width, trace_height])
+         for i_tfr_freq = 1:2
+            plot(t, data.cond_alpha{i_chan, i_tfr_freq}.avg)
+            hold on
+        end
+        hold off
+        xlim([-1 1] * x_lim)
+        xlabel('Time (s)')
+        ylabel('Amp (T)')
+        y_max = max(data.cond_alpha{i_chan,i_tfr_freq}.avg);
+        scaler = floor(log10(y_max));
+        ylims = ylim;
+
+        % Plot the difference-over sum
+        subplot('position', [xpos, ypos+trace_height, subplot_width, tfr_height])
+        imagesc(t, f_tfr, x)
+        hold on
+        plot([-1 1], 63 * [1 1], '--w')
+        plot([-1 1], 78 * [1 1], '--w')
+        hold off
+        set(gca, 'YDir', 'normal')
+        xlim([-1 1] * x_lim)
+        xticks([])
+        ylabel('Freq (Hz)')
+        h = colorbar('East');
+        cb_pos = get(h, 'Position');
+        set(h, 'Position',...
+            [cb_pos(1)+0.05 cb_pos(2) cb_pos(3)/4 cb_pos(4)]);
+%         title(chan_name)     
+    end
+
+    fig_width = 20;
+    fig_height = 20;
+    set(gcf,'units','centimeters')
+    set(gcf,'paperunits','centimeters')
+    set(gcf, 'PaperPositionMode', 'manual');
+    set(gcf,'papersize', [fig_width fig_height])
+    set(gcf,'paperposition', [0,0,fig_width,fig_height])
+    set(gcf, 'renderer', 'painters');
+    fn = sprintf('%splots/alpha_peaks/%s/%s', ...
+        exp_dir, ...
+        vers, ...
+        strrep(fname, '/', '_'));  
+    print('-dpng', fn)
+    
+        %{
         % Plot the difference-over-sum
         figure(1)
         subplot(3,3,i_chan)
@@ -2047,8 +2109,8 @@ for i_subject = inf %[1:height(subject_info) 0]
         hold off
         xlim([-1 1] * x_lim)
         title(chan_name)
-
     end
+
     
     fignames = {'tfr' 'spectra' 'alpha'};
     for i_fig = 1:3
@@ -2068,6 +2130,9 @@ for i_subject = inf %[1:height(subject_info) 0]
             strrep(fname, '/', '_'));  
         print('-dpng', fn)
     end
+    
+    %}
+
 end
 
 
