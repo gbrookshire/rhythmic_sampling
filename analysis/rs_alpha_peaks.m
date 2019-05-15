@@ -99,8 +99,7 @@ for i_preproc_trial = 1:length(data_alpha.trial)
         endings(chuck_segments) = [];
         t_beg(chuck_segments) = [];
         t_end(chuck_segments) = [];
-        % Round to the nearest ms and go slightly before
-        % To make sure this catches the right samples
+        % Round to the nearest ms
         t_beg = round(t_beg, 3);
         t_end = round(t_end, 3);
         % Save the remaining segments
@@ -109,6 +108,29 @@ for i_preproc_trial = 1:length(data_alpha.trial)
         segments = [segments; s];
     end
 end
+
+% Don't let the segments overlap
+keep_seg = nan(size(segments, 1), 1);
+prev_seg = nan(1, size(segments, 2));
+for i_seg = 1:size(segments, 1)
+    this_seg = segments(i_seg, :);
+    % Is this from the same trial and channel?
+    if (this_seg(1) == prev_seg(1)) && (this_seg(2) == prev_seg(2))
+        % If so, check whether this segment overlaps with the previous one
+        if this_seg(6) < prev_seg(7)
+            % If it overlaps, don't keep this segment
+            keep_seg(i_seg) = false;
+        else
+            % If it doesn't overlap, keep it
+            keep_seg(i_seg) = true;
+        end
+    else
+        % If this is a new trial or channel, keep this segment
+        keep_seg(i_seg) = true;
+    end
+    prev_seg = this_seg;
+end
+segments = segments(boolean(keep_seg), :);
 
 % Snip the MEG data out
 
