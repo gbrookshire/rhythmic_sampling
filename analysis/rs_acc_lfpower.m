@@ -4,11 +4,11 @@ clear variables
 close all
 rs_setup
 
-tfr_dir = [exp_dir 'tfr/target/'];
-
+tfr_dir = [exp_dir 'tfr/lf_0.3s/'];
+%%
 % Read in all data
 % Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
-agg_data = nan([height(subject_info), 304, 28, 41, 2, 2]);
+agg_data = nan([height(subject_info), 304, 28, 51, 2, 2]);
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -56,7 +56,7 @@ end
 agg_data_orig = agg_data;
 
 
-%% Find which channels are on the left/right side
+% Find which channels are on the left/right side
 
 hmlgs = homologous_chans(); % map left/right homologous channels
 close all
@@ -77,7 +77,7 @@ for i_chan = 1:length(d.label)
     right_inx(end+1) = homologous_chan_inx;
 end
 
-%% Select channels for an ROI
+% Select channels for an ROI
 high_alpha_chans = {'192x', '194x', '191x',...
                     '234x', '232x', '231x',};
 chan_names = {};
