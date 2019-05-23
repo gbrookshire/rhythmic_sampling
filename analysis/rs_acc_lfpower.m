@@ -8,7 +8,7 @@ tfr_dir = [exp_dir 'tfr/target/'];
 
 % Read in all data
 % Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
-agg_data = nan([height(subject_info), 204, 28, 41, 2, 2]);
+agg_data = nan([height(subject_info), 304, 28, 41, 2, 2]);
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -21,14 +21,14 @@ for i_subject = 1:height(subject_info)
     d = load(fn);
     d = d.low_freq_data;
     
-    % Combine planar gradiometers
-    fn = [exp_dir 'grad/' fname '/grad'];
-    grad = load(fn);
-    d.grad = grad.grad;
-    cfg = [];
-    cfg.method = 'sum';
-    cfg.updatesens = 'yes';
-    d = ft_combineplanar(cfg, d);
+%     % Combine planar gradiometers
+%     fn = [exp_dir 'grad/' fname '/grad'];
+%     grad = load(fn);
+%     d.grad = grad.grad;
+%     cfg = [];
+%     cfg.method = 'sum';
+%     cfg.updatesens = 'yes';
+%     d = ft_combineplanar(cfg, d);
 
     % Information about each trial
     trial_numbers = d.trialinfo(:,2);
@@ -58,7 +58,7 @@ agg_data_orig = agg_data;
 
 %% Find which channels are on the left/right side
 
-hmlgs = homologous_chans(true); % map left/right homologous channels
+hmlgs = homologous_chans(); % map left/right homologous channels
 close all
 
 % Compare channels
@@ -78,16 +78,15 @@ for i_chan = 1:length(d.label)
 end
 
 %% Select channels for an ROI
-high_alpha_chans = {'204x', '192x', '194x', '191x',...
-                    '203x', '234x', '232x', '231x',};
-mag_names = cellfun(@(s) ['MEG' s(1:(end-1)) '1'], ...
-    high_alpha_chans, ...
-    'UniformOutput', false);
-cmb_grad_names = cellfun(...
-    @(s) ['MEG' s(1:(end-1)) '2+' s(1:(end-1)) '3'], ...
-    high_alpha_chans, ...
-    'UniformOutput', false);
-roi = ismember(d.label, [mag_names cmb_grad_names]);
+high_alpha_chans = {'192x', '194x', '191x',...
+                    '234x', '232x', '231x',};
+chan_names = {};
+for chan_num = 2:3 % Only keep gradiometers
+    chan_names = [chan_names ...
+        cellfun(@(s) ['MEG' s(1:(end-1)) num2str(chan_num)], ...
+        high_alpha_chans, 'UniformOutput', false)];
+end
+roi = ismember(d.label, chan_names);
 
 %% Plot the results
 cm = flipud(lbmap(100, 'RedBlue'));
@@ -154,6 +153,7 @@ for i_subject = 0%0:height(subject_info)
     % For each side of the head
     clear d_agg
     clear d_comp
+    figure(1)
     for i_chan_side = 1:2
         % Select channels on this side
         if i_chan_side == 1
@@ -222,7 +222,7 @@ for i_subject = 0%0:height(subject_info)
                 d_p(i_freq, i_time) = p;
             end
         end
-        figure
+        figure(2)
         imagesc(d.time, d.freq, log10(d_p))
         hold on
         contour(d.time, d.freq, d_p, [0 0.01], ...
