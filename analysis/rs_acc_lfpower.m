@@ -92,7 +92,7 @@ roi = ismember(d.label, [mag_names cmb_grad_names]);
 %% Plot the results
 cm = flipud(lbmap(100, 'RedBlue'));
 
-for i_subject = 0:height(subject_info)
+for i_subject = 0%0:height(subject_info)
     if i_subject == 0 % Plot all subjects
         i_subject = true([1 height(subject_info)]);
         fn = 'avg';
@@ -153,6 +153,7 @@ for i_subject = 0:height(subject_info)
     % Compare left-hits and right-hits
     % For each side of the head
     clear d_agg
+    clear d_comp
     for i_chan_side = 1:2
         % Select channels on this side
         if i_chan_side == 1
@@ -174,6 +175,8 @@ for i_subject = 0:height(subject_info)
         d_x = (d_l - d_r) ./ (d_l + d_r);
         % Average over channels
         d_x = nanmean(d_x, 2);
+        % Hold onto this for doing simple stats
+        d_comp(i_chan_side, :, :, :) = squeeze(d_x);
         % Average over subjects
         d_x = nanmean(d_x, 1);
         d_x = squeeze(d_x);
@@ -184,7 +187,6 @@ for i_subject = 0:height(subject_info)
         subplot(3,1,i_plot)
         imagesc(d.time, d.freq, d_x)
         xlim(0.7 * [-1 1])
-%         xlabel('Time (s)')
         ylabel('Freq (Hz)')
         colorbar('EastOutside')
         colormap(cm)
@@ -204,6 +206,34 @@ for i_subject = 0:height(subject_info)
     set(gca, 'YDir', 'normal')
     caxis([-1 1] * max(max(abs(d_x))) * 0.75) % Center color axis
     title('Difference')
-    
     print('-dpng', fn)
+    
+    % Simple stats: a t-value map
+    if endsWith(fn, 'avg')
+        d_p = nan(size(d_x));
+        for i_time = 1:size(d_comp, 4)
+            for i_freq = 1:size(d_comp, 3)
+                a = squeeze(d_comp(1,:,i_freq,i_time));
+                b = squeeze(d_comp(2,:,i_freq,i_time));
+                if all(isnan(a))
+                    continue
+                end
+                [~,p] = ttest(a,b);
+                d_p(i_freq, i_time) = p;
+            end
+        end
+        figure
+        imagesc(d.time, d.freq, log10(d_p))
+        hold on
+        contour(d.time, d.freq, d_p, [0 0.01], ...
+            'color', 'r', 'LineWidth', 1.5);
+        hold off
+        xlim(0.7 * [-1 1])
+        xlabel('Time (s)')
+        ylabel('Freq (Hz)')
+        colorbar('EastOutside')
+        set(gca, 'YDir', 'normal')
+        print('-dpng', [fn '-pvals'])
+    end
+    
 end
