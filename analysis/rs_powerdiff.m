@@ -1,4 +1,4 @@
-function out = rs_powerdiff(i_subject, win_size, segment_type)
+function out = rs_powerdiff(i_subject, win_size, segment_type, k_bootstrap)
 
 % Get the ratio of normalized power at each side
 %
@@ -13,6 +13,7 @@ function out = rs_powerdiff(i_subject, win_size, segment_type)
 
 rs_setup
 
+% i_subject = 1;
 % segment_type = 'target'; % target | trial
 % win_size = 0.2;
 
@@ -26,12 +27,27 @@ fn = [tfr_dir fname '/high'];
 d = load(fn);
 d = d.high_freq_data;
 
+% Z-score power in each channel and frequency separately
+pwr = d.powspctrm;
+z = nan(size(pwr));
+for i_freq = 1:length(d.freq)
+    for i_chan = 1:length(d.label)
+        x = pwr(:,i_chan,i_freq,:);
+        x_mean = nanmean(reshape(x, [1 numel(x)]));
+        x_std = nanstd(reshape(x, [1 numel(x)]));
+        z(:,i_chan,i_freq,:) = (x - x_mean) ./ x_std;
+    end
+end
+clear pwr
+
 % Load the behavioral data
 behav = rs_behavior(i_subject);
 
 % Main analysis
 sides = {'left' 'right'};
-powdiff = nan(size(d.powspctrm, 1), length(d.time));
+powdiff_hit = nan(0, length(d.time));
+powdiff_miss = nan(0, length(d.time));
+
 for i_targ_side = 1:2
         
     % Select trials with the target on this side
@@ -40,97 +56,77 @@ for i_targ_side = 1:2
     targ_side_sel = strcmp(targ_side, behav.target_side(trial_num));
 
     for i_targ_freq = 1:2
-
-        % Select targets that appeared in stimuli tagged at this freq
         targ_freq = exp_params.tagged_freqs(i_targ_freq);
-        targ_freq_sel = targ_freq == behav.target_side_freq(trial_num);
+        
+        for hit = 0:1
+            hit_sel = d.trialinfo(:,1) == hit;
 
-        % Get the power timecourse
-        trial_sel = targ_side_sel & targ_freq_sel;
-        cfg = [];
-        cfg.trials = trial_sel;
-        d_sub = ft_selectdata(cfg, d);
-        pwr = d_sub.powspctrm;
-        
-        pwr_filt = pwr; clear pwr;
-        
-%         % HP filter
-%         warning('HP filtering power time-courses at 2 Hz!')
-%         hp_freq = 2; % Hz
-%         filt_order = 5;
-%         fsample = mean(diff(d.time)) ^ -1;
-%         nyq = fsample / 2;
-%         [b, a] = butter(filt_order, hp_freq / nyq, 'high');
-%         pwr_filt = nan(size(d_sub.powspctrm));
-%         for i_trial = 1:size(pwr, 1)
-%             for i_channel = 1:length(d.label)
-%                 for i_freq = 1:length(d.freq)
-%                     x = squeeze(pwr(i_trial,i_channel,i_freq,:));
-%                     x = filtfilt(b, a, x);
-%                     pwr_filt(i_trial,i_channel,i_freq,:) = x;
+            % Select targets that appeared in stimuli tagged at this freq
+            targ_freq_sel = targ_freq == behav.target_side_freq(trial_num);
+
+            % Get the power timecourse
+            trial_sel = targ_side_sel & targ_freq_sel & hit_sel;
+            z_sub = z(trial_sel,:,:,:);
+            
+%             % HP filter
+%             warning('HP filtering power time-courses at 2 Hz!')
+%             hp_freq = 2; % Hz
+%             filt_order = 5;
+%             fsample = mean(diff(d.time)) ^ -1;
+%             nyq = fsample / 2;
+%             [b, a] = butter(filt_order, hp_freq / nyq, 'high');
+%             pwr_filt = nan(size(d_sub.powspctrm));
+%             for i_trial = 1:size(pwr, 1)
+%                 for i_channel = 1:length(d.label)
+%                     for i_freq = 1:length(d.freq)
+%                         x = squeeze(pwr(i_trial,i_channel,i_freq,:));
+%                         x = filtfilt(b, a, x);
+%                         pwr_filt(i_trial,i_channel,i_freq,:) = x;
+%                     end
 %                 end
 %             end
-%         end
-%         clear pwr
+%             clear pwr
         
-        % Cut out transients (don't have to worry about that for target-seg)
-
-        % Z-score power in each frequency separately
-        z = nan(size(pwr_filt));
-        for i_freq = 1:length(d.freq)
-            for i_chan = 1:length(d.label)
-                x = pwr_filt(:,i_chan,i_freq,:);
-                x_mean = nanmean(reshape(x, [1 numel(x)]));
-                x_std = nanstd(reshape(x, [1 numel(x)]));
-                z(:,i_chan,i_freq,:) = (x - x_mean) ./ x_std;
+            % Cut out transients (don't have to worry about that for target-seg)
+           
+            % Make a bootstrap distribution of these values by randomly
+            % shuffling the two channels between trials. Do this within
+            % hits/misses.
+            if k_bootstrap > 0
+                size_z = size(z_sub);
+                z_old = z_sub;
+                perm1 = randsample(size_z(1), k_bootstrap, true);
+                perm2 = randsample(size_z(1), k_bootstrap, true);
+                z_sub = z_old(perm1, 1, :, :);
+                z_sub(:,2,:,:) = z_old(perm2, 2, :, :);        
             end
+
+            % Index the target and non-target frequencies
+            rft_freqs = exp_params.tagged_freqs;
+            f_t_inx = abs(d.freq - rft_freqs(i_targ_freq)) < 0.5;
+            f_n_inx = abs(d.freq - rft_freqs(mod(i_targ_freq, 2) + 1)) < 0.5;
+            
+            % Compare power in the target and non-target stimuli
+            % Get the timecourse of power at the target stimulus
+            x_targ = z_sub(:,i_targ_side,f_t_inx,:);
+            % Get the timecourse of power at the non-target stimulus
+            k_targ_side = mod(i_targ_side, 2) + 1;
+            x_nontarg = z_sub(:,k_targ_side,f_n_inx,:);
+            % Compute difference in power
+            power_diff = x_targ - x_nontarg;
+            power_diff = squeeze(power_diff);
+
+            if hit == 0
+                powdiff_miss = cat(1, powdiff_miss, power_diff);
+            elseif hit == 1
+                powdiff_hit = cat(1, powdiff_hit, power_diff);
+            end
+
         end
-        clear pwr_filt
-        
-        % TESTING
-        %{
-        f = d_sub.freq;
-        t = d_sub.time;
-        plt = @(a) imagesc(t, f, squeeze(nanmean(a(:,1,:,:), 1)));
-        subplot(3, 1, 1)
-        plt(pwr), set(gca, 'YDir', 'normal'), colorbar;
-        subplot(3, 1, 2)
-        plt(pwr_filt), set(gca, 'YDir', 'normal'), colorbar;
-        subplot(3, 1, 3)
-        plt(z), set(gca, 'YDir', 'normal'), colorbar;
-        %}
-
-        % Compare power in the target and non-target stimuli
-        % Get the timecourse of power at the target stimulus
-        target_timecourse = z(:,i_targ_side,i_targ_freq,:);
-        % Get the timecourse of power at the non-target stimulus
-        k_targ_side = mod(i_targ_side, 2) + 1;
-        k_targ_freq = mod(i_targ_freq, 2) + 1;
-        nontarget_timecourse = z(:,k_targ_side,k_targ_freq,:);
-        % Compute difference in power
-        power_diff = target_timecourse - nontarget_timecourse;
-        power_diff = squeeze(power_diff);
-        %{
-        % Don't use ratio -- because of HP filt and z-score, power is
-        % centered around 0, so computing ratios leads to weird numbers
-        power_ratio = target_timecourse ./ nontarget_timecourse;
-        power_ratio = squeeze(power_ratio);
-        %}
-        
-        % TESTING
-        %{
-        subplot(2, 1, 1)
-        plot(t, power_ratio)
-        subplot(2, 1, 2)
-        plot(t, power_diff)
-        %}
-
-        % Put this back into the main data object
-        powdiff(trial_sel,:) = power_diff;
     end
 end
 
 out = [];
 out.time = d.time;
-out.powdiff = powdiff;
-out.trialinfo = d.trialinfo;
+out.powdiff_hit = powdiff_hit;
+out.powdiff_miss = powdiff_miss;

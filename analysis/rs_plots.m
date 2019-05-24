@@ -403,6 +403,8 @@ for i_subject = 1:height(subject_info)
     i_plot = 1;
     for freq = exp_params.tagged_freqs
         for side = {'left' 'right'}
+            % Take the first column - first RESS component is the only one
+            % that's meaningful.
             maps = subj_map.(side{1}).(['f' num2str(freq)]).maps(:,1);
             % Make data structure to show maps
             d_maps = [];
@@ -1298,8 +1300,17 @@ print('-dpng', '-r300', ...
 clear variables
 close all
 rs_setup
+%
 
 win_size = 0.1; % Size of the TFR window used
+bootstrap = false;
+
+if bootstrap
+    k = 1e4;
+    warning('Bootstrapping - permuting data')
+else
+    k = 0;
+end
 
 % Read in the data
 powdiff = nan(height(subject_info), 2, 101); % Subject x Accuracy x Time
@@ -1308,12 +1319,15 @@ for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
-    p = rs_powerdiff(i_subject, win_size, 'target');
+    p = rs_powerdiff(i_subject, ...
+        win_size, ...
+        'target', ...
+        k); % Bootstrap samples
     powdiff_all{i_subject} = p;
-    for hit = 0:1
-        x = nanmean(p.powdiff(p.trialinfo(:, 1) == hit, :), 1);
-        powdiff(i_subject, hit+1, :) = x;
-    end
+
+    
+    powdiff(i_subject, 1, :) = nanmean(p.powdiff_miss, 1);
+    powdiff(i_subject, 2, :) = nanmean(p.powdiff_hit, 1);
 end
     
 % Plot it
@@ -1333,15 +1347,18 @@ for i_subject = 1:height(subject_info)
     % Labels
     xlabel('Time (s)')
     ylabel(sprintf('Targ - Non-targ power\n(Z)'))
-    text(-0.4, 0.15, 'Hit', 'color', 'r')
     text(-0.4, 0.11, 'Miss', 'color', 'b')
+    text(-0.4, 0.15, 'Hit', 'color', 'r')
     hold off
     
-    fn = sprintf('targ-non-diff_win%.1fs_%s', ...
-        win_size, strrep(subject_info.meg{i_subject}, '/', '_'));
-    print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
+    if ~bootstrap
+        fn = sprintf('targ-non-diff_win%.1fs_%s', ...
+            win_size, strrep(subject_info.meg{i_subject}, '/', '_'));
+        print('-dpng', '-r300', ...
+            [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
+    end
 end
-close all
+% close all
 
 %% All subjects
 
@@ -1364,7 +1381,7 @@ x_se = sterr(x);
 fill([p.time fliplr(p.time)], [x_mean + x_se, fliplr(x_mean - x_se)], ...
     'r', 'FaceAlpha', 0.3, 'EdgeColor', 'none')
 plot(p.time, x_mean, '-r', 'LineWidth', 2)
-plot(p.time(logical(h)), zeros(sum(h)) - 0.09, 'k*')
+% plot(p.time(logical(h)), zeros(sum(h)) - 0.09, 'k*')
 
 % Labels
 xlabel('Time (s)')
@@ -1386,7 +1403,7 @@ fill([p.time fliplr(p.time)], ... %[x_mean + x_se, fliplr(x_mean - x_se)], ...
     [0.5 0 0.5], 'FaceAlpha', 0.3, 'EdgeColor', 'none')
 hold on
 plot(p.time, x_mean, '-', 'LineWidth', 2, 'color', [0.5 0 0.5])
-plot(p.time(logical(h)), zeros(sum(h)) - 0.19, 'k*')
+plot(p.time(logical(h)), zeros(sum(h)) + min(min(min(powdiff))), 'k*')
 
 text(-0.4, 0.3, 'Difference (Hit - Miss)', 'color', [0.5 0 0.5])
 xlabel('Time (s)')
@@ -1394,12 +1411,6 @@ ylabel(sprintf('Targ - Non-targ power\n(Z)'))
 plot([min(p.time) max(p.time)], [0 0], '-k')
 hold off
 
-% % Plot significance for each sample
-% hold on
-% plot(p.time(h == 1), ...
-%     ones([1 sum(h)]) * min(min(ci)), ...
-%     'ok', 'LineWidth', 2)
-% hold off
 
 fn = sprintf('targ-non-diff_win%.1fs', win_size);
 print('-dpng', '-r300', [exp_dir 'plots/accuracy/high_freq/' fn '.png'])
@@ -2291,3 +2302,51 @@ title('')
 fn = [exp_dir 'plots/alpha_baseline/topo'];
 print('-dpng', fn)
 
+
+%% Plot filter characteristics for default bandpass filters
+
+data = [];
+data.fsample = 1000;
+data.time = {-1:(1/data.fsample):1};
+data.trial = {zeros(size(data.time{1}))};
+data.trial{1}(1000) = 1;
+data.label = {'e1'};
+
+bands = [3 7; 7 14; 15 25];
+
+for i_band = 1:size(bands, 1)
+    cfg = [];
+    cfg.bpfilter = 'yes';
+    cfg.bpfreq = bands(i_band,:);
+    cfg.bpfilttype = 'but';
+    d = ft_preprocessing(cfg, data);
+    
+    subplot(2,1,1)
+    plot(d.time{1}, d.trial{1}, 'LineWidth', 2)
+    hold on
+    
+    % Plot the spectrum of the filter response
+    cfg = [];
+    cfg.taper = 'hanning';
+    cfg.method = 'mtmfft';
+    cfg.output = 'pow';
+    f = ft_freqanalysis(cfg, d);
+    
+    subplot(2,1,2)
+    plot(f.freq, f.powspctrm, 'LineWidth', 2)
+    hold on
+end
+
+subplot(2,1,1)
+hold off
+xlim(0.5 * [-1 1])
+xlabel('Time (s)')
+ylabel('Amplitude')
+
+subplot(2,1,2)
+hold off
+xlim([0 50])
+ylabel('Power')
+xlabel('Frequency (Hz)')
+
+print('-dpng', [exp_dir 'plots/filter_char'])
