@@ -11,7 +11,6 @@ p = rs_powerdiff(i_subject, 0.1, 'target', false);
 n_timepoints = floor(length(p.time) / 2); % Only pre-target samples
 win = hanning(n_timepoints);
 
-% x = p.powdiff(:,1:n_timepoints); %%%% Old version
 x = [p.powdiff_hit(:,1:n_timepoints); p.powdiff_miss(:,1:n_timepoints)];
 
 nfft = 2 ^ ceil(log2(n_timepoints));
@@ -21,8 +20,6 @@ y = fft(x .* win', nfft, 2);
 y = y(:,1:nfft/2+1);
 
 % Sort trials into hit and miss
-% hit_inx = find(p.trialinfo(:,1) == 1); %%% Old version
-% miss_inx = find(p.trialinfo(:,1) == 0);
 hit_inx = 1:size(p.powdiff_hit, 1);
 miss_inx = (1:size(p.powdiff_miss, 1)) + length(hit_inx);
 combos = combvec(hit_inx', miss_inx');
