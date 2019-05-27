@@ -50,8 +50,9 @@ for i_subject = 1:height(subject_info)
         x_l = d_l.powspctrm;
         
         % Hits on the RIGHT with the target at the OTHER freq
+        % (To ensure that the sensors are contalateral to the same freq)
         stim_side_sel = strcmp(behav.target_side(trial_num), 'right');
-        stim_freq_sel = behav.target_side_freq(trial_num) == dist_freq;
+        stim_freq_sel = behav.freq_right(trial_num) == dist_freq;
         cfg.trials = hit_sel & stim_side_sel & stim_freq_sel;
         d_r = ft_selectdata(cfg, d);
         x_r = d_r.powspctrm;
@@ -70,18 +71,18 @@ for i_sensor_side = 1:2
     i_ress_side = mod(i_sensor_side, 2) + 1;
     for i_tagged_freq = 1:2
         subplot(2, 2, (i_tagged_freq - 1) * 2 + i_sensor_side)
-        z = squeeze(x(:,i_ress_side,i_tagged_freq,:));
-        z_mean = nanmean(z, 1);
-        plot(d_l.time, z, 'color', 0.7 * [1 1 1])
+        mi = squeeze(x(:,i_ress_side,i_tagged_freq,:));
+        mi_mean = nanmean(mi, 1);
+        plot(d_l.time, mi, 'color', 0.7 * [1 1 1])
         hold on
         plot([-0.5 0.5], [0 0], '-k')
-        plot([0 0], [min(min(z)) max(max(z))], '-k')
-        plot(d_l.time, z_mean, '-r', 'LineWidth', 2)
+        plot([0 0], [min(min(mi)) max(max(mi))], '-k')
+        plot(d_l.time, mi_mean, '-r', 'LineWidth', 2)
         title(sprintf('%s, %i Hz', ...
             sides{i_sensor_side}, exp_params.tagged_freqs(i_tagged_freq)));
-        ylim([min(min(z)) max(max(z))])
+        ylim([min(min(mi)) max(max(mi))])
         % Simple stats
-        [h, p] = ttest(z, 0, 'dim', 1);
+        [h, p] = ttest(mi, 0, 'dim', 1);
         plot(d_l.time(p < 0.05), zeros([1 sum(h)]), '*b')
         hold off
     end
@@ -89,3 +90,30 @@ end
 
 print('-dpng',...
     [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits'])
+
+%% Plot the difference between the right and left sides
+
+for i_tagged_freq = 1:2
+    subplot(2, 1, i_tagged_freq)
+    mi_left = squeeze(x(:,2,i_tagged_freq,:));
+    mi_right = squeeze(x(:,1,i_tagged_freq,:));
+    mi_diff = mi_right - mi_left;
+    mi_diff_mean = nanmean(mi_diff, 1); 
+    plot(d_l.time, mi_diff, 'color', 0.7 * [1 1 1])
+    hold on
+    plot([-0.5 0.5], [0 0], '-k')
+    plot([0 0], [min(min(mi_diff)) max(max(mi_diff))], '-k')
+    plot(d_l.time, mi_diff_mean, '-r', 'LineWidth', 2)
+    title(sprintf('%i Hz', ...
+        exp_params.tagged_freqs(i_tagged_freq)));
+    ylim([min(min(mi_diff)) max(max(mi_diff))])
+    % Simple stats
+    [h, p] = ttest(mi_diff, 0, 'dim', 1);
+    plot(d_l.time(p < 0.05), zeros([1 sum(h)]), '*b')
+    hold off 
+end
+
+print('-dpng',...
+    [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits_diff'])
+
+
