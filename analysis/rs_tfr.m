@@ -17,7 +17,7 @@ else
     toi = -0.5:step_size:0.5;
 end
 
-%
+%{
 % SIMULATED DATA
 d = rs_simulate_flicker();
 fname = 'SIMULATED';
@@ -37,13 +37,20 @@ cfg_base.keeptrials = 'yes';
 % cfg_base.padtype = 'zero';
 
 % TFR around the tagged frequencies
-% For HF data, use virtual channels from RESS spatial filters
-d = rs_preproc_ress(i_subject, segment_type);
 time_window = 0.1; % Smaller window -> more freq smoothing
 cfg = cfg_base;
 cfg.output = 'pow';
 cfg.foi = 55:100;
 cfg.t_ftimwin = ones(length(cfg.foi), 1).* time_window;
+% % Using virtual channels from RESS spatial filters
+% d = rs_preproc_ress(i_subject, segment_type);
+% high_freq_data = ft_freqanalysis(cfg, d);
+% save([save_dir '/' fname '/high'], 'high_freq_data', '-v7.3')
+% clear d cfg high_freq_data
+% Using raw channel responses
+% Focus on gradiometers that have high SNR
+cfg.channel = {'MEG2042' 'MEG2043' 'MEG2032' 'MEG2033'};
+d = rs_preproc(i_subject, segment_type);
 high_freq_data = ft_freqanalysis(cfg, d);
 save([save_dir '/' fname '/high'], 'high_freq_data', '-v7.3')
 clear d cfg high_freq_data

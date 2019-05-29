@@ -5,10 +5,11 @@ rs_setup
 sides = {'left' 'right'};
 
 segment_type = 'target'; % target | trial
-win_size = 0.1;
+w0in_size = 0.1;
 
-win_str = sprintf('win_%.1fs', win_size);
-tfr_dir = [exp_dir 'tfr/' win_str '/' segment_type '/'];
+% win_str = sprintf('win_%.1fs', win_size);
+vers = 'raw_chans';
+tfr_dir = [exp_dir 'tfr/' vers '/' segment_type '/'];
 
 clear x
 for i_subject = 1:height(subject_info)
@@ -66,12 +67,24 @@ end
 %% Plot it
 
 for i_sensor_side = 1:2
+    
+    %{
     % RESS side is coded as _stimulus_ side. Flip around to get to the
     % _sensor_ side.
     i_ress_side = mod(i_sensor_side, 2) + 1;
+    chan_inx = i_ress_side;
+    %}
+    
+    % Select channels for the raw-channel (non-RESS) analysis
+    if i_sensor_side == 1
+        chan_inx = 3:4; % Sensors on the left side
+    elseif i_sensor_side == 2
+        chan_inx = 1:2;
+    end
+    
     for i_tagged_freq = 1:2
         subplot(2, 2, (i_tagged_freq - 1) * 2 + i_sensor_side)
-        mi = squeeze(x(:,i_ress_side,i_tagged_freq,:));
+        mi = squeeze(mean(x(:,chan_inx,i_tagged_freq,:), 2));
         mi_mean = nanmean(mi, 1);
         plot(d_l.time, mi, 'color', 0.7 * [1 1 1])
         hold on
@@ -93,10 +106,18 @@ print('-dpng',...
 
 %% Plot the difference between the right and left sides
 
+% % For selecting RESS channels
+% left_inx = 2;
+% right_inx = 1;
+
+% For selecting raw channels
+left_inx = 3:4;
+right_inx = 1:2;
+
 for i_tagged_freq = 1:2
     subplot(2, 1, i_tagged_freq)
-    mi_left = squeeze(x(:,2,i_tagged_freq,:));
-    mi_right = squeeze(x(:,1,i_tagged_freq,:));
+    mi_left = squeeze(mean(x(:, left_inx, i_tagged_freq, :), 2));
+    mi_right = squeeze(mean(x(:, right_inx, i_tagged_freq, :), 2));
     mi_diff = mi_right - mi_left;
     mi_diff_mean = nanmean(mi_diff, 1); 
     plot(d_l.time, mi_diff, 'color', 0.7 * [1 1 1])
@@ -108,8 +129,8 @@ for i_tagged_freq = 1:2
         exp_params.tagged_freqs(i_tagged_freq)));
     ylim([min(min(mi_diff)) max(max(mi_diff))])
     % Simple stats
-    [h, p] = ttest(mi_diff, 0, 'dim', 1);
-    plot(d_l.time(p < 0.05), zeros([1 sum(h)]), '*b')
+    [h, p] = ttest(mi_diff, 0, 'dim', 1, 'alpha', 0.01);
+    plot(d_l.time(logical(h)), zeros([1 sum(h)]), '*b')
     hold off 
 end
 
