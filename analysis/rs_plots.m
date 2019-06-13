@@ -413,12 +413,14 @@ for i_subject = 1:height(subject_info)
             d_maps.avg = real(maps);
             d_maps.dimord = 'chan_time';
             d_maps.grad = grad.grad;
+            
             % Combine planar gradiometers
             cfg = [];
             cfg.method = 'sum';
-            d_maps = ft_combineplanar(cfg, d_maps);
+            d_maps_gradcmb = ft_combineplanar(cfg, d_maps);
 
-            % Plot it
+            % Plot gradiometers
+            figure(1)
             subplot(2,2,i_plot)
             cfg = [];
             cfg.marker = 'on';
@@ -428,13 +430,27 @@ for i_subject = 1:height(subject_info)
             cfg.style = 'straight';
             cfg.layout = chan.grad_cmb.layout;
             cfg.gridscale = 200;
+            ft_topoplotER(cfg, d_maps_gradcmb)
+            title(sprintf('%s, %i Hz', side{1}, freq))
+            
+            % Plot magnetometers
+            figure(2)
+            subplot(2,2,i_plot)
+            cfg.layout = chan.mag.layout;
             ft_topoplotER(cfg, d_maps)
             title(sprintf('%s, %i Hz', side{1}, freq))
+            
             i_plot = i_plot + 1;
         end
     end
+    figure(1)
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/ress_maps/' ...
+        [exp_dir 'plots/ress_maps/grad-' ...
+        strrep(fname, '/', '_')])
+
+    figure(2)
+    print('-dpng', '-r300', ...
+        [exp_dir 'plots/ress_maps/mag-' ...
         strrep(fname, '/', '_')])
     
 end
