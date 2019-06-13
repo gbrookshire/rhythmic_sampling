@@ -8,9 +8,6 @@ rs_setup
 
 devcode = @(x) x - 0.5; % Move DV from 0/1 to +/-0.5 regression coding
 
-% % Load in a sample 
-% i_subject = 15;
-
 % Read in the data segmented around targets
 fname = subject_info.meg{i_subject};
 fn = [exp_dir 'tfr/target/' fname '/high'];
@@ -18,8 +15,7 @@ d = load(fn);
 d = d.high_freq_data;
 
 % Load the behavioral data
-fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-behav = rs_behavior(fn);
+behav = rs_behavior(i_subject);
 behav = behav(225:end, :); % main blocks of trials
 
 % Select only hits and misses
@@ -28,9 +24,24 @@ behav = behav(225:end, :); % main blocks of trials
 % Exclude the trials with NaNs in the target trialdef
 hits = hits(~nans);
 behav = behav(~nans,:);
-hits_and_misses_inx = ismember(hits, [0 1]);
+
+% Only look at hits and misses (no FAs or late responses)
+only_hits_and_misses = ismember(hits, [0 1]);
+hits = hits(only_hits_and_misses);
+behav = behav(only_hits_and_misses,:);
+keep_trials = ismember(d.trialinfo(:,2), behav.TrialNumber);
+cfg = [];
+cfg.trials = keep_trials;
+d = ft_selectdata(cfg, d);
+
+% Get whether each data segment was a hit or miss
+hit_inx
 
 % Keep only the hits and misses (no FAs or late responses)
+hits_and_misses_inx = ismember(hits, [0 1]);
+
+d.trialinfo(
+
 cfg = [];
 cfg.trials = hits_and_misses_inx;
 d = ft_selectdata(cfg, d);
