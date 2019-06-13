@@ -414,44 +414,58 @@ for i_subject = 1:height(subject_info)
             d_maps.dimord = 'chan_time';
             d_maps.grad = grad.grad;
             
-            % Combine planar gradiometers
-            cfg = [];
-            cfg.method = 'sum';
-            d_maps_gradcmb = ft_combineplanar(cfg, d_maps);
-
-            % Plot gradiometers
-            figure(1)
+            % Plot the raw filter coefficients
             subplot(2,2,i_plot)
-            cfg = [];
-            cfg.marker = 'on';
-            cfg.markersymbol = 'o';
-            cfg.markersize = 1;
-            cfg.comment = 'no';
-            cfg.style = 'straight';
-            cfg.layout = chan.grad_cmb.layout;
-            cfg.gridscale = 200;
-            ft_topoplotER(cfg, d_maps_gradcmb)
-            title(sprintf('%s, %i Hz', side{1}, freq))
+            mags = endsWith(d_maps.label, '1');
+            inx = 1:length(d_maps.label);
+            plot(inx(mags), d_maps.avg(mags), 'or')
+            hold on
+            plot(inx(~mags), d_maps.avg(~mags), 'ob')
+            hold off
             
-            % Plot magnetometers
-            figure(2)
-            subplot(2,2,i_plot)
-            cfg.layout = chan.mag.layout;
-            ft_topoplotER(cfg, d_maps)
-            title(sprintf('%s, %i Hz', side{1}, freq))
+%             % Combine planar gradiometers
+%             cfg = [];
+%             cfg.method = 'sum';
+%             d_maps_gradcmb = ft_combineplanar(cfg, d_maps);
+% 
+%             % Plot gradiometers
+%             figure(1)
+%             subplot(2,2,i_plot)
+%             cfg = [];
+%             cfg.marker = 'on';
+%             cfg.markersymbol = 'o';
+%             cfg.markersize = 1;
+%             cfg.comment = 'no';
+%             cfg.style = 'straight';
+%             cfg.layout = chan.grad_cmb.layout;
+%             cfg.gridscale = 200;
+%             ft_topoplotER(cfg, d_maps_gradcmb)
+%             title(sprintf('%s, %i Hz', side{1}, freq))
+%             
+%             % Plot magnetometers
+%             figure(2)
+%             subplot(2,2,i_plot)
+%             cfg.layout = chan.mag.layout;
+%             ft_topoplotER(cfg, d_maps)
+%             title(sprintf('%s, %i Hz', side{1}, freq))
             
             i_plot = i_plot + 1;
         end
     end
-    figure(1)
+    
     print('-dpng', '-r300', ...
-        [exp_dir 'plots/ress_maps/grad-' ...
+        [exp_dir 'plots/ress_maps/raw-coefs-' ...
         strrep(fname, '/', '_')])
 
-    figure(2)
-    print('-dpng', '-r300', ...
-        [exp_dir 'plots/ress_maps/mag-' ...
-        strrep(fname, '/', '_')])
+%     figure(1)
+%     print('-dpng', '-r300', ...
+%         [exp_dir 'plots/ress_maps/grad-' ...
+%         strrep(fname, '/', '_')])
+% 
+%     figure(2)
+%     print('-dpng', '-r300', ...
+%         [exp_dir 'plots/ress_maps/mag-' ...
+%         strrep(fname, '/', '_')])
     
 end
 
