@@ -67,6 +67,8 @@ for i_subject = 1:height(subject_info)
     end
 end
 
+fn = [tfr_dir 'agg'];
+save(fn, 'x')
 
 %% Plot it
 
