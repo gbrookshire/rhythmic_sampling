@@ -237,3 +237,131 @@ for i_subject = 0%0:height(subject_info)
     end
     
 end
+
+%% Topoplot of left-hits vs right-hits
+% Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
+
+% Compute modulation index for all data simultaneously
+d_a = agg_data_orig(:,:,:,:,:,2); % Get all hits
+d_l = d_a(:,:,:,:,1,:); % Targets on the left
+d_r = d_a(:,:,:,:,2,:); % Targets on the right
+% Compare left-hits vs right-hits
+d_x = (d_l - d_r) ./ (d_l + d_r);
+% Average over subjects
+d_x = nanmean(d_x, 1);
+d_x = squeeze(d_x);
+
+d_mi = [];
+d_mi.label = d.label;
+d_mi.time = d.time;
+d_mi.freq = d.freq;
+d_mi.powspctrm = d_x;
+d_mi.dimord = 'chan_freq_time';
+
+% Combine planar gradiometers
+fn = [exp_dir 'grad/' fname '/grad'];
+grad = load(fn);
+d_mi.grad = grad.grad;
+cfg = [];
+cfg.method = 'sum';
+cfg.updatesens = 'yes';
+d_mi = ft_combineplanar(cfg, d_mi);
+
+% Plot it
+cfg = [];
+cfg.layout = chan.grad_cmb.layout;
+cfg.xlim = [0.4 0.6]; % Post-stimulus
+% cfg.xlim = [-0.4 0]; % Pre-stimulus
+cfg.ylim = [7 14];
+cfg.zlim = 'maxabs';
+cfg.colorbar = 'no';
+cfg.style = 'straight';
+cfg.comment = 'no';
+cfg.shading = 'interp';
+cfg.markersymbol = '.';
+cfg.gridscale = 200;
+cfg.colorbar = 'yes';
+ft_topoplotTFR(cfg, d_mi)
+
+fn = [exp_dir 'plots/alpha_power/topo'];
+print('-dpng', fn)
+
+%% Look at hits vs misses regardless of side of space
+
+% Compare hits vs misses
+d_h = agg_data_orig(:,:,:,:,:,2); % hits
+d_m = agg_data_orig(:,:,:,:,:,1); % misses
+d_x = (d_h - d_m) ./ (d_h + d_m); % compare them
+
+% TFR plot
+i_plot = 1;
+for d_sub = {d_h, d_m, d_x}
+    d_sub = d_sub{1}(:,roi,:,:,:);
+    d_sub = squeeze(nanmean(mean(mean(d_sub, 5), 2), 1));
+    subplot(3,1,i_plot)
+    imagesc(d.time, d.freq, d_sub)
+    xlim(0.7 * [-1 1])
+    ylabel('Freq (Hz)')
+    colorbar('EastOutside')
+    colormap(cm)
+    set(gca, 'YDir', 'normal')
+    switch i_plot
+        case 1
+            title('Hit')
+        case 2
+            title('Miss')
+        case 3
+            title('Hit vs. Miss')
+    end
+    i_plot = i_plot + 1;
+end
+caxis([-1 1] * max(max(abs(d_sub))) * 0.75) % Center color axis
+xlabel('Time (s)')
+fn = [exp_dir 'plots/alpha_power/hit_vs_miss_occip_chans'];
+print('-dpng', fn)
+close all
+
+% Topoplot
+d_x = nanmean(nanmean(d_x, 5), 1); % Average over subjects & target side
+d_x = squeeze(d_x);
+
+% Set up FT object
+d_mi = [];
+d_mi.label = d.label;
+d_mi.time = d.time;
+d_mi.freq = d.freq;
+d_mi.powspctrm = d_x;
+d_mi.dimord = 'chan_freq_time';
+
+% Combine planar gradiometers
+fn = [exp_dir 'grad/' fname '/grad'];
+grad = load(fn);
+d_mi.grad = grad.grad;
+cfg = [];
+cfg.method = 'sum';
+cfg.updatesens = 'yes';
+d_mi = ft_combineplanar(cfg, d_mi);
+
+% Plot it
+cfg = [];
+cfg.layout = chan.grad_cmb.layout;
+cfg.ylim = [7 14];
+cfg.zlim = 'maxabs';
+cfg.colorbar = 'no';
+cfg.style = 'straight';
+cfg.comment = 'no';
+cfg.shading = 'interp';
+cfg.markersymbol = '.';
+cfg.gridscale = 200;
+cfg.colorbar = 'yes';
+
+cfg.xlim = [-0.4 0]; % Pre-stimulus
+ft_topoplotTFR(cfg, d_mi)
+fn = [exp_dir 'plots/alpha_power/hit_vs_miss_topo_pre-stim'];
+print('-dpng', fn)
+
+cfg.xlim = [0.4 0.6]; % Post-stimulus
+ft_topoplotTFR(cfg, d_mi)
+fn = [exp_dir 'plots/alpha_power/hit_vs_miss_topo_post-stim'];
+print('-dpng', fn)
+
