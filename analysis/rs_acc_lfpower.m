@@ -55,6 +55,8 @@ end
 % Save a version of the original data
 agg_data_orig = agg_data;
 
+fn = [tfr_dir 'agg'];
+save(fn, 'agg_data_orig');
 
 % Find which channels are on the left/right side
 
