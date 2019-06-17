@@ -55,8 +55,10 @@ end
 % Save a version of the original data
 agg_data_orig = agg_data;
 
-fn = [tfr_dir 'agg'];
-save(fn, 'agg_data_orig');
+for fieldname = {'powspctrm' 'cumtapcnt' 'trialinfo' 'cfg' 'dimord'}
+    d = rmfield(d, fieldname{1});
+end
+save([tfr_dir 'agg'], 'agg_data_orig', 'd');
 
 % Find which channels are on the left/right side
 
