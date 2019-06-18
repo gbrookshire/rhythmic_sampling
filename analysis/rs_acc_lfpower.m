@@ -54,7 +54,6 @@ end
 
 % Save a version of the original data
 agg_data_orig = agg_data;
-
 for fieldname = {'powspctrm' 'cumtapcnt' 'trialinfo' 'cfg' 'dimord'}
     d = rmfield(d, fieldname{1});
 end

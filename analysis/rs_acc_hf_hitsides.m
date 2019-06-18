@@ -67,8 +67,10 @@ for i_subject = 1:height(subject_info)
     end
 end
 
-fn = [tfr_dir 'agg'];
-save(fn, 'x')
+for fieldname = {'powspctrm' 'cumtapcnt' 'trialinfo' 'cfg' 'dimord'}
+    d = rmfield(d, fieldname{1});
+end
+save([tfr_dir 'agg'], 'x', 'd')
 
 %% Plot it
 
