@@ -4,11 +4,11 @@ clear variables
 close all
 rs_setup
 
-tfr_dir = [exp_dir 'tfr/lf_0.3s/'];
+tfr_dir = [exp_dir 'tfr/lf_4cyc/'];
 %%
 % Read in all data
 % Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
-agg_data = nan([height(subject_info), 304, 28, 51, 2, 2]);
+agg_data = nan([height(subject_info), 202, 28, 51, 2, 2]);
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -29,6 +29,11 @@ for i_subject = 1:height(subject_info)
 %     cfg.method = 'sum';
 %     cfg.updatesens = 'yes';
 %     d = ft_combineplanar(cfg, d);
+
+    % Select only gradiometers
+    cfg = [];
+    cfg.channel = {'MEG*2' 'MEG*3'};
+    d = ft_selectdata(cfg, d);
 
     % Information about each trial
     trial_numbers = d.trialinfo(:,2);
@@ -228,7 +233,7 @@ for i_subject = 0%0:height(subject_info)
         figure(2)
         imagesc(d.time, d.freq, log10(d_p))
         hold on
-        contour(d.time, d.freq, d_p, [0 0.01], ...
+        contour(d.time, d.freq, d_p, [0 0.05], ...
             'color', 'r', 'LineWidth', 1.5);
         hold off
         xlim(0.7 * [-1 1])
@@ -240,6 +245,110 @@ for i_subject = 0%0:height(subject_info)
     end
     
 end
+
+%% Correlate pre- and post-stimulus effects
+
+time_windows = [-0.5 -0.3; 0.4 0.6];
+mi = {};
+for t_win = time_windows'
+    % Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
+    % Compute modulation index for all data simultaneously
+    d_a = agg_data_orig(:,:,:,:,:,2); % Get all hits
+    d_l = d_a(:,:,:,:,1,:); % Targets on the left
+    d_r = d_a(:,:,:,:,2,:); % Targets on the right
+    % Compare left-hits vs right-hits
+    d_x = (d_l - d_r) ./ (d_l + d_r);
+    % Average pre-stimulus activity
+    t_sel = (d.time > t_win(1)) & (d.time < t_win(2));
+    d_x = mean(d_x(:,:,:,t_sel), 4);
+    % Snip out the alpha band
+    f_sel = (d.freq >= 8) & (d.freq <= 14);
+    d_x = mean(d_x(:,:,f_sel), 3);
+    mi{end+1} = d_x;
+end
+
+r = nan([1 length(d.label)]);
+p = nan([1 length(d.label)]);
+for i_chan = 1:length(d.label)
+    [rho,pval] = corr(mi{1}(:,i_chan), mi{2}(:,i_chan), 'rows', 'pairwise');
+    r(i_chan) = rho;
+    p(i_chan) = pval;
+end
+
+% Plot correlation for individual channels
+i_plot = 1;
+for chan_name_stem = high_alpha_chans
+    for i_grad = 2:3
+        subplot(4, 3, i_plot)
+        chan_id = sprintf('MEG%s%i', chan_name_stem{1}(1:3), i_grad);
+        chan_sel = strcmp(d.label, chan_id);
+        pre_mi = mi{1}(:,chan_sel);
+        post_mi = mi{2}(:,chan_sel);
+        plot(pre_mi, post_mi, 'ob')
+        hold on
+%         plot(nanmean(pre_mi), nanmean(post_mi), 'or', 'MarkerSize', 12)
+        xl = xlim;
+        yl = ylim;
+        plot(xl, [0 0], '--k')
+        plot([0 0], yl, '--k')
+        xlim(xl)
+        ylim(yl)
+        hold off
+        text(0.1, 0.9, chan_id, 'Units', 'normalized')
+        if i_plot == 1
+            xlabel('Pre-stimulus MI')
+            ylabel('Post-stimulus MI')
+        end
+        i_plot = i_plot + 1;
+    end
+end
+fn = [exp_dir 'plots/alpha_power/corr-pre-post-MI'];
+print('-dpng', fn)
+
+% Plot topo-plots of p and r
+data_types = {r p};
+for i_type = 1:2
+    d_mi = [];
+    d_mi.label = d.label;
+    d_mi.time = 0;
+    d_mi.avg = data_types{i_type}';
+
+    % Combine planar gradiometers
+    fn = [exp_dir 'grad/' fname '/grad'];
+    grad = load(fn);
+    d_mi.grad = grad.grad;
+    cfg = [];
+    cfg.method = 'sum';
+    cfg.updatesens = 'yes';
+    d_mi = ft_combineplanar(cfg, d_mi);
+    d_mi.avg = d_mi.avg / 2; % Make it average instead of sum
+
+    subplot(1,2,i_type)
+    cfg = [];
+    cfg.layout = chan.grad_cmb.layout;
+    if i_type == 1
+        cfg.zlim = 'maxabs';
+    else
+        d_mi.avg = log10(d_mi.avg);
+        cfg.highlight = 'on';
+        cfg.highlightchannel
+    end
+    cfg.colorbar = 'no';
+    cfg.style = 'straight';
+    cfg.comment = 'no';
+    cfg.shading = 'interp';
+    cfg.markersymbol = '.';
+    cfg.gridscale = 200;
+    cfg.colorbar = 'yes';
+    ft_topoplotTFR(cfg, d_mi)
+end
+subplot(1,2,1), title('rho')
+subplot(1,2,2), title('p')
+
+fn = [exp_dir 'plots/alpha_power/topo-corr-pre-post-MI'];
+print('-dpng', fn)
+
+
 
 %% Topoplot of left-hits vs right-hits
 % Array for all data: Subj x Chan x TFRfreq x Time x TargSide x Hit 
