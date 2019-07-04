@@ -99,7 +99,7 @@ roi = ismember(d.label, chan_names);
 %% Plot the results
 cm = flipud(lbmap(100, 'RedBlue'));
 
-for i_subject = 0%0:height(subject_info)
+for i_subject = 0:height(subject_info)
     if i_subject == 0 % Plot all subjects
         i_subject = true([1 height(subject_info)]);
         fn = 'avg';
@@ -110,53 +110,6 @@ for i_subject = 0%0:height(subject_info)
     end
     fn = [exp_dir 'plots/alpha_power/' fn];
 
-    % Compare hits and misses
-    %{
-    % For each side of the head
-    for i_chan_side = 1:2
-        for i_targ_side = 1:2
-            % Select channels on this side
-            if i_chan_side == 1
-                chan_side_inx = left_inx;
-            elseif i_chan_side == 2
-                chan_side_inx = right_inx;
-            else
-                error('oops')
-            end
-            % Convert chan selection to logical inx to combine w/ ROI
-            chan_inx = false([length(d.label) 1]);
-            chan_inx(chan_side_inx) = true;
-            chan_inx = chan_inx & roi;
-            % Extract the data for hits and misses
-            d_a = agg_data_orig(i_subject,chan_inx,:,:,i_targ_side,:);
-            d_h = d_a(:,:,:,:,:,2);
-            d_m = d_a(:,:,:,:,:,1);
-            % Compare hits and misses
-            d_x = (d_h - d_m) ./ (d_h + d_m);
-            % Average over channels
-            d_x = nanmean(d_x, 2);
-            % Average over subjects
-            d_x = nanmean(d_x, 1);
-            d_x = squeeze(d_x);
-
-            % Plot the results
-            i_plot = (2 * (i_targ_side - 1)) + i_chan_side;
-            subplot(2,2,i_plot)
-            imagesc(d.time, d.freq, d_x)
-            xlim(0.7 * [-1 1])
-            xlabel('Time (s)')
-            ylabel('Freq (Hz)')
-            colorbar('EastOutside')
-            colormap(cm)
-            set(gca, 'YDir', 'normal')
-            caxis([-1 1] * max(max(abs(d_x))) * 0.75) % Center color axis
-            title(sprintf('Chans: %s, Targ: %s', ...
-                side_labels{i_chan_side}, ...
-                side_labels{i_targ_side}))
-        end
-    end
-    %}
-    
     % Compare left-hits and right-hits
     % For each side of the head
     clear d_agg
