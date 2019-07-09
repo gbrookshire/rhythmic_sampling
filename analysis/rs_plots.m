@@ -2322,7 +2322,7 @@ for i_subject = [1:height(subject_info) 0]
     high_alpha_chans = [chan_names(1) chan_names(2) chan_names(3)];
     cfg = [];
     cfg.channel = high_alpha_chans; %snr_roi;
-    cfg.baseline = [-1 -0.5];
+    cfg.baseline = [-0.5 -0.2];
     cfg.baselinetype = 'relative';
     cfg.xlim = [-0.5 2];
     cfg.title = ' ';
@@ -2339,13 +2339,13 @@ grad = load([exp_dir 'grad/' subject_info.meg{1} '/grad']);
 d.tfr.grad = grad.grad;
 
 cfg = [];
-cfg.baseline = [-1 -0.5];
-cfg.baselinetype = 'relative';
-x = ft_freqbaseline(cfg, d.tfr);
+cfg.method = 'sum';
+x = ft_combineplanar(cfg, d.tfr);
 
 cfg = [];
-cfg.method = 'sum';
-x = ft_combineplanar(cfg, x);
+cfg.baseline = [-0.5 -0.2];
+cfg.baselinetype = 'relative';
+x = ft_freqbaseline(cfg, x);
 
 % ROI to highlight
 high_alpha_chans = {'192x', '194x', '191x',...  % '204x', 
@@ -2365,9 +2365,10 @@ cfg.layout = chan.grad_cmb.layout;
 cfg.style = 'straight';
 cfg.highlight = 'on';
 cfg.highlightchannel = cmb_grad_names;
-cfg.highlightsymbol = '.';
+cfg.highlightsymbol = '.';x
 cfg.highlightsize = 15;
-cfg.title = ' ';
+cfg.comment = ' ';
+cfg.colorbar = 'SouthOutside';
 ft_topoplotTFR(cfg, x)
 title('')
 
