@@ -5,17 +5,23 @@ close all
 
 clrs = [0 0.6 0; 0.6 0 0.6];
 
+thrsh = nan(height(subject_info), 2, 2); % Subj * Side * RFT_Freq
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
     % Load the behavioral data
     fn = [exp_dir 'logfiles/' subject_info.behav{i_subject} '.csv'];
-    behav = rs_behavior(fn);
+    behav = rs_behavior(i_subject);
     subplot(4,4,i_subject)
     hold on
-    for s = {'left' 'right'}
-        for f = [63 78]
+    sides = {'left' 'right'};
+    for i_side = 1:2
+        s = sides{i_side};
+        freqs = [63 78];
+        for i_freq = 1:2
+            f = freqs(i_freq);
             if f == 63
                 clr = clrs(1,:);
             else
@@ -27,8 +33,11 @@ for i_subject = 1:height(subject_info)
                 clr = clr * 0.8; % Right - darker
             end
             inx = strcmp(behav.target_side,s) & (behav.target_side_freq==f);
-            plot(behav.target_opacity(inx), '-', 'color', clr)
+            x = behav.target_opacity(inx);
+            plot(x, '-', 'color', clr)
             ylim([0 0.4])
+            % Store the value
+            thrsh(i_subject, i_side, i_freq) = x(end);
         end
     end
 end
@@ -54,6 +63,31 @@ ylim([0 2])
 axis off
 
 print('-dpng', [exp_dir 'plots/behav/opacity'])
+
+%% Plot the thresholds for each subject
+for i_side = 1:2
+    for i_freq = 1:2
+        if i_freq == 1
+            clr = clrs(1,:);
+        else
+            clr = clrs(2,:);
+        end
+        if i_side == 1
+            clr = clr + (1 - max(clr)); % Left - lighter
+        else
+            clr = clr * 0.8; % Right - darker
+        end
+        plot(1:height(subject_info), thrsh(:,i_side,i_freq), ...
+            'o', 'color', clr, 'LineWidth', 2)
+        hold on
+
+    end
+end
+hold off
+xlabel('Subject')
+ylabel('Threshold')
+xlim([0 height(subject_info) + 1])
+print('-dpng', [exp_dir 'plots/behav/opacity-threshold'])
 
 
 %% Behavioral performance over course of expt
@@ -2274,17 +2308,24 @@ for i_subject = [1:height(subject_info) 0]
     else
         % Read in the data segmented around targets
         fname = subject_info.meg{i_subject};
-        fn = [exp_dir 'tfr/trial/' fname '/baseline_alpha'];
+        fn = [exp_dir 'tfr/baseline_alpha/' fname '/baseline_alpha'];
         d = load(fn);
         x = d.tfr.powspctrm;
         overall_powspctrm(i_subject,:,:,:) = x;
     end
 
-%     subplot(4,4,i_subject)
+    high_alpha_chans = {'192x', '194x', '191x',...  % '204x', 
+                        '234x', '232x', '231x',};   % '203x',
+    chan_names = @(n) cellfun(@(c) ['MEG' c(1:3) num2str(n)], ...
+        high_alpha_chans, ...
+        'UniformOutput', false)
+    high_alpha_chans = [chan_names(1) chan_names(2) chan_names(3)];
     cfg = [];
-    cfg.channel = snr_roi;
+    cfg.channel = high_alpha_chans; %snr_roi;
     cfg.baseline = [-1 -0.5];
-    cfg.baselinetype = 'db';
+    cfg.baselinetype = 'relative';
+    cfg.xlim = [-0.5 2];
+    cfg.title = ' ';
     ft_singleplotTFR(cfg, d.tfr)
     
     fn = [exp_dir 'plots/alpha_baseline/' strrep(fname, '/', '_')];
@@ -2299,7 +2340,7 @@ d.tfr.grad = grad.grad;
 
 cfg = [];
 cfg.baseline = [-1 -0.5];
-cfg.baselinetype = 'db';
+cfg.baselinetype = 'relative';
 x = ft_freqbaseline(cfg, d.tfr);
 
 cfg = [];
@@ -2307,8 +2348,8 @@ cfg.method = 'sum';
 x = ft_combineplanar(cfg, x);
 
 % ROI to highlight
-high_alpha_chans = {'204x', '192x', '194x', '191x',...
-                    '203x', '234x', '232x', '231x',};
+high_alpha_chans = {'192x', '194x', '191x',...  % '204x', 
+                    '234x', '232x', '231x',};   % '203x', 
 mag_names = cellfun(@(s) ['MEG' s(1:(end-1)) '1'], ...
     high_alpha_chans, ...
     'UniformOutput', false);
@@ -2318,7 +2359,7 @@ cmb_grad_names = cellfun(...
     'UniformOutput', false);
 
 cfg = [];
-cfg.xlim = [0.4 0.8];
+cfg.xlim = [0.2 0.8];
 cfg.ylim = [7 14];
 cfg.layout = chan.grad_cmb.layout;
 cfg.style = 'straight';
@@ -2326,6 +2367,7 @@ cfg.highlight = 'on';
 cfg.highlightchannel = cmb_grad_names;
 cfg.highlightsymbol = '.';
 cfg.highlightsize = 15;
+cfg.title = ' ';
 ft_topoplotTFR(cfg, x)
 title('')
 
