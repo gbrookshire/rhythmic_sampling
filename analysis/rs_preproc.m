@@ -44,8 +44,8 @@ for i_block = block_info.main
     cfg.trl = trl;   
 
     % Preprocess the data
-%     cfg.channel = art.ica.comp.cfg.channel; % Select the good channels
-    cfg.channel = [{'BIO001' 'BIO002'}]; % EOG channels
+    cfg.channel = art.ica.comp.cfg.channel; % Select the good channels
+%     cfg.channel = [{'BIO001' 'BIO002'}]; % EOG channels
     cfg.bsfilter = 'yes'; % Band-stop filter to get rid of line noise
     cfg.bsfreq = [48 52];
     cfg.lpfilter = 'yes';
@@ -99,7 +99,7 @@ end
 data = ft_appenddata([], data_by_block{block_info.main});
 
 % Save the data
-save_dir = [exp_dir 'preproc/eog/' segment_type '/'];
+save_dir = [exp_dir 'preproc/' segment_type '/'];
 [~,~,~] = mkdir(save_dir, fname);
 save([save_dir '/' fname '/preproc'], ...
     '-v7.3', ... % For files over 2GB
