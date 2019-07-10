@@ -140,6 +140,7 @@ switch vers
         error('Not implemented for TFR version %s', vers)
 end
 
+% Difference between left and right sensors
 for i_tagged_freq = 1:2
     subplot(2, 1, i_tagged_freq)
     mi_left = squeeze(mean(x(:, left_inx, i_tagged_freq, :), 2));
@@ -162,6 +163,34 @@ end
 
 print('-dpng',...
     [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits_diff'])
+
+
+% Collapse over RFT frequency for each sensor side
+for i_sensor_side = 1:2
+    subplot(2, 1, i_sensor_side)
+    if i_sensor_side == 1
+        chan_inx = left_inx;
+    elseif i_sensor_side == 2
+        chan_inx = right_inx;
+    end
+        
+    mi_sub = squeeze(mean(mean(x(:, chan_inx, :, :), 2), 3));
+    
+    plot(d_l.time, mi_sub, 'color', 0.7 * [1 1 1])
+    hold on
+    plot([-0.5 0.5], [0 0], '-k')
+    plot([0 0], [min(min(mi_sub)) max(max(mi_sub))], '-k')
+    plot(d_l.time, nanmean(mi_sub, 1), '-r', 'LineWidth', 2)
+    title([sides{i_sensor_side} ' sensors']);
+    ylim([min(min(mi_sub)) max(max(mi_sub))])
+    % Simple stats
+    [h, p] = ttest(mi_sub, 0, 'dim', 1, 'alpha', 0.01);
+    plot(d_l.time(logical(h)), zeros([1 sum(h)]), '*b')
+    hold off 
+end
+
+print('-dpng',...
+    [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits_by-side'])
 
 
 %% Collapse over the two RFT frequencies
