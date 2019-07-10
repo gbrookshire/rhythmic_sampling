@@ -340,8 +340,8 @@ for i_subject = 1:height(subject_info)
         cfg.event = trialdef.trl.event;
         cfg.trl = trialdef.trl.trial;
         cfg.channel = {'MISC001' 'MISC002'};
-        cfg.polyremoval = 'yes';
-        cfg.polyorder = 0;
+%         cfg.polyremoval = 'yes';
+%         cfg.polyorder = 0;
         d = ft_preprocessing(cfg);
 
         % Find the eye blink artifacts in this subject
