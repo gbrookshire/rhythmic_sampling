@@ -2423,3 +2423,86 @@ ylabel('Power')
 xlabel('Frequency (Hz)')
 
 print('-dpng', [exp_dir 'plots/filter_char'])
+
+%% Plot the EOG
+
+clear variables
+close all
+rs_setup
+
+% Array for all data: Subj x Chan x Time x TargSide x Hit 
+agg_data_avg = nan([height(subject_info), 2, 2001, 2, 2]);
+agg_data_var = agg_data_avg;
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    
+%     % Be sure to comment out channel selection, and take EOG chans, and
+%     % change the save filepath
+%     rs_preproc(i_subject, 'target');
+
+    fname = subject_info.meg{i_subject};
+    fn = [exp_dir 'preproc/eog/target/' fname '/preproc'];    
+    d = load(fn);
+    d = d.data;
+    behav = rs_behavior(i_subject);
+    
+    cfg = [];
+    cfg.lpfilter = 'yes';
+    cfg.lpfreq = 30;
+    d = ft_preprocessing(cfg, d);
+        
+    % Information about each trial
+    trial_numbers = d.trialinfo(:,2);
+    targ_side_per_trial = behav.target_side(trial_numbers);
+
+    % Put the data together
+    side_labels = {'left' 'right'};
+    for i_targ_side = 1:2
+        targ_side_sel = strcmp(targ_side_per_trial, side_labels{i_targ_side});
+        for hit = 0:1
+            hit_sel = d.trialinfo(:,1) == hit;
+            trial_sel = hit_sel & targ_side_sel;
+            cfg = [];
+            cfg.trials = trial_sel;
+            cfg.keeptrials = 'no';
+            cfg.vartrllength = 2;
+            d_sub = ft_timelockanalysis(cfg, d);
+            agg_data_avg(i_subject, :, :, i_targ_side, hit+1) = d_sub.avg;
+            agg_data_var(i_subject, :, :, i_targ_side, hit+1) = d_sub.var;
+        end
+    end
+end
+
+
+% Plot it
+side_label = {'left' 'right'};
+hit_label = {'miss' 'hit'};
+for field = {'avg' 'var'}
+    field = field{1};
+    switch field
+        case 'avg'
+            agg = agg_data_avg;
+            ylims = [-1 1] * 3e-5;
+        case 'var'
+            agg = agg_data_var;
+            ylims = [0 1] * 5e-9;
+    end
+    for i_targ_side = 1:2
+        for hit = 0:1
+            % Array for all data: Subj x Chan x Time x TargSide x Hit 
+            x = agg(:, 2, :, i_targ_side, hit+1);
+            x = squeeze(x);
+            subplot(2, 2, (hit * 2) + i_targ_side)
+            plot(d_sub.time, x)
+            hold on
+            plot(d_sub.time, nanmean(x, 1), '-k', 'LineWidth', 2)            
+            hold off
+            ylim(ylims)
+            title(sprintf('%s %s', side_label{i_targ_side}, hit_label{hit+1}))
+        end
+    end
+    print('-dpng', [exp_dir 'plots/eog/' field])
+end
