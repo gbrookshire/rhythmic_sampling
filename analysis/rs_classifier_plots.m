@@ -58,7 +58,7 @@ plot([-1 1], [0.5 0.5], '--k')
 hold off
 xlim([-0.75 0.75])
 xlabel('Time (s)')
-ylabel('Accuracy')
+ylabel('OOB Error')
 
 subplot(2, 1, 2)
 
@@ -68,8 +68,9 @@ for i_t = 1:length(t)
     if all(isnan(x))
         continue
     end
-    %[~, p] = ttest(x, 0.5);
-    p = myBinomTest(sum(x < 0.5), length(x), 0.5);
+    [~, p] = ttest(x, 0.5);
+%     p = signrank(x, 0.5);
+%     p = myBinomTest(sum(x < 0.5), length(x), 0.5);
     pval(i_t) = p;
 end
 plot(t, log10(pval))
