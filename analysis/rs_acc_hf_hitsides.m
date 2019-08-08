@@ -8,7 +8,9 @@ segment_type = 'target'; % target | trial
 % win_size = 0.1;
 
 % win_str = sprintf('win_%.1fs', win_size);
-vers = 'raw_chans/all';
+% vers = 'raw_chans/all';
+vers = 'ress/win_0.1s'
+
 tfr_dir = [exp_dir 'tfr/' vers '/' segment_type '/'];
 
 occip_roi = {'MEG2042' 'MEG2043' 'MEG2032' 'MEG2033'};
@@ -74,12 +76,24 @@ save([tfr_dir 'agg'], 'x', 'd')
 
 %% Plot it
 
-for i_sensor_side = 1:2
+for i_subject = 0:height(subject_info)
     
+if i_subject == 0
+    subj_sel = 1:height(subject_info);
+    save_fname = 'avg';
+elseif subject_info.exclude(i_subject)
+    continue
+else
+    subj_sel = i_subject;
+    save_fname = strrep(subject_info.meg{i_subject}, '/', '_');
+end
+
+for i_sensor_side = 1:2
+
     switch vers
-        case 'ress/win_0.1.s'
-            % RESS side is coded as _stimulus_ side. Flip around to get to the
-            % _sensor_ side.
+        case 'ress/win_0.1s'
+            % RESS side is coded as _stimulus_ side. 
+            % Flip around to get to the sensor_ side.
             i_ress_side = mod(i_sensor_side, 2) + 1;
             chan_inx = i_ress_side;
         case 'raw_chans/occip'
@@ -90,20 +104,22 @@ for i_sensor_side = 1:2
                 chan_inx = 1:2;
             end
         case 'raw_chans/all'
-            if i_sensor_side == 1
+            if i_sensor_side == 1 % Right
                 chan_inx = 3:4; 
-            elseif i_sensor_side == 2
+            elseif i_sensor_side == 2 % Left
                 chan_inx = 1:2;
             end
             chan_inx = ismember(d.label, occip_roi(chan_inx));
         otherwise
             error('Not implemented for TFR version %s', vers)
     end
-        
+
     for i_tagged_freq = 1:2
         subplot(2, 2, (i_tagged_freq - 1) * 2 + i_sensor_side)
-        mi = squeeze(mean(x(:,chan_inx,i_tagged_freq,:), 2));
+        mi = mean(x(subj_sel, chan_inx, i_tagged_freq,:), 2);
         mi_mean = nanmean(mi, 1);
+        mi = squeeze(mi);
+        mi_mean = squeeze(mi_mean);
         plot(d_l.time, mi, 'color', 0.7 * [1 1 1])
         hold on
         plot([-0.5 0.5], [0 0], '-k')
@@ -112,20 +128,25 @@ for i_sensor_side = 1:2
         title(sprintf('%s, %i Hz', ...
             sides{i_sensor_side}, exp_params.tagged_freqs(i_tagged_freq)));
         ylim([min(min(mi)) max(max(mi))])
-        % Simple stats
-        [h, p] = ttest(mi, 0, 'dim', 1);
-        plot(d_l.time(p < 0.05), zeros([1 sum(h)]), '*b')
+        if i_subject == 0
+            % Simple stats
+            [h, p] = ttest(mi, 0, 'dim', 1);
+            plot(d_l.time(p < 0.05), zeros([1 sum(h)]), '*b')
+        end
         hold off
     end
 end
 
-print('-dpng',...
-    [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits'])
+save_dir = [exp_dir 'plots/accuracy/high_freq/'];
+print('-dpng', [save_dir 'left-hits_vs_right-hits_' save_fname])
+% break
+end
+
 
 %% Plot the difference between the right and left sides
 
 switch vers
-    case 'ress/win_0.1.s'
+    case 'ress/win_0.1s'
         % For selecting RESS channels
         left_inx = 2;
         right_inx = 1;
@@ -140,13 +161,27 @@ switch vers
         error('Not implemented for TFR version %s', vers)
 end
 
+for i_subject = 0:height(subject_info)
+    
+if i_subject == 0
+    subj_sel = 1:height(subject_info);
+    save_fname = 'avg';
+elseif subject_info.exclude(i_subject)
+    continue
+else
+    subj_sel = i_subject;
+    save_fname = strrep(subject_info.meg{i_subject}, '/', '_');
+end
+
 % Difference between left and right sensors
 for i_tagged_freq = 1:2
     subplot(2, 1, i_tagged_freq)
-    mi_left = squeeze(mean(x(:, left_inx, i_tagged_freq, :), 2));
-    mi_right = squeeze(mean(x(:, right_inx, i_tagged_freq, :), 2));
+    mi_left = mean(x(subj_sel, left_inx, i_tagged_freq, :), 2);
+    mi_right = mean(x(subj_sel, right_inx, i_tagged_freq, :), 2);
     mi_diff = mi_right - mi_left;
     mi_diff_mean = nanmean(mi_diff, 1); 
+    mi_diff = squeeze(mi_diff);
+    mi_diff_mean = squeeze(mi_diff_mean);
     plot(d_l.time, mi_diff, 'color', 0.7 * [1 1 1])
     hold on
     plot([-0.5 0.5], [0 0], '-k')
@@ -155,14 +190,17 @@ for i_tagged_freq = 1:2
     title(sprintf('%i Hz', ...
         exp_params.tagged_freqs(i_tagged_freq)));
     ylim([min(min(mi_diff)) max(max(mi_diff))])
-    % Simple stats
-    [h, p] = ttest(mi_diff, 0, 'dim', 1, 'alpha', 0.01);
-    plot(d_l.time(logical(h)), zeros([1 sum(h)]), '*b')
+    if i_subject == 0
+        % Simple stats
+        [h, p] = ttest(mi_diff, 0, 'dim', 1, 'alpha', 0.01);
+        plot(d_l.time(logical(h)), zeros([1 sum(h)]), '*b')
+    end
     hold off 
 end
 
+save_dir = [exp_dir 'plots/accuracy/high_freq/'];
 print('-dpng',...
-    [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits_diff'])
+    [save_dir 'left-hits_vs_right-hits_diff_' save_fname])
 
 
 % Collapse over RFT frequency for each sensor side
@@ -174,25 +212,32 @@ for i_sensor_side = 1:2
         chan_inx = right_inx;
     end
         
-    mi_sub = squeeze(mean(mean(x(:, chan_inx, :, :), 2), 3));
+    mi_sub = mean(mean(x(subj_sel, chan_inx, :, :), 2), 3);
+    mi_sub_mean = nanmean(mi_sub, 1);
+    mi_sub = squeeze(mi_sub);
+    mi_sub_mean = squeeze(mi_sub_mean);
     
     plot(d_l.time, mi_sub, 'color', 0.7 * [1 1 1])
     hold on
     plot([-0.5 0.5], [0 0], '-k')
     plot([0 0], [min(min(mi_sub)) max(max(mi_sub))], '-k')
-    plot(d_l.time, nanmean(mi_sub, 1), '-r', 'LineWidth', 2)
+    plot(d_l.time, mi_sub_mean, '-r', 'LineWidth', 2)
     title([sides{i_sensor_side} ' sensors']);
     ylim([min(min(mi_sub)) max(max(mi_sub))])
-    % Simple stats
-    [h, p] = ttest(mi_sub, 0, 'dim', 1, 'alpha', 0.01);
-    plot(d_l.time(logical(h)), zeros([1 sum(h)]), '*b')
+    if i_subject == 0
+        % Simple stats
+        [h, p] = ttest(mi_sub, 0, 'dim', 1, 'alpha', 0.01);
+        plot(d_l.time(logical(h)), zeros([1 sum(h)]), '*b')
+    end
     hold off 
 end
 
+
+save_dir = [exp_dir 'plots/accuracy/high_freq/'];
 print('-dpng',...
-    [exp_dir 'plots/accuracy/high_freq/left-hits_vs_right-hits_by-side'])
+    [save_dir 'left-hits_vs_right-hits_by-side_' save_fname])
 
-
+end
 %% Collapse over the two RFT frequencies
 
 switch vers

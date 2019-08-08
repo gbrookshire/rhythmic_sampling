@@ -60,11 +60,44 @@ switch data_type
         get_time = @(d) d.time{1};
                 
     case 'rft'
-        error('Not implemented for RFT data yet')
         % Read in the data
-        xxxxx
+        data_dir = [exp_dir 'tfr/ress/win_0.1s/target/'];
+        fn = [data_dir fname '/high.mat'];
+        d = load(fn);
+        d = d.high_freq_data;
+        % Take data at the tagged frequencies
+        d_features = cell(1, 2);
+        d_comb = d; % Initialize
+        % Arrange data with tagged frequencies as different channels
+        for i_freq = 1:2
+            freq = exp_params.tagged_freqs(i_freq);
+            cfg = [];
+            cfg.frequency = [-1.2 1.2] + freq;
+            cfg.avgoverfreq = 'yes';
+            d_sub = ft_selectdata(cfg, d);
+            % Re-label the channels to include freq
+            d_sub.label = cellfun(...
+                @(s) sprintf('%s-%i', s, freq), ...
+                d.label, ...
+                'UniformOutput', false);
+            d_sub.freq = 0; % Fake freq - real freq is in chan name
+            d_features{i_freq} = d_sub;
+        end
+        % Include a feature for which side each RFT freq is on
+        trial_numbers = d.trialinfo(:,2);
+        freq_mapping = behav.freq_left(trial_numbers) == 63;
+        cfg = [];
+        cfg.channel = d.label{1};
+        cfg.frequency = min(d.freq);
+        d_freq_mapping = ft_selectdata(cfg, d);
+        d_freq_mapping.label = {'freq_mapping'};
+        fm = repmat(freq_mapping, [1 length(d.time)]);
+        d_freq_mapping.powspctrm(:,1,1,:) = fm;
+        d_freq_mapping.freq = 0;
+        d_features{3} = d_freq_mapping;
+        d = ft_appendfreq([], d_features{:});
         % Make a function to grab the data for this timepoint
-        get_data = @get_data_rft;
+        get_data = @(d, i_t) d.powspctrm(:,:,1,i_t);
         % Function to get the time vector
         get_time = @(d) d.time;
     
@@ -79,9 +112,11 @@ hits = d.trialinfo(:,1) == 1;
 cfg_sel.trials = hits;
 cfg_sel.avgoverrept = 'no';
 
-% Only look at gradiometers
-cfg_sel.channel = {'MEG*2' 'MEG*3'};
-
+if ismember(data_type, {'alpha' 'raw'})
+    % Only look at gradiometers
+    cfg_sel.channel = {'MEG*2' 'MEG*3'};
+end
+    
 % Make the selections
 d = ft_selectdata(cfg_sel, d);
 
@@ -121,26 +156,3 @@ data_matrix = cat(3, d.trial{:});
 dout = data_matrix(:, i_t, :);
 dout = squeeze(dout)';
 end
-
-% Function to get a timepoint of data from RFT data
-function dout = get_data_rft(d, i_t)
-%%%%%%% ----- This should be moved, so it doesn't get computed on each loop
-% Select data at each tagged frequency +/- 1 Hz
-d_freq = cell(1, 2);
-for i_freq = 1:2
-    freq = exp_params.tagged_freqs(i_freq);
-    cfg = [];
-    cfg.frequency = [-1 1] + freq;
-    cfg.avgoverfreq = 'yes';
-    d_freq{i_freq} = ft_selectdata(cfg, d); 
-end
-d = ft_appendfreq([], d_freq{:});
-data = d.powspctrm(:,:,:,i_t);
-%
-% Separate features for power at each tagged freq
-% Include a feature for "rft_mapping": which side has 63 Hz
-% Random forests discover interactions automatically
-%
-end
-
-
