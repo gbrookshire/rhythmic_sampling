@@ -209,6 +209,34 @@ text(2, 0.8, '78 Hz', 'color', b(2).FaceColor)
 print('-dpng', [exp_dir 'plots/behav/overall_accuracy'])
 
 
+%% RT histograms
+
+% clear variables
+% close all
+% rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    subplot(4, 4, i_subject)
+    behav = rs_behavior(i_subject);
+    rt = behav.rt - behav.target_t;
+    histogram(rt, 0:0.1:2, ...
+        'Normalization', 'count', ...
+        'DisplayStyle', 'stairs', ...
+        'LineWidth', 1.5)
+%         'EdgeAlpha', 0.4)
+%     hold on
+end
+% hold off
+subplot(4,4,1)
+ylabel('Count')
+xlabel('RT (s)')
+
+print('-dpng', [exp_dir 'plots/behav/rt_hist'])
+
+
 %% Look at artifact counts for each subject
 % Look at the number of NaNs in each sample over the trials
 
