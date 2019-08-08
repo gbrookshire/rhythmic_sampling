@@ -2,7 +2,7 @@ clear variables
 close all
 rs_setup
 
-data_type = 'alpha';
+data_type = 'rft';
 
 %% Compute and save the Out-of-bag error
 
@@ -17,6 +17,9 @@ switch data_type
     case 'raw';
         % Time variable for downsampled raw data
         t = -1:0.01:1;
+        
+    case 'rft'
+        t = -0.5:0.01:0.5;
         
     otherwise
         error('data_type %s not implemented',data_type)
