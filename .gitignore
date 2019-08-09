@@ -2,3 +2,7 @@
 *.pdf
 *.asv
 *.m~
+
+slurm-*.err
+slurm-*.out
+slurm-*.stats
