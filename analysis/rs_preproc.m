@@ -45,7 +45,7 @@ for i_block = block_info.main
 
     % Preprocess the data
     cfg.channel = art.ica.comp.cfg.channel; % Select the good channels
-    cfg.channel = [cfg.channel {'MISC004'}]; % Include photodiode
+%     cfg.channel = [cfg.channel; {'MISC004'}]; % Include photodiode
 %     cfg.channel = [{'BIO001' 'BIO002'}]; % EOG channels
     cfg.bsfilter = 'yes'; % Band-stop filter to get rid of line noise
     cfg.bsfreq = [48 52];
