@@ -2534,3 +2534,193 @@ for field = {'avg' 'var'}
     end
     print('-dpng', [exp_dir 'plots/eog/' field])
 end
+
+%% Coherence
+
+close all
+clear variables
+rs_setup
+
+% Load the data
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    d = load([exp_dir 'coherence/' fname '/coh']);
+    % Dim: subject * chancmb * freq * time * RFT_freq_mapping
+    x(i_subject,:,:,:,:) = d.x;
+end
+
+% Plot it
+sides = {'left' 'right'};
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    elseif i_subject == 0
+        subj_sel = 1:height(subject_info);
+        fname = 'avg';
+    else
+        subj_sel = i_subject;
+        fname = strrep(subject_info.meg{i_subject}, '/', '_');
+    end
+    
+    for i_rft_map = 1:2
+        for i_chancmb = 1:2
+            x_sub = x(subj_sel, i_chancmb, :, :, i_rft_map);
+            x_sub = nanmean(x_sub, 1);
+            x_sub = squeeze(x_sub);
+            
+            i_plot = 2 * (i_rft_map - 1) + i_chancmb;
+            subplot(2, 2, i_plot)
+            imagesc(d.coh.time, ...
+                d.coh.freq, ...
+                x_sub)
+            set(gca, 'YDir', 'normal')
+            title(sprintf('%s, %i HZ on left', ...
+                d.coh.labelcmb{i_chancmb}, ...
+                exp_params.tagged_freqs(i_rft_map)));
+            colorbar;
+        end
+    end
+
+    print('-dpng', [exp_dir 'plots/coherence/' fname])
+    
+end
+
+%% Check whether the photodiode recordings can be approximated with a sine
+
+clear variables
+close all
+rs_setup
+
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    behav = rs_behavior(i_subject);
+    d = load([exp_dir 'preproc/photodiode/trial/' fname '/preproc']);
+    d = d.data;
+    cfg = [];
+    cfg.detrend = 'yes';
+    d = ft_preprocessing(cfg, d);
+    
+    % Only keep data from when the stimulus was on
+    trial_num = d.trialinfo(:,2);
+    rt = behav.rt(trial_num);
+    for i_trial = 1:length(d.trial)
+        t = d.time{i_trial};
+        after_stim_onset = t > 0 + 0.1;
+        before_stim_end = t < 4 - 0.1;
+        before_resp = t < rt(i_trial);
+        t_sel = after_stim_onset & before_stim_end & before_resp;
+        d.trial{i_trial} = d.trial{i_trial}(t_sel);
+        d.time{i_trial} = d.time{i_trial}(t_sel);
+    end
+    % Toss empty trials
+    empty_trial = cellfun(@isempty, d.time);
+    cfg = [];
+    cfg.trials = ~empty_trial;
+    d = ft_selectdata(cfg, d);
+
+    % Compute the phase of the real signal
+    hilbphase = @(x) angle(hilbert(x));
+    p_data = cellfun(hilbphase, d.trial, 'UniformOutput', false);
+
+    % Check the actual frequency of the stimulus
+    freq_measured = nan(size(d.trial));
+    for i_trial = 1:length(d.trial)
+        unwrapped = unwrap(p_data{i_trial});
+        phase_change = unwrapped(end) - unwrapped(1);
+        time_change = d.time{i_trial}(end) - d.time{i_trial}(1);
+        freq_measured(i_trial) = phase_change / time_change / (2 * pi);
+    end
+
+    p_data_all = p_data;
+    freq_measured_all = freq_measured;
+    d_all = d;
+    
+    for i_freq = 1:2
+        % Look at each frequency separately
+        freq = exp_params.tagged_freqs(i_freq);
+        keep_trials = abs(freq_measured_all - freq) < 1;
+        p_data = p_data_all(keep_trials);
+        freq_measured = freq_measured_all(keep_trials);
+        cfg = [];
+        cfg.trials = keep_trials;
+        d = ft_selectdata(cfg, d_all);
+
+        % Plot the distribution of measured frequency
+        subplot(3, 2, i_freq)
+        bins = 60:0.1:80;
+        histogram(freq_measured, bins, 'DisplayStyle', 'stairs')
+        hold on
+
+        % Synthesize a sine wave at the frequency of this oscillation
+        trial_num = d.trialinfo(:,2);
+        freq_right = behav.freq_right(trial_num);
+        d_synth = cell(size(d.trial));
+        for i_trial = 1:length(d.trial)
+            f = freq_right(i_trial);
+    %         f = freq_measured(i_trial);
+            t = d.time{i_trial};
+            amp = max(d.trial{i_trial});
+            y = amp * sin(2 * pi * f * t);
+            d_synth{i_trial} = y;
+        end
+        clear f t y
+
+        % Check whether the synthesized signals match the real signals
+        p_synth = cellfun(hilbphase, d_synth, 'UniformOutput', false);
+        p_diff = cellfun(@minus, p_data, p_synth, 'UniformOutput', false);
+        p_diff = cellfun(@wrapToPi, p_diff, 'UniformOutput', false);
+
+        % Plot the phase difference between the real and synthesized
+        % signals
+        subplot(3, 2, 2 + i_freq)
+        histogram(cat(2, p_diff{:}), 250, 'DisplayStyle', 'stairs')
+        hold on
+        
+        % Plot phase difference as a function of time in the trial
+        subplot(3, 2, 4 + i_freq)
+        t_vec = cat(2, d.time{:});
+        p_vec = cat(2, p_diff{:});
+        s = randsample(length(t_vec), 1000);
+        scatter(t_vec(s), p_vec(s))
+        hold on
+    
+    end
+    
+end
+
+for i_plot = 1:2
+    subplot(3,2,i_plot)
+    title('Measured frequency')
+    xlabel('Frequency (Hz)')
+    ylabel('Count')
+    hold off
+end
+
+for i_plot = 3:4
+    subplot(3,2,i_plot)
+    title('Phase: measured vs synth')
+    xlim([-pi pi])
+    xlabel('Phase difference (rad)')
+    ylabel('Count')
+    hold off
+end
+
+for i_plot = 5:6
+    subplot(3,2,i_plot)
+    title('Phase diff by time')
+    ylim([-pi pi])
+    ylabel('Phase difference (rad)')
+    xlabel('Time (s)')
+    hold off
+end
+
+fig = gcf;
+fig.PaperUnits = 'inches';
+fig.PaperPosition = [0 0 8 8];
+print('-dpng', [exp_dir 'plots/coherence/phase_test'])
