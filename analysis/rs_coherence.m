@@ -35,6 +35,7 @@ nan_trials = any(squeeze(isnan(fourier.fourierspctrm(:,1,1,:))), 2);
 hits = fourier.trialinfo(:,1) == 1;
 cfg = [];
 cfg.trials = hits & ~nan_trials;
+% cfg.trials = ~nan_trials;
 fourier = ft_selectdata(cfg, fourier);
 
 % Find which side each RFT frequency was on in each trial
@@ -44,27 +45,27 @@ target_side = behav.target_side(trial_num);
 
 % Get coherence separately for each mapping of freq to each side
 sides = {'left' 'right'};
-clear cohspctrm % chancmb * freq * time * RFTfreq * target_side
+clear cohspctrm % chancmb * freq * time * RFT_mapping * target_side
 clear trial_counts
-for i_freq = 1:2
+for i_rft_map = 1:2
     % i_freq == 1: left side at 63 Hz, right side at 78 Hz
     % i_freq == 2: left side at 78 Hz, right side at 63 Hz
-    freq_sel = freq_left == exp_params.tagged_freqs(i_freq);
+    freq_sel = freq_left == exp_params.tagged_freqs(i_rft_map);
     for i_targ_side = 1:2
         % i_targ_side == 1: target is on the left (left-hits)
         % i_targ_side == 2: target is on the right (right-hits)
         targside_sel = strcmp(target_side, sides{i_targ_side});
         % Combine selection vectors to get trial selection
         trial_sel = freq_sel & targside_sel;
-        trial_counts(i_freq, i_targ_side) = sum(trial_sel);
+        trial_counts(i_rft_map, i_targ_side) = sum(trial_sel);
         % Compute coherence
         cfg = [];
-        cfg.trials = freq_sel & targside_sel;
+        cfg.trials = trial_sel;
         cfg.method = 'coh';
         cfg.channelcmb = {'left' 'MISC004'
                           'right' 'MISC004'};
         coh = ft_connectivityanalysis(cfg, fourier);
-        cohspctrm(:,:,:,i_freq,i_targ_side) = coh.cohspctrm;
+        cohspctrm(:,:,:,i_rft_map,i_targ_side) = coh.cohspctrm;
     end
 end
 
