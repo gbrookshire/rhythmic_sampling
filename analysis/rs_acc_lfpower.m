@@ -199,6 +199,71 @@ for i_subject = 0:height(subject_info)
     
 end
 
+
+%% Look at raw alpha power in a scatterplot
+% Compare left-hits -- right-hits, avg'd over sensors and over time during
+% a pre-stimulus window
+
+time_win = [0.0 0.2] - 0.1;
+freq_win = [7 14];
+
+% Compare left-hits and right-hits
+% For each side of the head
+for i_chan_side = 1:2
+    subplot(1,2,i_chan_side)
+    % Select channels on this side
+    if i_chan_side == 1
+        chan_side_inx = left_inx;
+    elseif i_chan_side == 2
+        chan_side_inx = right_inx;
+    else
+        error('oops')
+    end
+    % Convert chan selection to logical inx to combine w/ ROI
+    chan_inx = false([length(d.label) 1]);
+    chan_inx(chan_side_inx) = true;
+    chan_inx = chan_inx & roi;
+    % Extract the data for left-hits and right-hits
+    d_x = agg_data_orig(:,chan_inx,:,:,:,2); % Get hits
+    % Average over channels
+    d_x = nanmean(d_x, 2);
+    % Average over the time window
+    t_sel = (time_win(1) < d.time) & (d.time < time_win(2));
+    d_x = d_x(:,:,:,t_sel,:,:);
+    d_x = mean(d_x, 4);
+    % Average over the frequencies of interest
+    f_sel = (freq_win(1) < d.freq) & (d.freq < freq_win(2));
+    d_x = d_x(:,:,f_sel,:,:,:);
+    d_x = mean(d_x, 3);
+    d_x = squeeze(d_x);
+    
+    % Make the plot
+    lims = [min(min(d_x)) * 0.9, max(max(d_x)) * 1.1];
+    loglog(d_x(:,1), d_x(:,2), 'o')
+    hold on
+    plot(lims, lims, '--k')
+    hold off
+    xlabel('Power (left hits)')
+    ylabel('Power (right hits)')
+    xlim(lims)
+    ylim(lims)
+    if i_chan_side == 1
+        title('Left hemi')
+    elseif i_chan_side == 2
+        title('Right hemi')
+    end
+end
+
+fig = gcf;
+fig.PaperUnits = 'inches';
+fig.PaperPosition = [0 0 8 4];
+print('-dpng', [exp_dir 'plots/coherence/phase_test'])
+
+fn = [exp_dir 'plots/alpha_power/win_4cyc'];
+fn = sprintf('%s/each_side_%.1f-%.1f.png', fn, time_win(1), time_win(2));
+print('-dpng', fn)
+
+
 %% Correlate pre- and post-stimulus effects
 
 time_windows = [-0.5 -0.3; 0.4 0.6];
