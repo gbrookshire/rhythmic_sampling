@@ -2748,7 +2748,3 @@ b(b==0) = NaN;
 beta = squeeze(b(2,:,:)); % Get slopes
 beta = beta * (1 / (2 * pi)); % Convert to Hz
 nanmean(beta)
-
-%% Convert the betas to Hz
-beta = squeeze(b(2,:,:));
-% (rad / s) * (1 cyc / 2pi rad) = cyc / s = Hz
