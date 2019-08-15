@@ -2594,6 +2594,8 @@ clear variables
 close all
 rs_setup
 
+freq_adjust = [-0.0535 -0.0648];
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -2663,7 +2665,9 @@ for i_subject = 1:height(subject_info)
         d_synth = cell(size(d.trial));
         for i_trial = 1:length(d.trial)
             f = freq_right(i_trial);
-    %         f = freq_measured(i_trial);
+            %%% Adjust freq using measured diff in freq due to the frame
+            %%% rate being slightly slower than 120 Hz
+            f = f + freq_adjust(i_freq);
             t = d.time{i_trial};
             amp = max(d.trial{i_trial});
             y = amp * sin(2 * pi * f * t);
@@ -2689,9 +2693,23 @@ for i_subject = 1:height(subject_info)
         s = randsample(length(t_vec), 1000);
         scatter(t_vec(s), p_vec(s))
         hold on
-    
+        
+        % Fit a line to the phase lag over time
+        % This will tell us what the real frequency is
+        if i_freq == 1 % Toss weird values due to dropped frames
+            keep_obs = (-2 < p_vec) & (p_vec < 1); 
+        elseif i_freq == 2
+            keep_obs = (-pi < p_vec) & (p_vec < -1); 
+            p_vec = wrapTo2Pi(p_vec);
+        end
+        p_vec(~keep_obs) = [];
+        t_vec(~keep_obs) = [];
+        X = [ones(length(p_vec), 1) t_vec'];
+        beta = X\p_vec';
+        b(:,i_subject, i_freq) = beta';
+        % Units of b(2,:) - rad/s  
+        % So the drift for each subject is 
     end
-    
 end
 
 for i_plot = 1:2
@@ -2724,3 +2742,13 @@ fig = gcf;
 fig.PaperUnits = 'inches';
 fig.PaperPosition = [0 0 8 8];
 print('-dpng', [exp_dir 'plots/coherence/phase_test'])
+
+% Get the difference in Hz between expected and displayed signals
+b(b==0) = NaN;
+beta = squeeze(b(2,:,:)); % Get slopes
+beta = beta * (1 / (2 * pi)); % Convert to Hz
+nanmean(beta)
+
+%% Convert the betas to Hz
+beta = squeeze(b(2,:,:));
+% (rad / s) * (1 cyc / 2pi rad) = cyc / s = Hz
