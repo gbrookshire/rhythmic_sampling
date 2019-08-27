@@ -1072,7 +1072,7 @@ xlabel('Modulation frequency (Hz)')
 
 print('-dpng', '-r300', [exp_dir 'plots/cfc/' vers 'avg'])
 
-%% Plot cross-correlation of power at the two tagged frequencies
+%% Plot cross-correlation of power at the two tagged frequencies -- OLD
 
 clear variables
 rs_setup
@@ -1121,6 +1121,60 @@ ylabel('Power (dB)')
 xlim([0 12])
 
 print('-dpng', '-r300', [exp_dir 'plots/xcorr'])
+
+%% Cross-correlations -- NEW
+
+clear variables
+rs_setup
+
+close all
+
+clrs = {'b' 'r'};
+
+xc = nan([height(subject_info), 2, 101]); % Subj * Hit side * Lag
+for i_subject = 1:height(subject_info)
+    if subject_info.exclude(i_subject)
+        continue
+    end
+    fname = subject_info.meg{i_subject};
+    x = load([exp_dir 'xcorr/' fname '/xc']);
+    xc(i_subject,:,:) = x.xc;
+
+    plot(x.t_lags, x.xc)
+    hold on
+    plot([-0.5 0.5], [0 0], '-k')
+    hold off
+    xlabel('Lag (s)')
+    ylabel('Corr')
+    legend('Left hits', 'Right hits')
+    
+    fn = [exp_dir 'plots/xcorr/' strrep(fname, '/', '_')];
+    print('-dpng', '-r300', fn);
+end
+
+% Plot average over subjects
+n = sum(subject_info.exclude == 0);
+for i_hit_side = 1:2
+    xcx = xc(:,i_hit_side,:);
+    m = squeeze(nanmean(xcx, 1));
+    sem = squeeze(nanstd(xcx, 1)) ./ sqrt(n);
+    plot(x.t_lags, m, clrs{i_hit_side})
+    hold on
+    plot([-0.5 0.5], [0 0], '-k')
+    fill([x.t_lags fliplr(x.t_lags)], ...
+        [m + sem; flipud(m - sem)], ...
+        clrs{i_hit_side}, ...
+        'edgecolor', 'none')
+    alpha(0.2)
+end    
+hold off
+xlabel('Lag (s)')
+ylabel('Corr')
+legend('Left hits', 'Right hits')
+
+fn = [exp_dir 'plots/xcorr/avg'];
+print('-dpng', '-r300', fn);
+
 
 
 %% Compare HF power in hits vs misses
