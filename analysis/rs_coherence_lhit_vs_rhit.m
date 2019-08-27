@@ -1,4 +1,4 @@
-function rs_coherence_lhit-vs-rhit(i_subject)
+function rs_coherence_lhit_vs_rhit(i_subject)
 
 % Compute coherence between the MEG recordings and the photodiode
 % 
@@ -61,8 +61,8 @@ for i_rft_map = 1:2
         cfg = [];
         cfg.trials = trial_sel;
         cfg.method = 'coh';
-        cfg.channelcmb = {'left' 'MISC004'
-                          'right' 'MISC004'};
+        % Only compute coh over RESS filter for stims on right side
+        cfg.channelcmb = {'right' 'MISC004'};
         coh = ft_connectivityanalysis(cfg, fourier);
         cohspctrm(:,:,:,i_rft_map,i_targ_side) = coh.cohspctrm;
     end
