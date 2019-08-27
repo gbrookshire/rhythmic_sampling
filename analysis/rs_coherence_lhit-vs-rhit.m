@@ -1,4 +1,4 @@
-function rs_coherence(i_subject)
+function rs_coherence_lhit-vs-rhit(i_subject)
 
 % Compute coherence between the MEG recordings and the photodiode
 % 
