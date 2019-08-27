@@ -2535,7 +2535,7 @@ for field = {'avg' 'var'}
     print('-dpng', [exp_dir 'plots/eog/' field])
 end
 
-%% Coherence
+%% Coherence - Left hits vs right hits
 
 close all
 clear variables
@@ -2553,40 +2553,38 @@ for i_subject = 1:height(subject_info)
 end
 
 % Plot it
-sides = {'left' 'right'};
-for i_subject = 1:height(subject_info)
-    if subject_info.exclude(i_subject)
-        continue
-    elseif i_subject == 0
+for i_subject = 0:height(subject_info)
+    if i_subject == 0
         subj_sel = 1:height(subject_info);
         fname = 'avg';
+    elseif subject_info.exclude(i_subject)
+        continue
     else
         subj_sel = i_subject;
         fname = strrep(subject_info.meg{i_subject}, '/', '_');
     end
     
-    for i_rft_map = 1:2
-        for i_chancmb = 1:2
-            x_sub = x(subj_sel, i_chancmb, :, :, i_rft_map);
-            x_sub = nanmean(x_sub, 1);
-            x_sub = squeeze(x_sub);
-            
-            i_plot = 2 * (i_rft_map - 1) + i_chancmb;
-            subplot(2, 2, i_plot)
-            imagesc(d.coh.time, ...
-                d.coh.freq, ...
-                x_sub)
-            set(gca, 'YDir', 'normal')
-            title(sprintf('%s, %i HZ on left', ...
-                d.coh.labelcmb{i_chancmb}, ...
-                exp_params.tagged_freqs(i_rft_map)));
-            colorbar;
-        end
+    for i_rft_map = 1:2 % Which side each tagged freq is on
+        i_chancmb = 1; % Only using the RESS channel for stims on the right
+        x_sub = x(subj_sel, i_chancmb, :, :, i_rft_map);
+        x_sub = nanmean(x_sub, 1);
+        x_sub = squeeze(x_sub);
+
+        subplot(2, 1, i_rft_map)
+        imagesc(d.coh.time, ...
+            d.coh.freq, ...
+            x_sub)
+        set(gca, 'YDir', 'normal')
+        title(sprintf('%s, %i HZ on left', ...
+            d.coh.labelcmb{i_chancmb}, ...
+            exp_params.tagged_freqs(i_rft_map)));
+        colorbar;
     end
 
-    print('-dpng', [exp_dir 'plots/coherence/' fname])
-    
+    fn = [exp_dir 'plots/coherence/left-hits_vs_right-hits/' fname];
+    print('-dpng', fn)
 end
+
 
 %% Check whether the photodiode recordings can be approximated with a sine
 
