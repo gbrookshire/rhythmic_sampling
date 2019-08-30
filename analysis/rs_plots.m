@@ -1132,6 +1132,7 @@ close all
 clrs = {'b' 'r'};
 
 xc = nan([height(subject_info), 2, 101]); % Subj * Hit side * Lag
+clear spec
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
@@ -1159,12 +1160,13 @@ for i_subject = 1:height(subject_info)
     y = fft(x.xc, nfft, 2);
     Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
     % Only look at low frequencies
-    f_sel = f < 12;
+    f_sel = f <= 12;
     f = f(f_sel);
     Pyy = Pyy(:,f_sel);
     plot(f, db((Pyy), 'power'));
     xlabel('Frequency (Hz)')
     ylabel('Power (dB)')
+    spec(i_subject,:,:) = Pyy;
     
     fn = [exp_dir 'plots/xcorr/' strrep(fname, '/', '_')];
     print('-dpng', '-r300', fn);
@@ -1173,6 +1175,7 @@ end
 % Plot average over subjects
 n = sum(subject_info.exclude == 0);
 for i_hit_side = 1:2
+    subplot(2, 1, 1)
     xcx = xc(:,i_hit_side,:);
     m = squeeze(nanmean(xcx, 1));
     sem = squeeze(nanstd(xcx, 1)) ./ sqrt(n);
@@ -1184,11 +1187,32 @@ for i_hit_side = 1:2
         clrs{i_hit_side}, ...
         'edgecolor', 'none')
     alpha(0.2)
-end    
+    
+    subplot(2, 1, 2)
+    nfft = length(x.t_lags)-1;
+    sample_per = mean(diff(x.t_lags));
+    Fs = 1 / sample_per;
+    f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+    y = fft(m, nfft);
+    Pyy = 1 / (nfft * Fs) * abs(y(1:nfft/2+1)) .^ 2; % Power spectrum
+    % Only look at low frequencies
+    f_sel = f <= 12;
+    f = f(f_sel);
+    Pyy = Pyy(f_sel);
+    plot(f, db((Pyy), 'power'), clrs{i_hit_side});
+    hold on
+end
+
+subplot(2, 1, 1)
 hold off
 xlabel('Lag (s)')
 ylabel('Corr')
 legend('Left hits', 'Right hits')
+
+subplot(2, 1, 2)
+hold off
+xlabel('Frequency (Hz)')
+ylabel('Power (dB)')
 
 fn = [exp_dir 'plots/xcorr/avg'];
 print('-dpng', '-r300', fn);
