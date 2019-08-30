@@ -1140,6 +1140,8 @@ for i_subject = 1:height(subject_info)
     x = load([exp_dir 'xcorr/' fname '/xc']);
     xc(i_subject,:,:) = x.xc;
 
+    % Plot cross-correlations
+    subplot(2, 1, 1)
     plot(x.t_lags, x.xc)
     hold on
     plot([-0.5 0.5], [0 0], '-k')
@@ -1147,6 +1149,22 @@ for i_subject = 1:height(subject_info)
     xlabel('Lag (s)')
     ylabel('Corr')
     legend('Left hits', 'Right hits')
+    
+    % Plot spectra of cross-correlations
+    subplot(2,1,2)
+    nfft = length(x.t_lags)-1;
+    sample_per = mean(diff(x.t_lags));
+    Fs = 1 / sample_per;
+    f = (1/sample_per) * (0:(nfft / 2)) / nfft;
+    y = fft(x.xc, nfft, 2);
+    Pyy = 1 / (nfft * Fs) * abs(y(:,1:nfft/2+1)) .^ 2; % Power spectrum
+    % Only look at low frequencies
+    f_sel = f < 12;
+    f = f(f_sel);
+    Pyy = Pyy(:,f_sel);
+    plot(f, db((Pyy), 'power'));
+    xlabel('Frequency (Hz)')
+    ylabel('Power (dB)')
     
     fn = [exp_dir 'plots/xcorr/' strrep(fname, '/', '_')];
     print('-dpng', '-r300', fn);
@@ -1182,10 +1200,10 @@ clear variables
 close all
 rs_setup
 
+cm = flipud(lbmap(100, 'RedBlue'));
+
 % Which TFR window to use?
-win_size = 0.2;
-win_str = sprintf('win_%.1fs', win_size);
-tfr_dir = [exp_dir 'tfr/' win_str '/'];
+tfr_dir = [exp_dir 'tfr/ress/win_0.1s/target/'];
 
 % Array for all data: Subj x Side x TaggedFreq x Hit X TFRfreq x Time
 agg_data = nan([height(subject_info), 2, 2, 2, 46, 101]);
@@ -1198,7 +1216,7 @@ for i_subject = 1:height(subject_info)
     % Read in the data segmented around targets
     behav = rs_behavior(i_subject);
     fname = subject_info.meg{i_subject};
-    fn = [tfr_dir 'target/' fname '/high'];
+    fn = [tfr_dir fname '/high'];
     d = load(fn);
     d = d.high_freq_data;
 
@@ -1274,6 +1292,7 @@ for i_side = 1:2
         xdiff = hit_miss(:,:,2) - hit_miss(:,:,1);
         clims = [-1 1] * max(max(abs(xdiff)));
         imagesc(d_sub.time, d_sub.freq, xdiff, clims)
+        colormap(cm)
         set(gca, 'YDir', 'normal')
         title(sprintf('%s, %i Hz, Diff', ...
             targ_side, targ_freq))
@@ -1282,7 +1301,7 @@ for i_side = 1:2
     end
 end
 print('-dpng', '-r300', ...
-    [exp_dir 'plots/accuracy/high_freq/hf_acc_by_side-' win_str '.png'])
+    [exp_dir 'plots/accuracy/high_freq/hf_acc_by_side.png'])
 
 
 %% Plot it, collapsing over side
@@ -1314,6 +1333,8 @@ for i_freq = 1:2
     xdiff = hit_miss(:,:,2) - hit_miss(:,:,1);
     clims = [-1 1] * max(max(abs(xdiff)));
     imagesc(d_sub.time, d_sub.freq, xdiff, clims)
+    colormap(cm)
+%     colorbar
     set(gca, 'YDir', 'normal')
 %     title(sprintf('%i Hz, Diff', ...
 %         targ_freq))
@@ -1337,7 +1358,7 @@ set(gcf,'paperposition',[0,0,width,height])
 % set(gcf, 'renderer', 'painters');
 
 print('-dpng', '-r300', ...
-    [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '.png'])
+    [exp_dir 'plots/accuracy/high_freq/hf_acc.png'])
 
 
 
@@ -1356,6 +1377,7 @@ for i_freq = 1:2
 
         subplot(2, 3, i_plot)
         imagesc(d_sub.time, d_sub.freq, x)
+        colormap(cm)
         set(gca, 'YDir', 'normal')
         title(hit_labels{hit+1})
 
@@ -1368,8 +1390,9 @@ for i_freq = 1:2
     m = hit_miss(:,:,1);
     %xcomp = h ./ m;
     xcomp = (h-m) ./ (h+m);
-    %clims = [-1 1] * max(max(abs(xdiff)));
+    clims = [-1 1] * max(max(abs(xdiff)));
     imagesc(d_sub.time, d_sub.freq, xcomp) %, clims)
+    colormap(cm)
     set(gca, 'YDir', 'normal')
     title('diff')
 
@@ -1387,7 +1410,7 @@ set(gcf,'paperunits','centimeters')
 set(gcf,'paperposition',[0,0,width,height])
 
 print('-dpng', '-r300', ...
-    [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '_ratio.png'])
+    [exp_dir 'plots/accuracy/high_freq/hf_acc_ratio.png'])
 
 % Run some very simple statistics
 % Get a map of t-statistics 
@@ -1411,6 +1434,7 @@ for i_freq = 1:2
     %clims = [-1 1] * max(max(abs(t)));
     clims = [-1 1] * 2.5;
     imagesc(d_sub.time, d_sub.freq, t, clims)
+%     colormap(cm)
     set(gca, 'YDir', 'normal')
     title(sprintf('%i Hz, t', f))
     %colorbar;
@@ -1421,6 +1445,7 @@ for i_freq = 1:2
     % Plot points where this sample is signif
     subplot(2,2,(i_freq-1)*2 + 2)
     imagesc(d_sub.time, d_sub.freq, squeeze(h(:,i_freq,:,:)))
+%     colormap(cm)
     set(gca, 'YDir', 'normal')
     title('Signif')
     hold on
@@ -1438,7 +1463,171 @@ set(gcf,'paperunits','centimeters')
 set(gcf,'paperposition',[0,0,width,height])
 
 print('-dpng', '-r300', ...
-    [exp_dir 'plots/accuracy/high_freq/hf_acc-' win_str '_ratio_stats.png'])
+    [exp_dir 'plots/accuracy/high_freq/hf_acc_ratio_stats.png'])
+
+
+%% TFR for high-frequency activity of left-hits vs right-hits
+
+clear variables
+close all
+rs_setup
+
+cm = flipud(lbmap(100, 'RedBlue'));
+
+% Which TFR window to use?
+tfr_dir = [exp_dir 'tfr/ress/win_0.1s/target/'];
+
+% Array for all data: Subj x TargetSide x LeftRFTFreq X Chan x TFRfreq x Time
+agg_data = nan([height(subject_info), 2, 2, 2, 46, 101]);
+trial_counts = nan([height(subject_info), 2, 2]);
+
+for i_subject = 1:height(subject_info)
+        if subject_info.exclude(i_subject)
+        continue
+    end
+
+    % Read in the data segmented around targets
+    behav = rs_behavior(i_subject);
+    fname = subject_info.meg{i_subject};
+    fn = [tfr_dir fname '/high'];
+    d = load(fn);
+    d = d.high_freq_data;
+    
+    % Only keep hits
+    cfg = [];
+    cfg.trials = d.trialinfo(:,1) == 1;
+    d = ft_selectdata(cfg, d);
+
+    % Information about each trial
+    trial_numbers = d.trialinfo(:,2);
+    targ_side_per_trial = behav.target_side(trial_numbers);
+    left_freq_per_trial = behav.freq_left(trial_numbers);
+
+    % Put the data together
+    sides = {'left' 'right'};
+    for i_targ_side = 1:2
+        targ_side = sides{i_targ_side};
+        sel_targ_side = strcmp(targ_side_per_trial, targ_side);
+        for i_freq = 1:2
+            targ_freq = exp_params.tagged_freqs(i_freq);
+            sel_targ_freq = left_freq_per_trial == targ_freq;
+            trial_sel = sel_targ_side & sel_targ_freq;
+            cfg = [];
+            cfg.trials = trial_sel;
+            d_sub = ft_selectdata(cfg, d);
+            x = squeeze(nanmean(d_sub.powspctrm, 1)); % Avg over trials
+            agg_data(i_subject, i_targ_side, i_freq, :, :, :) = x;
+            n_trials = size(d_sub.powspctrm, 1);
+            trial_counts(i_subject, i_targ_side, i_freq) = n_trials;
+        end
+    end
+end
+agg_data_orig = agg_data;
+
+% Get the comparison: Left-hits vs Right-hits
+d_lhit = agg_data(:,1,:,:,:,:);
+d_rhit = agg_data(:,2,:,:,:,:);
+d_comp = (d_lhit - d_rhit) ./ (d_lhit + d_rhit);
+d_cell = {d_lhit, d_rhit, d_comp};
+
+% Plot it
+for i_subject = 0:height(subject_info)
+    close all
+    if i_subject == 0
+        subj_sel = 1:height(subject_info);
+        fname = 'avg';
+    elseif subject_info.exclude(i_subject)
+        continue
+    else
+        subj_sel = i_subject;
+        fname = subject_info.meg{i_subject};
+    end
+    
+    for i_freq = 1:2 % Tagged freq of the target
+        figure(i_freq)
+        for i_data = 1:3 % Left hit, Right hit, Comparison
+            switch i_data
+                case 1
+                    data_label = 'Left hit';
+                case 2
+                    data_label = 'Right hit';
+                case 3
+                    data_label = 'Left vs. Right';
+            end
+            for i_ress_side = 1:2
+                if i_ress_side == 1 % RESS channels are named for stim side
+                    hemis_label = 'Right';
+                    plot_side = 2;
+                elseif i_ress_side == 2
+                    hemis_label = 'Left';
+                    plot_side = 1;
+                end
+                i_plot = (2 * (i_data - 1)) + plot_side;
+                subplot(3, 2, i_plot)
+                x = d_cell{i_data}(subj_sel, :, i_freq, i_ress_side, :, :);
+                x = squeeze(nanmean(x, 1));
+            %     clims = [-1 1] * max(max(abs(x)));
+                imagesc(d.time, d.freq, x) %, clims)
+                colorbar;
+                colormap(cm);
+                set(gca, 'YDir', 'normal')
+                if i_data == 3
+                    xlabel('Time (s)')
+                end
+                if i_ress_side == 1
+                    ylabel('Frequency (Hz)')
+                end
+                title(sprintf('%s - %s hemi', ...
+                    data_label, hemis_label))
+            end
+        end
+        fn = [exp_dir 'plots/accuracy/high_freq/lhits_vs_rhits'];
+        fn = sprintf('%s/%ihz-left_%s',...
+            fn, ...
+            exp_params.tagged_freqs(i_freq), ...
+            strrep(fname, '/', '_'));
+        print('-dpng', fn)
+    end
+end
+
+
+close all
+
+% Get the difference between hemispheres of the comparison
+% This gives one TFR plot per RFT frequency
+d_comp_63l_rh = d_comp(:,:,1,1,:,:); % 63 Hz on left, right hemisphere
+d_comp_63r_lh = d_comp(:,:,2,2,:,:); % 63 Hz on right, left hemisphere
+d_comp_63diff = d_comp_63l_rh - d_comp_63r_lh;
+d_comp_63diff = squeeze(nanmean(d_comp_63diff, 1));
+
+d_comp_78l_rh = d_comp(:,:,2,1,:,:); % 78 Hz on left, right hemisphere
+d_comp_78r_lh = d_comp(:,:,1,2,:,:); % 78 Hz on right, left hemisphere
+d_comp_78diff = d_comp_78l_rh - d_comp_78r_lh;
+d_comp_78diff = squeeze(nanmean(d_comp_78diff, 1));
+
+subplot(2, 1, 1)
+clims = [-1 1] * max(max(abs(d_comp_63diff)));
+imagesc(d.time, d.freq, d_comp_63diff, clims)
+colorbar;
+set(gca, 'YDir', 'normal')
+xlabel('Time (s)')
+ylabel('Frequency (Hz)')
+title('63 Hz')
+colormap(cm);
+
+subplot(2, 1, 2)
+clims = [-1 1] * max(max(abs(d_comp_78diff)));
+imagesc(d.time, d.freq, d_comp_78diff, clims)
+colorbar;
+set(gca, 'YDir', 'normal')
+xlabel('Time (s)')
+ylabel('Frequency (Hz)')
+title('78 Hz')
+colormap(cm);
+
+fn = [exp_dir 'plots/accuracy/high_freq/lhits_vs_rhits/collapse_avg'];
+print('-dpng', fn);
+
 
 
 %% Compare power at the target/non-target stimulus between hits and misses
