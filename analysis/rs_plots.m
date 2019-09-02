@@ -1652,9 +1652,86 @@ colormap(cm);
 fn = [exp_dir 'plots/accuracy/high_freq/lhits_vs_rhits/collapse_avg'];
 print('-dpng', fn);
 
+%% Run simple stats on l-hits vs r-hits
+[~, p63] = ttest(squeeze(d_comp_63l_rh), squeeze(d_comp_63r_lh), 'dim', 1);
+[~, p78] = ttest(squeeze(d_comp_78l_rh), squeeze(d_comp_78r_lh), 'dim', 1);
+pvals = {p63, p78};
+
+for i_freq = 1:2
+    subplot(2, 1, i_freq)
+    clims = [-4 0];
+    p = log10(squeeze(pvals{i_freq}));
+    imagesc(d.time, d.freq, p, clims);
+    hold on
+    contour(d.time, d.freq, p, ...
+        log10([0, 0.01, 1]), ...
+        '-r', 'LineWidth', 1.5)
+    hold off
+    set(gca, 'YDir', 'normal')
+    colorbar;
+    ylabel('Frequency (Hz)')
+    xlabel('Time (s)')
+end
+
+fn = [exp_dir 'plots/accuracy/high_freq/lhits_vs_rhits/collapse_stats'];
+print('-dpng', fn);
+
+%% Run cluster permutation test on the same data
+
+d_template = [];
+d_template.label = {'chan'};
+d_template.freq = d.freq;
+d_template.time = d.time;
+d_template.dimord = 'subj_chan_freq_time'; % Will it work with no channels
+
+my_reshape = @(x) reshape(x, ...
+    [height(subject_info), 1, length(d.freq), length(d.time)]);
+
+d63lhemi = d_template;
+d63lhemi.powspctrm = my_reshape(d_comp_63r_lh);
+
+d63rhemi = d_template;
+d63rhemi.powspctrm = my_reshape(d_comp_63l_rh);
+
+d78lhemi = d_template;
+d78lhemi.powspctrm = my_reshape(d_comp_78r_lh);
+
+d78rhemi = d_template;
+d78rhemi.powspctrm = my_reshape(d_comp_78l_rh);
+
+cfg = [];
+% cfg.latency          = [-0.1 0.5];
+% cfg.frequency        = 20;
+cfg.frequency = [78];
+cfg.method           = 'montecarlo';
+cfg.statistic        = 'ft_statfun_depsamplesT';
+cfg.correctm         = 'cluster';
+cfg.clusteralpha     = 0.05;
+cfg.clusterstatistic = 'maxsum';
+cfg.minnbchan        = [];
+cfg.tail             = 0;
+cfg.clustertail      = 0;
+cfg.alpha            = 0.025;
+cfg.numrandomization = 5000;
+cfg.neighbours = [];
+
+n_subj = height(subject_info);
+design = nan(2, 2 * n_subj);
+design(1,:) = repmat(1:n_subj, [1 2]);
+design(2,:) = [ones(1, n_subj), ones(1, n_subj) * 2];
+
+cfg.design   = design;
+cfg.uvar     = 1;
+cfg.ivar     = 2;
+
+stat63 = ft_freqstatistics(cfg, d63rhemi, d63lhemi);
+stat78 = ft_freqstatistics(cfg, d78rhemi, d78lhemi);
+
+pval63 = min([stat63.negclusters.prob stat63.posclusters.prob]);
+pval78 = min([stat78.negclusters.prob stat78.posclusters.prob]);
 
 
-%% Compare power at the target/non-target stimulus between hits and misses
+    %% Compare power at the target/non-target stimulus between hits and misses
 
 clear variables
 close all
