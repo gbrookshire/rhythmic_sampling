@@ -57,8 +57,7 @@ save([save_dir '/' fname '/high'], 'high_freq_data', '-v7.3')
 clear d cfg high_freq_data
 %}
 
-%{
-
+%
 % TFR at low freqs (theta, alpha)
 % For LF data, use all channels
 d = load([exp_dir 'preproc/' segment_type '/' fname '/preproc']);
@@ -74,6 +73,7 @@ low_freq_data = ft_freqanalysis(cfg, d);
 save([save_dir '/' fname '/low'], 'low_freq_data', '-v7.3')
 %}
 
+%{
 % TFR at low freqs (theta, alpha) - for standard LF analyses
 % Parameters from Popov, Kastner, Jensen, J Neurosci
 % For LF data, use all channels
