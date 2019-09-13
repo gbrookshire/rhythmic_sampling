@@ -6,10 +6,11 @@ function rs_acc_lfphase_pbi(i_subject)
 %   where C is the inter-trial phase coherence for that condition
 
 rs_setup
+data_dir = [exp_dir 'tfr/lf_2cyc/'];
 
 % Read in the data segmented around targets
 fname = subject_info.meg{i_subject};
-fn = [exp_dir 'tfr/target/' fname '/low'];
+fn = [data_dir fname '/low'];
 d = load(fn);
 d = d.low_freq_data;
 
@@ -48,7 +49,7 @@ label = d.label;
 freq = d.freq;
 time = d.time;
 dimord = 'chan_freq_time';
-save([exp_dir 'tfr/target/' fname '/lfphase_acc_pbi'], ...
+save([data_dir fname '/lfphase_acc_pbi'], ...
     'pbi', 'label', 'freq', 'dimord', 'time')
 
 end

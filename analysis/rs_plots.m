@@ -2137,26 +2137,30 @@ clear variables
 close all
 rs_setup
 
+data_dir = [exp_dir 'tfr/lf_2cyc/'];
+
 % Read in the data
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         continue
     end
     fname = subject_info.meg{i_subject};
-    fn = [exp_dir 'tfr/target/' fname '/lfphase_acc_pbi'];
+    fn = [data_dir fname '/lfphase_acc_pbi'];
     d = load(fn);
     grad = load([exp_dir 'grad/' fname '/grad'], 'grad'); % To combine grads
     d.grad = grad.grad;
     d_all(i_subject) = d;
+    t_sel = (-0.5 <= d.time) & (d.time <= 0);
     
     close all
     for i_freq = 1:length(d.freq)
         subplot(3, 4, i_freq)
-        x = squeeze(d.pbi(:,i_freq,:));
+        x = squeeze(d.pbi(:,i_freq,t_sel));
         clims = [-1 1] * max(max(abs(x)));
         imagesc(d.time, 1:length(d.label), x, clims)
         xlabel('Time (s)')
         ylabel('Channel')
+        xlim([-0.5 0])
         title(sprintf('%i Hz', d.freq(i_freq)))
     end
     print('-dpng', '-r300', ...
@@ -2173,6 +2177,7 @@ for i_freq = 1:length(d.freq)
     imagesc(d.time, 1:length(d.label), x, clims)
     xlabel('Time (s)')
     ylabel('Channel')
+    xlim([-0.5 0])
     title(sprintf('%i Hz', d.freq(i_freq)))
 end
 print('-dpng', '-r300', [exp_dir 'plots/accuracy/low_freq/pbi_avg'])
