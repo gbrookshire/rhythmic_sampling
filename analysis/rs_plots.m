@@ -244,36 +244,52 @@ clear variables
 close all
 rs_setup
 
-for segment_type = {'target' 'trial'}
+fsample = 1000;
+
+for segment_type = {'target'} %{'target' 'trial'}
     segment_type = segment_type{1};
+
+    trial_has_data = cell(1, height(subject_info));
+    
     for i_subject = 1:height(subject_info)
         if subject_info.exclude(i_subject)
             continue
         end
-
-        %fname = subject_info.meg{i_subject};
-        %data = rs_preproc(fname, 'trial');
 
         % Load preprocessed data
         fname = subject_info.meg{i_subject};
         disp(fname)
         data = load([exp_dir 'preproc/' segment_type '/' fname '/preproc']);
         data = data.data;
+        
+        
+        % Get the time vector
+        [~, max_inx] = max(cellfun(@length, data.time));
+        time_vec_sec = data.time{max_inx};
+        time_vec_int = round(time_vec_sec * 1000);
+        
+        % Matrix for which trials have data at each timepoint
+        trial_has_data{i_subject} = nan(length(data.trial), ...
+            length(time_vec_sec));
 
         trial_len = cellfun(@(x) size(x,2), data.trial);
-        nan_counts = zeros([1 max(trial_len)]);
+        nan_counts = zeros(size(time_vec_int));
         trial_counts = nan_counts;
         for i_trial = 1:length(data.trial)
             x = data.trial{i_trial}(1,:); % Look for NaNs in one channel
-            nan_counts(1:length(x)) = nan_counts(1:length(x)) + isnan(x);
-            trial_counts(1:length(x)) = trial_counts(1:length(x)) + ~isnan(x);
+            % Get time-points for this trial
+            t = round(data.time{i_trial} * 1000);
+            t_inx = ismember(time_vec_int, t);
+            nan_counts(t_inx) = nan_counts(t_inx) + isnan(x);
+            trial_counts(t_inx) = trial_counts(t_inx) + ~isnan(x);
+            trial_has_data{i_subject}(i_trial, t_inx) = ~isnan(x);
         end
         subplot(4,4,i_subject)
-        plot(nan_counts, '-r')
+        plot(time_vec_sec, nan_counts, '-r')
         hold on
-        plot(trial_counts, '-k')
+        plot(time_vec_sec, trial_counts, '-k')
         hold off
-        xlim([0 max(trial_len)])
+%         xlim([0 max(trial_len)])
         ylim([0 336])
         xticks([])
         yticks([])
@@ -282,9 +298,10 @@ for segment_type = {'target' 'trial'}
     subplot(4,4,13)
     xlabel('Time (sample)')
     ylabel('Count')
-    xticks([0 max(trial_len)])
+    xticks([-1 0 1])
     yticks([0 336])
 
+    % Labels
     subplot(4,4,5)
     text(1, 2, 'Data after exclusion', 'color', 'k')
     text(1, 1, 'NaN', 'color', 'r')
@@ -292,6 +309,7 @@ for segment_type = {'target' 'trial'}
     xlim([1 4])
     ylim([0 5])
 
+    save([exp_dir 'artifacts/kept_trials'], 'trial_has_data');
     print('-dpng', [exp_dir 'plots/artifacts/trial_counts_' segment_type])
 end
 
