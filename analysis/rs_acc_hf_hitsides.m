@@ -17,6 +17,11 @@ occip_roi = {'MEG2042' 'MEG2043' 'MEG2032' 'MEG2033'};
 
 clear x % Subject x Channel X TaggedFreq x Time
 
+% Load data about which samples contained artifacts
+art = load([exp_dir 'artifacts/kept_trials'], 'trial_has_data');
+
+trial_counts = nan(height(subject_info), 2);
+
 for i_subject = 1:height(subject_info)
     if subject_info.exclude(i_subject)
         x(i_subject,:,:,:) = nan;
@@ -37,6 +42,12 @@ for i_subject = 1:height(subject_info)
     % Which trials were hits
     hit_sel = d.trialinfo(:,1) == 1;
     trial_num = d.trialinfo(:, 2);
+    
+    % Which trials were artifact-free
+    no_art_sel = art.trial_has_data{i_subject};
+    t_inx = (-0.3 < d.time) & (d.time < 0.3);
+    no_art_sel = no_art_sel(:,t_inx);
+    no_art_sel = ~any(isnan(no_art_sel), 2);
 
     for i_tagged_freq = 1:2
         % Get the frequencies of the target and distractor
@@ -52,17 +63,19 @@ for i_subject = 1:height(subject_info)
         % Hits on the LEFT with the target at THIS freq
         stim_side_sel = strcmp(behav.target_side(trial_num), 'left');
         stim_freq_sel = behav.freq_left(trial_num) == targ_freq;
-        cfg.trials = hit_sel & stim_side_sel & stim_freq_sel;
+        cfg.trials = hit_sel & stim_side_sel & stim_freq_sel & no_art_sel;
         d_l = ft_selectdata(cfg, d);
         x_l = d_l.powspctrm;
+        trial_counts(i_subject, 1) = sum(cfg.trials);
         
         % Hits on the RIGHT with the target at the OTHER freq
         % (To ensure that the sensors are contalateral to the same freq)
         stim_side_sel = strcmp(behav.target_side(trial_num), 'right');
         stim_freq_sel = behav.freq_right(trial_num) == dist_freq;
-        cfg.trials = hit_sel & stim_side_sel & stim_freq_sel;
+        cfg.trials = hit_sel & stim_side_sel & stim_freq_sel & no_art_sel;
         d_r = ft_selectdata(cfg, d);
         x_r = d_r.powspctrm;
+        trial_counts(i_subject, 2) = sum(cfg.trials);
 
         % Compare them
         x(i_subject,:,i_tagged_freq,:) = (x_l - x_r) ./ (x_l + x_r);
@@ -72,7 +85,7 @@ end
 for fieldname = {'powspctrm' 'cumtapcnt' 'trialinfo' 'cfg' 'dimord'}
     d = rmfield(d, fieldname{1});
 end
-save([tfr_dir 'agg'], 'x', 'd')
+save([tfr_dir 'agg'], 'x', 'd', 'trial_counts')
 
 %% Plot it
 
